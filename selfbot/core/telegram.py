@@ -45,15 +45,18 @@ class Telegram(abc.ABC):
         super().__init__(**kwargs)
 
     async def run(self) -> None:
-        if self.__idle__ and not self.__idle__.done():
+        if self.__idle__ and not self.__idle__.is_set():
             raise RuntimeError("Selfbot Running")
+
+        rflag = "Restart" if os.path.exists("r.txt") else "Start"
+        self.logger.info(f"{rflag}ing Client...")
 
         try:
             await self.start()
-            self.logger.info("Client Started")
         except Exception as e:
             self.logger.error(str(e))
         else:
+            self.logger.info("Client Started")
             await self.idle()
         finally:
             await self.stop()

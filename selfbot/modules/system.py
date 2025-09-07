@@ -75,6 +75,13 @@ class System(Module):
             with open(file, "w") as f:
                 f.write(text)
 
+        if getattr(self.client, "restart", None):
+            return await event.edit_message_text(
+                "<code>Restart is Called</code>", reply_markup=ikm(("Close", b"0"))
+            )
+
+        setattr(self.client, "restart", True)
+
         if os.path.isdir(".git"):
             await shell(
                 "git fetch ; git reset --hard origin/{}".format(
@@ -97,6 +104,6 @@ class System(Module):
         await event.edit_message_text("<code>Restarting...</code>")
 
         try:
-            self.client.__idle__.cancel()
+            self.client.__idle__.set()
         finally:
             os.execv(sys.executable, (sys.executable, "-m", "selfbot"))
