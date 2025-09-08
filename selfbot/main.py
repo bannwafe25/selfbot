@@ -1,8 +1,9 @@
 import asyncio
 import logging
+import os
 
 import aiorun
-import dotenv
+from dotenv import dotenv_values
 
 from .core import Selfbot
 
@@ -16,9 +17,16 @@ for lib in ["pyrogram", "httpx"]:
     logging.getLogger(lib).setLevel(logging.ERROR)
 
 
-def run() -> None:
-    config = dotenv.dotenv_values()
+def config() -> dict:
+    config = dotenv_values()
 
+    if not config:
+        config = {k.lower(): v for k, v in os.environ.items()}
+
+    return config
+
+
+def run() -> None:
     try:
         import uvloop
     except ImportError:
@@ -30,4 +38,4 @@ def run() -> None:
     asyncio.set_event_loop(loop)
 
     aiorun.logger.disabled = True
-    aiorun.run(Selfbot.launch(config, loop=loop), loop=loop)
+    aiorun.run(Selfbot.launch(config(), loop=loop), loop=loop)

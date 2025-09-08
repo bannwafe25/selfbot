@@ -77,8 +77,7 @@ class Telegram(abc.ABC):
         await asyncio.to_thread(self.loads)
         self.loop.create_task(self.dispatch("startup"))
 
-        for cred in ["api_id", "api_hash", "bot_token", "session_string"]:
-            self.config.pop(cred, None)
+        await asyncio.to_thread(self.safe)
 
     async def idle(self) -> None:
         if self.__idle__ and not self.__idle__.is_set():
@@ -107,7 +106,7 @@ class Telegram(abc.ABC):
     def updates(self) -> None:
         fltapp = flt.user(self.app.me.id)
         events = {
-            "message": (self.app, MessageHandler, flt.me, 0),
+            "message": (self.app, MessageHandler, flt.me & flt.text & ~flt.via_bot, 0),
             "callback_query": (self.bot, CallbackQueryHandler, fltapp, 0),
             "chosen_inline_result": (self.bot, ChosenInlineResultHandler, fltapp, 0),
             "inline_query": (self.bot, InlineQueryHandler, fltapp, 0),
@@ -128,6 +127,14 @@ class Telegram(abc.ABC):
                     client.add_handler(*dispatcher)
                 finally:
                     self.handlers[name] = dispatcher
+
+    def safe(self) -> None:
+        for key in os.environ.keys():
+            if key != "STICKER_FILE_ID":
+                self.config.pop(key.lower, None)
+
+        for cred in ["API_ID", "API_HASH", "BOT_TOKEN", "SESSION_STRING"]:
+            os.environ.pop(cred, None)
 
     @staticmethod
     async def migrate(client: Client, storage: FileStorage) -> None:
@@ -164,13 +171,18 @@ class Telegram(abc.ABC):
 
     @property
     def _bot(self) -> Client:
-        client = Client(
-            "bot",
-            api_id=self.config["api_id"],
-            api_hash=self.config["api_hash"],
-            bot_token=self.config["bot_token"],
-            **commons,
-        )
+        kwargs = {"name": "bot"}
+
+        if not os.path.exists(f"{commons['workdir']}/{kwargs['name']}.session"):
+            kwargs.update(
+                {
+                    "api_id": self.config["api_id"],
+                    "api_hash": self.config["api_hash"],
+                    "bot_token": self.config["bot_token"],
+                }
+            )
+
+        client = Client(**kwargs, **commons)
 
         client.dispatcher.update_parsers = {
             k: v
