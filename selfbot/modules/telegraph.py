@@ -24,6 +24,7 @@ pattern = re.compile(
 spoiler = re.compile(r"</?spoiler\b[^>]*>")
 emojiid = re.compile(r"<emoji id=\"\d+\">(.*?)</emoji>")
 htmltag = re.compile(r"<.*?>")
+mention = re.compile(r"(?<!\S)@([a-zA-Z0-9_]{5,32})(?!\S)")
 
 
 class Telegraph(Module):
@@ -45,7 +46,14 @@ class Telegraph(Module):
                 return await event.edit("<code>Reply to Content or Give a Text</code>")
 
             content = emojiid.sub(
-                r"\1", spoiler.sub("", event.reply_to_message.content.html)
+                r"\1",
+                spoiler.sub(
+                    "",
+                    mention.sub(
+                        r"<a href='https://t.me/\1'>@\1</a>",
+                        event.reply_to_message.content.html,
+                    ),
+                ),
             ).replace("\n", "<br>")
 
             if (
@@ -80,7 +88,9 @@ class Telegraph(Module):
                 InlineQueryResultCachedSticker(
                     sticker_file_id=self.client.config["sticker_file_id"],
                     reply_markup=ikm((">_", "user_id", event._client.me.id)),
-                    input_message_content=InputTextMessageContent("<code>...</code>"),
+                    input_message_content=InputTextMessageContent(
+                        "<code>Paste to Telegraph...</code>"
+                    ),
                 )
             ],
             cache_time=900,
