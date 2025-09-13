@@ -113,14 +113,14 @@ class Telegraph(Module):
                 reply_markup=ikm(("Close", b"0")),
             )
         else:
-            text = fmtstr(
-                "Telegraph Page Created",
-                {
-                    "Title": data["title"] or "N/A",
-                    "Content": htmltag.sub("", data["content"])[:16],
-                },
-                fmtsec(now),
-            )
             await event.edit_message_text(
-                text, reply_markup=ikm([("Copy", "copy", url), ("Open", "url", url)])
+                fmtstr(
+                    "Telegraph Page Created",
+                    {
+                        "Title": data["title"] or "N/A",
+                        "Content": htmltag.sub("", data["content"])[:16],
+                    },
+                    fmtsec(now),
+                ),
+                reply_markup=ikm([("Copy", "copy", url), ("Open", "url", url)]),
             )

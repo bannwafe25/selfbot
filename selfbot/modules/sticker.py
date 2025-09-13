@@ -152,37 +152,35 @@ class Sticker(Module):
                     reply_markup=ikm(("Close", b"0")),
                 )
             else:
-                args = {
-                    "text": fmtstr(
-                        text,
-                        {
-                            "Name": last.set.short_name,
-                            "Emoji": data["emoji"],
-                            "Source": data["source"]["name"],
-                        },
-                        fmtsec(now),
-                    ),
-                    "reply_markup": ikm(
-                        [
-                            [
-                                (
-                                    "Old",
-                                    "url",
-                                    f"https://t.me/addstickers/{data['source']['name']}",
-                                ),
-                                (
-                                    "New",
-                                    "url",
-                                    f"https://t.me/addstickers/{last.set.short_name}",
-                                ),
-                            ],
-                            [("Close", b"0")],
-                        ]
-                    ),
-                }
-
                 try:
-                    await event.edit_message_text(**args)
+                    await event.edit_message_text(
+                        fmtstr(
+                            text,
+                            {
+                                "Name": last.set.short_name,
+                                "Emoji": data["emoji"],
+                                "Source": data["source"]["name"],
+                            },
+                            fmtsec(now),
+                        ),
+                        reply_markup=ikm(
+                            [
+                                [
+                                    (
+                                        "Old",
+                                        "url",
+                                        f"https://t.me/addstickers/{data['source']['name']}",
+                                    ),
+                                    (
+                                        "New",
+                                        "url",
+                                        f"https://t.me/addstickers/{last.set.short_name}",
+                                    ),
+                                ],
+                                [("Close", b"0")],
+                            ]
+                        ),
+                    )
                 finally:
                     async with self.lock:
                         self.last = last.set.short_name

@@ -124,18 +124,20 @@ class Schedule(Module):
                     if i % 5 == 0:
                         await asyncio.sleep(0.5)
 
-            text = fmtstr(
-                "Schedule Message",
-                {
-                    "Self": bool(data["self"]),
-                    "Repeat": data["loop"],
-                    "Period": f"{data['time']} {data['unit']}",
-                    "Failed": int(data["loop"]) - res,
-                    "Content": data["text"],
-                },
-                fmtsec(now),
+            await event.edit_message_text(
+                fmtstr(
+                    "Schedule Message",
+                    {
+                        "Self": bool(data["self"]),
+                        "Repeat": data["loop"],
+                        "Period": f"{data['time']} {data['unit']}",
+                        "Failed": int(data["loop"]) - res,
+                        "Content": data["text"],
+                    },
+                    fmtsec(now),
+                ),
+                reply_markup=ikm(("Close", b"0")),
             )
-            await event.edit_message_text(text, reply_markup=ikm(("Close", b"0")))
 
         else:
             args = {self.period[data["unit"]]: int(data["time"])}
@@ -152,13 +154,15 @@ class Schedule(Module):
                     reply_markup=ikm(("Close", b"0")),
                 )
             else:
-                text = fmtstr(
-                    "Schedule Message",
-                    {
-                        "Self": bool(data["self"]),
-                        "Period": f"{data['time']} {data['unit']}",
-                        "Content": data["text"],
-                    },
-                    fmtsec(now),
+                await event.edit_message_text(
+                    fmtstr(
+                        "Schedule Message",
+                        {
+                            "Self": bool(data["self"]),
+                            "Period": f"{data['time']} {data['unit']}",
+                            "Content": data["text"],
+                        },
+                        fmtsec(now),
+                    ),
+                    reply_markup=ikm(("Close", b"0")),
                 )
-                await event.edit_message_text(text, reply_markup=ikm(("Close", b"0")))

@@ -37,18 +37,19 @@ class System(Module):
 
         data = await asyncio.to_thread(get_id, "r.txt")
         if data:
-            text = fmtstr(
-                "Selfbot Restarted",
-                {
-                    "Version": self.client.version,
-                    "Modules": len(self.client.modules),
-                    "Handlers": len(self.client.handlers),
-                    "Listeners": len(self.client.listeners),
-                },
-                fmtsec(datetime.datetime.fromtimestamp(float(data[1]))),
-            )
             await self.client.bot.edit_inline_text(
-                data[0], text, reply_markup=ikm(("Close", b"0"))
+                data[0],
+                fmtstr(
+                    "Selfbot Restarted",
+                    {
+                        "Version": self.client.version,
+                        "Modules": len(self.client.modules),
+                        "Handlers": len(self.client.handlers),
+                        "Listeners": len(self.client.listeners),
+                    },
+                    fmtsec(datetime.datetime.fromtimestamp(float(data[1]))),
+                ),
+                reply_markup=ikm(("Close", b"0")),
             )
 
     @listener.handler(filters.regex(pattern), 1)

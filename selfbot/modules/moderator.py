@@ -147,12 +147,14 @@ class Moderator(Module):
                 reply_markup=ikm(("Close", b"0")),
             )
         else:
-            text = fmtstr(
-                f"<a href='tg://user?id={target}'>User</a> {self.verb(action, 'past')}",
-                {"ID": target, "Reason": data["reason"] or "N/A", "Duration": unit},
-                fmtsec(now),
+            await event.edit_message_text(
+                fmtstr(
+                    f"<a href='tg://user?id={target}'>User</a> {self.verb(action, 'past')}",
+                    {"ID": target, "Reason": data["reason"] or "N/A", "Duration": unit},
+                    fmtsec(now),
+                ),
+                reply_markup=ikm(("Close", b"0")),
             )
-            await event.edit_message_text(text, reply_markup=ikm(("Close", b"0")))
 
     def verb(self, text: str, tense: str) -> str:
         suffix = "ing" if tense == "present" else "ed"
