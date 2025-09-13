@@ -104,7 +104,7 @@ class Translate(Module):
         await event.edit_message_text(
             fmtstr(
                 "Translated Text",
-                {"To": data["lang"] or "id", "Text": res.text},
+                {"Language": data["lang"] or "id", "Result": res.text},
                 fmtsec(now),
             ),
             reply_markup=ikm(("Close", b"0")),
