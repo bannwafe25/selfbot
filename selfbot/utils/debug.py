@@ -25,7 +25,6 @@ async def aexec(code: str, scopes: dict = {}) -> any:
                 body=body,
                 decorator_list=[],
                 returns=None,
-                type_comments=[],
                 type_params=[],
             )
         ],
