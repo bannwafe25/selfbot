@@ -57,7 +57,7 @@ class Debug(Module):
     async def on_message(self, event: Message) -> None:
         res = await event._client.get_inline_bot_results(self.client.bot.me.id, "#")
         await asyncio.gather(
-            event.edit(event.content.markdown.removesuffix("#").rstrip()),
+            event.edit(html.escape(event.content.markdown).removesuffix("#").rstrip()),
             event.reply_inline_bot_result(res.query_id, res.results[0].id, quote=True),
         )
 
