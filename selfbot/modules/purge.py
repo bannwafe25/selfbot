@@ -43,7 +43,7 @@ class Purge(Module):
                     from_user="me",
                     min_id=event.reply_to_message_id or 1,
                     max_id=event.id,
-                    limit=limit or 100,
+                    limit=(limit or 100) + 1,
                 )
             ]
         else:

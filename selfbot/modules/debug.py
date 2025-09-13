@@ -53,10 +53,13 @@ class Debug(Module):
             "loop": self.client.loop,
         }
 
-    @listener.handler(filters.regex(r"^#\s+.*"), 1)
+    @listener.handler(filters.regex(pattern), 1)
     async def on_message(self, event: Message) -> None:
         res = await event._client.get_inline_bot_results(self.client.bot.me.id, "#")
-        await event.reply_inline_bot_result(res.query_id, res.results[0].id, quote=True)
+        await asyncio.gather(
+            event.edit(event.content.markdown.removesuffix("#").rstrip()),
+            event.reply_inline_bot_result(res.query_id, res.results[0].id, quote=True),
+        )
 
     @listener.handler(filters.regex(pattern), 2)
     async def on_inline_query(self, event: InlineQuery) -> None:
@@ -127,9 +130,9 @@ class Debug(Module):
 
         if btn:
             code = event.query.removesuffix("#").rstrip()
-            ikb[0].insert(0, ("Run", "switch_inline_query_current_chat", code.rstrip()))
+            ikb[0].insert(0, ("Run", "switch_inline_query_current_chat", code))
         else:
-            code = msg.content.markdown.removeprefix("#").lstrip()
+            code = msg.content.markdown
             ikb[0].insert(0, ("Run", "1"))
 
         self.scope.update(
