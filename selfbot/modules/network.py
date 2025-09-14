@@ -24,6 +24,9 @@ pattern = re.compile(r"^ping$")
 class Network(Module):
     name = "Network"
 
+    cmds = "ping"
+    desc = ["Selfbot Latency"]
+
     @listener.handler(filters.regex(pattern), 1)
     async def on_message(self, event: Message) -> None:
         res = await event._client.get_inline_bot_results(self.client.bot.me.id, "ping")
@@ -51,6 +54,9 @@ class Network(Module):
 
     @listener.handler(filters.regex(pattern), 4)
     async def on_callback_query(self, event: CallbackQuery) -> None:
+        if event.from_user.id != self.client.app.me.id:
+            return await event.answer("Who are You?", show_alert=True, cache_time=900)
+
         await self.edit(event)
 
     async def edit(self, event: Update) -> None:
