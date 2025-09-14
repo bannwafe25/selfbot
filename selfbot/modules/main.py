@@ -24,9 +24,9 @@ class Main(Module):
     hide = True
 
     async def on_startup(self) -> None:
-        self.mods = {}
-        self.maps = {}
-        self.ikbs = []
+        self.mod = {}
+        self.map = {}
+        self.ikb = []
 
         mods = [mod for mod in self.client.modules.values() if not mod.hide]
         mods.sort(key=lambda mod: mod.name.lower())
@@ -36,21 +36,20 @@ class Main(Module):
         for i, mod in enumerate(mods):
             name = mod.name.lower()
 
-            self.maps[name] = len(self.ikbs)
+            self.map[name] = len(self.ikb)
 
-            desc = "\n".join([f"    • <code>{i}</code>" for i in mod.desc])
-            self.mods[name] = (
+            self.mod[name] = (
                 f"<b>{mod.name}</b>\n\n  <b>Pattern</b>\n    <code>{mod.cmds}</code>"
-                f"\n\n{desc}"
+                f"\n\n{self.fmtmod(mod.desc)}"
             )
 
             page.append((mod.name, f"help/mod/{name}"))
             if len(page) == 4:
-                self.ikbs.append([page[i : i + 2] for i in range(0, 4, 2)])
+                self.ikb.append([page[i : i + 2] for i in range(0, 4, 2)])
                 page = []
 
         if page:
-            self.ikbs.append([page[i : i + 2] for i in range(0, len(page), 2)])
+            self.ikb.append([page[i : i + 2] for i in range(0, len(page), 2)])
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message(self, event: Message) -> None:
@@ -91,10 +90,19 @@ class Main(Module):
     async def on_callback_query(self, event: CallbackQuery) -> None:
         act, val = pattern.match(event.data).groups()
 
+        if act == "info":
+            await event.answer(
+                f"Page {int(val) + 1} of {len(self.ikb)}",
+                show_alert=True,
+                cache_time=900,
+            )
+
+        await event.answer(cache_time=0)
+
         if act == "mod":
-            page = self.maps.get(val, 0)
+            page = self.map.get(val, 0)
             await event.edit_message_text(
-                self.mods[val],
+                self.mod[val],
                 reply_markup=ikm([("« Back", f"help/page/{page}"), ("Close", b"0")]),
             )
 
@@ -103,18 +111,11 @@ class Main(Module):
                 "<b>Selfbot Modules</b>", reply_markup=ikm(self.build(int(val)))
             )
 
-        elif act == "info":
-            await event.answer(
-                f"Page {int(val) + 1} of {len(self.ikbs)}",
-                show_alert=True,
-                cache_time=900,
-            )
-
     def build(self, page: int = 0) -> list:
-        ikbs = len(self.ikbs)
+        ikbs = len(self.ikb)
         page = max(0, min(page, ikbs - 1))
 
-        ikb = self.ikbs[page][:]
+        ikb = self.ikb[page][:]
         ikb.append([("Page Info", f"help/info/{page}")])
 
         nav = []
@@ -129,3 +130,16 @@ class Main(Module):
         ikb.append(nav)
 
         return ikb
+
+    @staticmethod
+    def fmtmod(data: any) -> str:
+        if isinstance(data, dict):
+            res = [
+                f"   • <b>{k}</b>\n        <code>{v}</code>" for k, v in data.items()
+            ]
+            return "\n\n".join(res)
+
+        elif isinstance(data, list):
+            return "\n".join([f"   • <b>{i}</b>" for i in data])
+
+        return f"   • <b>{data}</b>"
