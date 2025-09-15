@@ -19,8 +19,8 @@ from selfbot.utils import ikm
 pattern = re.compile(r"^help/?(mod|info|page)?/?(\d{1}|[a-z]+)?$")
 
 
-class Main(Module):
-    name = "Main"
+class Help(Module):
+    name = "Help"
     hide = True
 
     async def on_startup(self) -> None:
@@ -91,7 +91,7 @@ class Main(Module):
         act, val = pattern.match(event.data).groups()
 
         if act == "info":
-            await event.answer(
+            return await event.answer(
                 f"Page {int(val) + 1} of {len(self.ikb)}",
                 show_alert=True,
                 cache_time=900,
@@ -135,11 +135,12 @@ class Main(Module):
     def fmtmod(data: any) -> str:
         if isinstance(data, dict):
             res = [
-                f"   • <b>{k}</b>\n        <code>{v}</code>" for k, v in data.items()
+                f"{' ' * 4}• <b>{k}</b>\n{' ' * 8}<code>{v}</code>"
+                for k, v in data.items()
             ]
             return "\n\n".join(res)
 
         elif isinstance(data, list):
-            return "\n".join([f"   • <b>{i}</b>" for i in data])
+            return "\n".join([f"{' ' * 4}• <b>{i}</b>" for i in data])
 
-        return f"   • <b>{data}</b>"
+        return f"{' ' * 4}<b>{data}</b>"
