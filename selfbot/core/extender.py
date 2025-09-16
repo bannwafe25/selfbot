@@ -15,7 +15,6 @@ class Extender(abc.ABC):
         for submod in submods:
             for attr in dir(submod):
                 mod = getattr(submod, attr)
-
                 if (
                     inspect.isclass(mod)
                     and issubclass(mod, Module)
@@ -32,7 +31,6 @@ class Extender(abc.ABC):
             raise ModuleExists(type(self.modules[mod.name]), mod)
 
         obj = mod(self)
-
         try:
             self.registers(obj)
         except Exception as e:

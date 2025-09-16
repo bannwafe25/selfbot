@@ -30,10 +30,7 @@ class Selfbot(Dispatcher, Extender, Telegram):
             asyncio.set_event_loop(loop)
 
         selfbot = cls(config)
-
-        selfbot.loop = loop
-        selfbot.http = AsyncClient()
-
+        selfbot.loop, selfbot.http = loop, AsyncClient()
         try:
             await selfbot.run()
         finally:
@@ -44,7 +41,6 @@ class Selfbot(Dispatcher, Extender, Telegram):
 
     async def stop(self) -> None:
         self.logger.info("Stopping Client...")
-
         await asyncio.gather(
             *[self.app.stop(), self.bot.stop(), self.http.aclose()],
             return_exceptions=True

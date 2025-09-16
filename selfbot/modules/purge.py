@@ -21,7 +21,6 @@ pattern = re.compile(r"^purge(me)?(\s(\d{1,3}))?$")
 
 class Purge(Module):
     name = "Purge"
-
     cmds = "{action} {limit}"
     desc = {"action": "[purge, purgeme]", "limit": "1 - 999"}
 
@@ -31,9 +30,7 @@ class Purge(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message(self, event: Message) -> None:
-        match = pattern.match(event.content)
-
-        limit = 0
+        match, limit = pattern.match(event.content), 0
         if match.group(2):
             limit = int(match.group(3))
 
@@ -97,12 +94,9 @@ class Purge(Module):
         async with self.lock:
             cid, ids = await self.data.get()
 
-        res = 0
-        now = datetime.datetime.now()
-
+        res, now = 0, datetime.datetime.now()
         for chunk in [ids[i : i + 100] for i in range(0, len(ids), 100)]:
             res += await self.client.app.delete_messages(cid, chunk)
-
             if res % 100 == 0:
                 await asyncio.sleep(5)
 

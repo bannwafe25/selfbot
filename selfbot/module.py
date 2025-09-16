@@ -6,9 +6,8 @@ if TYPE_CHECKING:
 
 
 class Module:
-    name: str = "Unnamed"
-    hide: bool = False
-
+    name: str = ""
+    hide: int = 0
     cmds: str = ""
     desc: any = None
 

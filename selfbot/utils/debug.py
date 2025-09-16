@@ -43,7 +43,6 @@ async def shell(cmd: str) -> str:
     proc = await asyncio.create_subprocess_shell(
         cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
-
     try:
         stdout, stderr = await proc.communicate()
         return (stdout + stderr).decode()

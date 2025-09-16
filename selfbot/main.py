@@ -12,14 +12,12 @@ logging.basicConfig(
     datefmt="%b %-d | %-I:%M %p | %-S",
     level=logging.INFO,
 )
-
 for lib in ["pyrogram", "httpx"]:
     logging.getLogger(lib).setLevel(logging.ERROR)
 
 
 def config() -> dict:
     config = dotenv_values()
-
     if not config:
         config = {k.lower(): v for k, v in os.environ.items()}
 

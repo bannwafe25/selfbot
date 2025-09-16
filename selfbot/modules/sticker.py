@@ -31,7 +31,6 @@ pattern = re.compile(
 
 class Sticker(Module):
     name = "Sticker"
-
     cmds = "{mode(sticker)} {name} {emoji}"
     desc = {"mode": "[add, get, set]", "name": "String", "emoji": "String"}
 
@@ -50,8 +49,7 @@ class Sticker(Module):
     @listener.handler(filters.regex(pattern), 1)
     async def on_message(self, event: Message) -> None:
         data = pattern.match(event.content).groupdict()
-
-        if data["mode"] not in ["del", "get"]:
+        if data["mode"] != "get":
             if not event.reply_to_message or (
                 event.reply_to_message and not event.reply_to_message.sticker
             ):
@@ -61,7 +59,6 @@ class Sticker(Module):
                 "file": event.reply_to_message.sticker.file_id,
                 "name": event.reply_to_message.sticker.set_name or "N/A",
             }
-
             if not data["emoji"]:
                 data["emoji"] = event.reply_to_message.sticker.emoji or "🤖"
 
@@ -115,7 +112,6 @@ class Sticker(Module):
             data = await self.data.get()
 
         now = datetime.datetime.now()
-
         if data["mode"] == "get":
             return await event.edit_message_text(
                 fmtstr(
@@ -130,10 +126,7 @@ class Sticker(Module):
             document=get_input_media_from_file_id(data["source"]["file"]).id,
             emoji=data["emoji"],
         )
-
-        text = ""
-        func = None
-
+        text, func = "", None
         if data["mode"] == "add":
             text = "Added to Sticker Set"
             func = AddStickerToSet(
