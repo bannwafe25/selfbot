@@ -11,6 +11,7 @@ from pyrogram.types import (
     InlineQueryResultCachedSticker,
     InputTextMessageContent,
     Message,
+    ReplyParameters,
 )
 
 from selfbot import listener
@@ -25,19 +26,8 @@ class System(Module):
     cmds = "r"
     desc = "Restart Selfbot"
 
-    async def on_startup(self) -> None:
-        def get_id(file: str) -> tuple | None:
-            if os.path.exists(file):
-                with open(file) as f:
-                    try:
-                        data = f.readlines()
-                        return data[0], float(data[1])
-                    finally:
-                        os.remove(file)
-
-            return None
-
-        data = await asyncio.to_thread(get_id, "r.txt")
+    async def on_starting(self) -> None:
+        data = await asyncio.to_thread(self._get, "r.txt")
         if data:
             await self.client.bot.edit_inline_text(
                 data[0],
@@ -55,10 +45,16 @@ class System(Module):
             )
 
     @listener.handler(filters.regex(pattern), 1)
-    async def on_message(self, event: Message) -> None:
+    async def on_message_out(self, event: Message) -> None:
         res = await event._client.get_inline_bot_results(self.client.bot.me.id, "r")
         await asyncio.gather(
-            event.reply_inline_bot_result(res.query_id, res.results[0].id),
+            event.reply_inline_bot_result(
+                res.query_id,
+                res.results[0].id,
+                reply_parameters=ReplyParameters(
+                    message_id=event.reply_to_message_id or event.id
+                ),
+            ),
             event.delete(True),
         )
 
@@ -78,11 +74,7 @@ class System(Module):
         )
 
     @listener.handler(filters.regex(pattern), 3)
-    async def on_chosen_inline_result(self, event: ChosenInlineResult) -> None:
-        def put_id(file: str, text: str) -> None:
-            with open(file, "w") as f:
-                f.write(text)
-
+    async def on_inline_result(self, event: ChosenInlineResult) -> None:
         if getattr(self.client, "restart", None):
             return await event.edit_message_text(
                 "<code>Restart is Called</code>", reply_markup=ikm(("Close", b"0"))
@@ -96,29 +88,41 @@ class System(Module):
         await asyncio.gather(
             event.edit_message_text("<code>Fetching...</code>"),
             shell(
-                "git init; git remote add origin {repo}"
-                "; git fetch; git reset --hard origin/{branch}".format(
-                    repo=self.client.config.get(
-                        "repo", "https://github.com/DeltaUniverse/selfbot"
-                    ),
-                    branch=self.client.config.get("branch", "staging"),
+                "git init"
+                "&& git remote add origin https://github.com/DeltaUniverse/selfbot"
+                "&& git fetch"
+                "&& git reset --hard origin/{}".format(
+                    self.client.config.get("branch", "staging")
                 )
             ),
         )
         await asyncio.gather(
-            event.edit_message_text("<code>Updating...</code>"),
-            shell(
-                "pip install --upgrade pip; pip install --upgrade -r requirements.txt"
-            ),
+            event.edit_message_text("<code>Restarting...</code>"),
             asyncio.to_thread(
-                put_id,
+                self._put,
                 "r.txt",
                 f"{event.inline_message_id}\n{datetime.datetime.now().timestamp()}",
             ),
         )
 
-        await event.edit_message_text("<code>Restarting...</code>")
         try:
             self.client.__idle__.set()
         finally:
             os.execv(sys.executable, (sys.executable, "-m", "selfbot"))
+
+    @staticmethod
+    def _get(file: str) -> tuple | None:
+        if os.path.exists(file):
+            with open(file) as f:
+                try:
+                    data = f.readlines()
+                    return data[0], float(data[1])
+                finally:
+                    os.remove(file)
+
+        return None
+
+    @staticmethod
+    def _put(file: str, text: str) -> None:
+        with open(file, "w") as f:
+            f.write(text)
