@@ -3,7 +3,6 @@ import asyncio
 import contextlib
 import functools
 import os
-import pathlib
 import signal
 
 from pyrogram import Client
@@ -15,6 +14,7 @@ from pyrogram.handlers import (
     InlineQueryHandler,
     MessageHandler,
 )
+from pyrogram.handlers.handler import Handler
 from pyrogram.raw.types import (
     UpdateBotInlineQuery,
     UpdateBotInlineSend,
@@ -22,11 +22,11 @@ from pyrogram.raw.types import (
     UpdateNewChannelMessage,
     UpdateNewMessage,
 )
-from pyrogram.storage import FileStorage
 from pyrogram.types import LinkPreviewOptions, Update
 
+from .storage import PostgresStorage
+
 commons = {
-    "workdir": "./selfbot/storage/",
     "parse_mode": ParseMode.HTML,
     "sleep_threshold": 900,
     "max_message_cache_size": 0,
@@ -37,16 +37,16 @@ commons = {
 
 class Telegram(abc.ABC):
     def __init__(self, **kwargs) -> None:
-        self.app = self._app
-        self.bot = self._bot
+        self.app: Client = None
+        self.bot: Client = None
 
-        self.__idle__ = None
-        self.handlers = {}
+        self.__event__: asyncio.Event = None
+        self.handlers: dict[str, Handler] = {}
 
         super().__init__(**kwargs)
 
     async def run(self) -> None:
-        if self.__idle__ and not self.__idle__.is_set():
+        if self.__event__ and not self.__event__.is_set():
             raise RuntimeError("Selfbot Running")
 
         self.logger.info(
@@ -64,18 +64,23 @@ class Telegram(abc.ABC):
             self.logger.info("Client Stopped")
 
     async def start(self) -> None:
-        async def migrate(name: str, key: str) -> None:
+        async def _migrate(name: str, key: str) -> None:
+
             if self.config.get(key):
                 async with Client(name, session_string=self.config[key]) as client:
-                    await self._migrate(client)
+                    await self.migrate(client)
+
+        await self.database()
+        await PostgresStorage.create_schema(self.db)
+
+        self.app = self._app
+        self.bot = self._bot
 
         await asyncio.gather(
-            migrate(self.app.name, "app_session_string"),
-            migrate(self.bot.name, "bot_session_string"),
+            _migrate(self.app.name, "app_session_string"),
+            _migrate(self.bot.name, "bot_session_string"),
         )
-        _, __, self.db = await asyncio.gather(
-            self.app.start(), self.bot.start(), self.database()
-        )
+        await asyncio.gather(self.app.start(), self.bot.start())
         await self.app.resolve_peer(self.bot.me.username)
         await asyncio.gather(
             asyncio.to_thread(self.loads), asyncio.to_thread(self.safe)
@@ -83,23 +88,23 @@ class Telegram(abc.ABC):
         self.loop.create_task(self.dispatch("starting"))
 
     async def idle(self) -> None:
-        if self.__idle__ and not self.__idle__.is_set():
+        if self.__event__ and not self.__event__.is_set():
             raise RuntimeError("Selfbot Idling")
 
         signames = (signal.SIGINT, signal.SIGTERM, signal.SIGABRT)
 
         def sighandler(signum: int) -> None:
-            if self.__idle__:
-                self.__idle__.set()
+            if self.__event__:
+                self.__event__.set()
 
         for signame in signames:
             self.loop.add_signal_handler(
                 signame, functools.partial(sighandler, signame)
             )
 
-        self.__idle__ = asyncio.Event()
+        self.__event__ = asyncio.Event()
         try:
-            await self.__idle__.wait()
+            await self.__event__.wait()
         finally:
             for signame in signames:
                 with contextlib.suppress(Exception):
@@ -144,16 +149,28 @@ class Telegram(abc.ABC):
         for key in list(os.environ):
             if key.endswith("_SESSION_STRING"):
                 os.environ.pop(key)
-            elif key in ["BRANCH", "DATABASE_URL", "STICKER_FILE_ID"]:
+            elif key in ["BRANCH", "DATABASE_URL", "REMOTE", "STICKER_FILE_ID"]:
                 self.config[key.lower()] = os.environ[key]
+
+    def build(self, name: str, updates: tuple = ()) -> Client:
+        client = Client(name, **commons, storage_engine=PostgresStorage(name, self.db))
+        if updates:
+            client.dispatcher.update_parsers = {
+                k: v
+                for k, v in client.dispatcher.update_parsers.items()
+                if k in updates
+            }
+
+        setattr(client, "workers", len(client.dispatcher.update_parsers))
+        return client
 
     @property
     def _app(self) -> Client:
-        return self._build("app", updates=(UpdateNewChannelMessage, UpdateNewMessage))
+        return self.build("app", updates=(UpdateNewChannelMessage, UpdateNewMessage))
 
     @property
     def _bot(self) -> Client:
-        return self._build(
+        return self.build(
             "bot",
             updates=(
                 UpdateBotInlineQuery,
@@ -162,8 +179,7 @@ class Telegram(abc.ABC):
             ),
         )
 
-    @staticmethod
-    async def _migrate(client: Client) -> None:
+    async def migrate(self, client: Client) -> None:
         attrs = [
             "dc_id",
             "api_id",
@@ -176,21 +192,8 @@ class Telegram(abc.ABC):
         creds = await asyncio.gather(
             *[getattr(client.storage, attr)() for attr in attrs]
         )
-        files = FileStorage(client.name, pathlib.Path(commons["workdir"]))
-        await files.open()
+        psqls = PostgresStorage(client.name, self.db)
+        await psqls.open()
         await asyncio.gather(
-            *[getattr(files, attr)(cred) for attr, cred in zip(attrs, creds)]
+            *[getattr(psqls, attr)(cred) for attr, cred in zip(attrs, creds)]
         )
-
-    @staticmethod
-    def _build(name: str, updates: tuple = ()) -> Client:
-        client = Client(name, **commons)
-        if updates:
-            client.dispatcher.update_parsers = {
-                k: v
-                for k, v in client.dispatcher.update_parsers.items()
-                if k in updates
-            }
-
-        setattr(client, "workers", len(client.dispatcher.update_parsers))
-        return client

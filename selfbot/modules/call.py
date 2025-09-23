@@ -12,15 +12,20 @@ from pyrogram.types import (
     Message,
     ReplyParameters,
 )
-from pytgcalls import PyTgCalls
-from pytgcalls.pytgcalls_session import PyTgCallsSession
-from pytgcalls.types import GroupCallConfig
+
+hide = False
+try:
+    from pytgcalls import PyTgCalls
+    from pytgcalls.pytgcalls_session import PyTgCallsSession
+    from pytgcalls.types import GroupCallConfig
+except Exception:
+    hide = True
+else:
+    PyTgCallsSession.notice_displayed = True
 
 from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr, ids, ikm
-
-PyTgCallsSession.notice_displayed = True
 
 pattern = re.compile(
     r"^"
@@ -45,10 +50,14 @@ class Call(Module):
     }
 
     async def on_starting(self) -> None:
+        if hide:
+            self.hide = True
+            return self.client.unload(self)
+
         self.data = asyncio.Queue()
         self.lock = asyncio.Lock()
 
-        self.client.tgc = PyTgCalls(self.client.app, 1, 900)
+        self.client.tgc = PyTgCalls(self.client.app, 1, 1)
         await self.client.tgc.start()
 
         for group in self.client.app.dispatcher.groups.keys():
@@ -83,13 +92,14 @@ class Call(Module):
 
     @listener.handler(filters.regex(pattern), 2)
     async def on_inline_query(self, event: InlineQuery) -> None:
+        action = pattern.match(event.query).groupdict()["action"].title()
         await event.answer(
             [
                 InlineQueryResultCachedSticker(
                     sticker_file_id=self.client.config["sticker_file_id"],
                     reply_markup=ikm((">_", "user_id", event._client.me.id)),
                     input_message_content=InputTextMessageContent(
-                        f"<code>Processing...</code>"
+                        f"<code>{action} Call...</code>"
                     ),
                 )
             ],
