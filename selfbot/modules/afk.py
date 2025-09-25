@@ -131,7 +131,7 @@ class Afk(Module):
             data = await self.data.get()
 
         now = datetime.datetime.now()
-        if data[0]:
+        if not data[0]:
             await self.client.db.execute("DELETE FROM afk;")
             await self.client.db.execute(
                 """
@@ -156,7 +156,7 @@ class Afk(Module):
         await event.edit_message_text(
             fmtstr(
                 "Away from Keyboard",
-                {"Status": data[0], "Reason": data[1] if data[1] else "N/A"},
+                {"Status": not data[0], "Reason": data[1] if data[1] else "N/A"},
                 fmtsec(now),
             ),
             reply_markup=ikm(("Close", "0")),

@@ -86,7 +86,7 @@ class Debug(Module):
                         attr.thumbs[0].file_id, in_memory=True
                     )
                 }
-                if obj.thumbs and "thumb" in args
+                if attr.thumbs and "thumb" in args
                 else {}
             ),
             **{
