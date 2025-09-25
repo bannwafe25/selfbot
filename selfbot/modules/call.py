@@ -27,12 +27,19 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr, ids, ikm
 
+QUERY = """
+CREATE TABLE IF NOT EXISTS call (
+    chat_id BIGINT  PRIMARY KEY,
+    joined  BOOLEAN DEFAULT FALSE,
+    join_as BIGINT
+);
+"""
+
 pattern = re.compile(
     r"^"
     r"(?P<action>(?:start|end|join|leave))call"
-    r"(?:\s+chat@(?P<chat>@?[a-zA-Z][a-zA-Z0-9_]{5,32}|-100\d{10}))?"
-    r"(?:\s+as@(?P<as>@?[a-z][a-zA-Z0-9_]{5,32}|-100\d{10}))?"
-    r"(?:\s+(?P<mute>-mute))?"
+    r"(?:\s+(?P<chat>@?[a-zA-Z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
+    r"(?:\s+as@(?P<as>@?[a-z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
     r"(?:\s+-t\s(?P<title>.+))?"
     r"$"
 )
@@ -40,12 +47,12 @@ pattern = re.compile(
 
 class Call(Module):
     name = "Call"
-    cmds = "{action(call)} *{(chat@) chat} *{(as@) as} *(-mute) *{(-t) title}"
+    cmds = "{action(call)} *{chat} *{(as@)peer} *{(-t) title}"
     desc = {
         "action": "[join, leave, start, end]",
         "*": "Optional",
         "chat": "[username, chat_id]",
-        "as": "[username, chat_id]",
+        "peer": "[username, chat_id]",
         "title": "String",
     }
 
@@ -60,7 +67,7 @@ class Call(Module):
         self.client.tgc = PyTgCalls(self.client.app, 1, 900)
         await self.client.tgc.start()
 
-        for group in self.client.app.dispatcher.groups.keys():
+        for group in list(self.client.app.dispatcher.groups.keys()):
             if group == -1:
                 continue
 
@@ -69,10 +76,35 @@ class Call(Module):
 
             self.client.app.dispatcher.groups.pop(group, None)
 
+        await self.client.db.execute(QUERY)
+        rows = await self.client.db.fetch(
+            "SELECT chat_id, join_as FROM call WHERE joined = TRUE"
+        )
+        for row in rows:
+            args = {"chat_id": row["chat_id"]}
+            if row.get("join_as"):
+                try:
+                    peer = await self.client.app.resolve_peer(row["join_as"])
+                except RPCError:
+                    pass
+                else:
+                    args["config"] = GroupCallConfig(join_as=peer)
+
+            try:
+                await self.client.tgc.play(**args)
+            except Exception:
+                await self.client.db.execute(
+                    "UPDATE call SET joined = FALSE WHERE chat_id = $1;", row["chat_id"]
+                )
+
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         data = pattern.match(event.content).groupdict()
-        data["chat_id"] = data["chat"] or event.chat.id
+        data["chat_id"] = event.chat.id
+        if data["chat"]:
+            chat = await self.client.app.get_chat(data["chat"], False)
+            data["chat_id"] = chat.id
+
         async with self.lock:
             await self.data.put(data)
 
@@ -137,7 +169,6 @@ class Call(Module):
                     text["data"]["Peer"] = data["as"]
                     args["config"] = GroupCallConfig(join_as=peer)
 
-            text["data"]["Mute"] = True if data["mute"] else False
             coro = self.client.tgc.play
 
         elif data["action"] == "leave":
@@ -165,8 +196,19 @@ class Call(Module):
                 reply_markup=ikm(("Close", b"0")),
             )
         else:
-            if data["action"] == "join" and data["mute"]:
-                self.client.loop.create_task(self.client.tgc.mute(data["chat_id"]))
+            if data["action"] in ["join", "leave"]:
+                await self.client.db.execute(
+                    """
+                    INSERT INTO call (chat_id, joined, join_as)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (chat_id) DO UPDATE SET
+                        joined = EXCLUDED.joined,
+                        join_as = EXCLUDED.join_as;
+                    """,
+                    data["chat_id"],
+                    True if data["action"] == "join" else False,
+                    data["as"],
+                )
 
             await event.edit_message_text(
                 fmtstr(**text, foot=fmtsec(now)), reply_markup=ikm(("Close", b"0"))
