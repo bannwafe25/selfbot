@@ -32,12 +32,10 @@ class Dispatcher(abc.ABC):
             except (FloodWait, SlowmodeWait) as e:
                 if e.value <= 30:
                     await asyncio.sleep(e.value)
-                    try:
+                    with contextlib.suppress(Exception):
                         await listener.func(*args, **kwargs)
-                    except Exception as e:
-                        self.logger.warning(f"Retry Failed: {e}")
                 else:
-                    raise
+                    continue
 
             except Exception as e:
                 tb = e.__traceback__
@@ -46,15 +44,17 @@ class Dispatcher(abc.ABC):
 
                 fn = tb.tb_frame.f_code.co_filename if tb else "N/A"
                 ln = tb.tb_lineno if tb else "N/A"
+
                 with contextlib.suppress(Exception):
-                    self.logger.error(f"{e.__class__.__name__}: {e} at {fn}:{ln}")
                     await self.bot.send_message(
                         self.app.me.id,
                         (
-                            f"<code>{fn}</code>\n<b>Line</b> <code>{ln}</code>"
+                            f"<b>Line {ln}</b>\n<code>{fn}</code>"
                             f"\n\n<b>{e.__class__.__name__}</b>\n<code>{e}</code>"
                         ),
                     )
+
+                self.logger.error(f"{e.__class__.__name__}: {e} at {fn}:{ln}")
 
     def registers(self, mod: "Module") -> None:
         for event, func in self._funcs(mod, "on_"):
