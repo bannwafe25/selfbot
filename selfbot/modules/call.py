@@ -63,7 +63,7 @@ class Call(Module):
         self.data = asyncio.Queue()
         self.lock = asyncio.Lock()
 
-        self.client.tgc = PyTgCalls(self.client.app, 1, 900)
+        self.client.tgc = PyTgCalls(self.client.app, 1, 1)
         await self.client.tgc.start()
 
         for group in list(self.client.app.dispatcher.groups.keys()):
