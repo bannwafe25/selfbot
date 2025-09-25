@@ -75,7 +75,7 @@ class Afk(Module):
             event.delete(True),
         )
 
-    @listener.handler(filters.all, 2)
+    @listener.handler(~filters.private, 2)
     async def on_message_in(self, event: Message) -> None:
         if not self.afk:
             return
@@ -173,7 +173,7 @@ class Afk(Module):
         since = await self.client.db.fetchval("SELECT since FROM afk;")
         if since:
             return await event.answer(
-                since.strftime("%B %-d, %-H:%M %p (UTC+7)"),
+                since.strftime("%B %-d, %-I:%M %p (UTC+7)"),
                 show_alert=True,
                 cache_time=45,
             )
