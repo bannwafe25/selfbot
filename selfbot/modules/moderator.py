@@ -111,10 +111,7 @@ class Moderator(Module):
             data = await self.data.get()
 
         func = None
-        args = {
-            "chat_id": ids(event.inline_message_id)[0],
-            "user_id": int(data["target"]),
-        }
+        args = {"chat_id": ids(event.inline_message_id)[0], "user_id": data["target"]}
         if data["action"] in ["ban", "kick"]:
             func = self.client.app.ban_chat_member
         elif data["action"] in ["mute", "unmute"]:
