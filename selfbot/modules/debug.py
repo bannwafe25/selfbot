@@ -126,7 +126,10 @@ class Debug(Module):
         if not msg:
             if len(event.query) <= 1:
                 return await cmd.delete()
+                
+            btn, msg = True, cmd
 
+        elif len(event.query) > 1:
             btn, msg = True, cmd
 
         await self.execute(msg, event, btn)
