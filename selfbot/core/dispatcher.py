@@ -5,6 +5,7 @@ import contextlib
 from typing import Any
 
 from pyrogram.errors import FloodWait, MessageNotModified, QueryIdInvalid, SlowmodeWait
+from pyrogram.types import Update
 
 from selfbot.listener import Listener
 from selfbot.module import Module
@@ -19,9 +20,8 @@ class Dispatcher(abc.ABC):
     async def dispatch(self, event: str, *args: Any, **kwargs: Any) -> None:
         for listener in self.listeners.get(event, []):
             try:
-                if listener.filters:
-                    first_arg = args[0] if args else None
-                    if not await listener.filters(first_arg._client, first_arg):
+                if listener.filters and args and isinstance(args[0], Update):
+                    if not await listener.filters(args[0]._client, args[0]):
                         continue
 
                 await listener.func(*args, **kwargs)
