@@ -57,7 +57,7 @@ class Moderator(Module):
                 data["target"] = event.entities[0].user.id
             else:
                 try:
-                    chat = await event._client.get_chat(user, False)
+                    chat = await event._client.get_chat(data["target"], False)
                 except RPCError as e:
                     return await event.edit(f"<code>{e.__class__.__name__}</code>")
                 else:
