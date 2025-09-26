@@ -29,14 +29,11 @@ pattern = re.compile(
 
 class Schedule(Module):
     name = "Schedule"
-    cmds = "{action} {n}{unit}*{(*)repeat} {text}"
+    cmds = "sch(me)? [1-99][mhdw](*[1-99])? {content}"
     desc = {
-        "action": "[sch, schme]",
-        "n": "[1-99]",
-        "unit": "{m: minute, h: hour, d: day, w: week}",
-        "*": "Optional",
-        "repeat": "[1-99]",
-        "text": "String",
+        "period": "{m: minute, h: hour, d: day, w: week}",
+        "content": "String",
+        "e.g.": "schme 3m*5 Hello, World!",
     }
 
     async def on_starting(self) -> None:

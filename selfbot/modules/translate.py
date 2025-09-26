@@ -23,11 +23,11 @@ pattern = re.compile(
 
 class Translate(Module):
     name = "Translate"
-    cmds = "(tr) *{(-to) lang} {content}"
+    cmds = "tr (-to {language})? {content}"
     desc = {
-        "*": "Optional",
-        "lang": "Language Code",
-        "content": "[string, reply_content, quote_content]",
+        "language": "ISO 639-1 (Default: id)",
+        "content": "String or Reply to Content",
+        "e.g.": "tr -to ja Hello, World!",
     }
 
     async def on_starting(self) -> None:

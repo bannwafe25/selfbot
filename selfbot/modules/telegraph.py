@@ -28,8 +28,13 @@ mention = re.compile(r"(?<!\S)@([a-zA-Z0-9_]{5,32})(?!\S)")
 
 class Telegraph(Module):
     name = "Telegraph"
-    cmds = "(graph) *{(-t) title} {content}"
-    desc = {"*": "Optional", "title": "String", "content": "[string, reply_content]"}
+    cmds = "graph (-t {title})? {content}"
+    desc = {
+        "title": "String",
+        "content": "String or Reply to Content",
+        "?": "Optional",
+        "e.g.": "graph -t Untitled Hello, World!",
+    }
 
     async def on_starting(self) -> None:
         self.data = asyncio.Queue()

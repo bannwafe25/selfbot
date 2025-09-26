@@ -47,13 +47,14 @@ pattern = re.compile(
 
 class Call(Module):
     name = "Call"
-    cmds = "{action(call)} *{chat} *{(as@)peer} *{(-t) title}"
+    cmds = "{action}call {chat}? (as@{peer})? (-t {title})?"
     desc = {
-        "action": "[join, leave, start, end]",
-        "*": "Optional",
-        "chat": "[username, chat_id]",
-        "peer": "[username, chat_id]",
+        "action": "join|leave|start|end",
+        "chat": "chat_id|username",
+        "peer": "chat_id|username",
         "title": "String",
+        "?": "Optional",
+        "e.g.": "startcall @durov -t Untitled",
     }
 
     async def on_starting(self) -> None:

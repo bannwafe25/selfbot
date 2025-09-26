@@ -32,14 +32,14 @@ pattern = re.compile(
 
 class Moderator(Module):
     name = "Moderator"
-    cmds = "{action} {target} *{{n}{unit}} *{(-r) reason}"
+    cmds = "{action} {target} ([1-99][mhdw])? (-r {reason})?"
     desc = {
-        "action": "[ban, kick, mute, unban, unmute]",
-        "target": "[user_id, username, reply_user]",
-        "*": "Optional",
-        "n": "[1-99]",
-        "unit": "{m: minute, h: hour, d: day, w: week}",
+        "action": "ban|kick|mute|unban|unmute",
+        "target": "user_id|username|reply_user",
+        "period": "{m: minute, h: hour, d: day, w: week}",
         "reason": "String",
+        "?": "Optional",
+        "e.g.": "ban 12345 3d -r Undefined",
     }
 
     async def on_starting(self) -> None:

@@ -31,8 +31,13 @@ pattern = re.compile(
 
 class Sticker(Module):
     name = "Sticker"
-    cmds = "{mode(sticker)} {name} {emoji}"
-    desc = {"mode": "[add, get, set]", "name": "String", "emoji": "String"}
+    cmds = "{action}sticker {name}? (emoji)?"
+    desc = {
+        "action": "add|get|set",
+        "name": "Sticker short_name",
+        "?": "Optional",
+        "e.g.": "addsticker unnamed",
+    }
 
     async def on_starting(self) -> None:
         self.data = asyncio.Queue()

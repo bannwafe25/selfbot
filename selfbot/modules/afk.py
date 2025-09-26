@@ -35,8 +35,8 @@ pattern = re.compile(r"^(?:#)?(un)?afk(?:/since)?(?:\s(.+))?$")
 
 class Afk(Module):
     name = "AFK"
-    cmds = "{action} *{reason}"
-    desc = {"action": "[afk, unafk]", "*": "Optional", "reason": "String"}
+    cmds = "(un)?afk {reason}?"
+    desc = {"reason": "String", "?": "Optional", "e.g.": "afk Undefined"}
 
     async def on_starting(self) -> None:
         self.data = asyncio.Queue()

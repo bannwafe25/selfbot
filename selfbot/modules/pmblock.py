@@ -41,13 +41,12 @@ pattern = re.compile(
 
 
 class PmBlock(Module):
-    name = "PMBL"
-    cmds = "(pmbl) *{set content} | (auth) *{user}"
+    name = "PMBlock"
+    cmds = "pmbl ((msg|url) {content})? | auth {user}?"
     desc = {
-        "*": "Optional",
-        "set": "[msg, url]",
         "content": "String",
-        "user": "[user_id, username, reply_user]",
+        "user": "user_id|username|reply_user",
+        "e.g.": "pmbl msg Sorry, No PMs!",
     }
 
     async def on_starting(self) -> None:
