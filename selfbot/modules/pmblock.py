@@ -46,6 +46,7 @@ class PmBlock(Module):
     desc = {
         "content": "String",
         "user": "user_id|username|reply_user",
+        "?": "Optional",
         "e.g.": "pmbl msg Sorry, No PMs!",
     }
 

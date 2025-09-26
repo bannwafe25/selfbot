@@ -33,6 +33,7 @@ class Schedule(Module):
     desc = {
         "period": "{m: minute, h: hour, d: day, w: week}",
         "content": "String",
+        "?": "Optional",
         "e.g.": "schme 3m*5 Hello, World!",
     }
 

@@ -27,6 +27,7 @@ class Translate(Module):
     desc = {
         "language": "ISO 639-1 (Default: id)",
         "content": "String or Reply to Content",
+        "?": "Optional",
         "e.g.": "tr -to ja Hello, World!",
     }
 
