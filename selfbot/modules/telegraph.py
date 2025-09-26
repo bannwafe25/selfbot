@@ -28,12 +28,12 @@ mention = re.compile(r"(?<!\S)@([a-zA-Z0-9_]{5,32})(?!\S)")
 
 class Telegraph(Module):
     name = "Telegraph"
-    cmds = "graph (-t {title})? {content}"
+    cmds = "graph {content} (-t {title})?"
     desc = {
-        "title": "String",
         "content": "String or Reply to Content",
+        "title": "String",
         "?": "Optional",
-        "e.g.": "graph -t Untitled Hello, World!",
+        "e.g.": "graph Hello, World! -t Untitled",
     }
 
     async def on_starting(self) -> None:
