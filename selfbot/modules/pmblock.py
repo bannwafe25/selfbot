@@ -115,7 +115,7 @@ class PmBlock(Module):
             event.delete(True),
         )
 
-    @listener.handler(filters.private, 2)
+    @listener.handler(filters.private & ~filters.user(777000), 2)
     async def on_message_in(self, event: Message) -> None:
         auth = await self.client.db.fetchval(
             """
