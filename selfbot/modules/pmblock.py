@@ -117,6 +117,9 @@ class PmBlock(Module):
 
     @listener.handler(filters.private & ~filters.user(777000), 2)
     async def on_message_in(self, event: Message) -> None:
+        if not self.pmbl:
+            return
+
         auth = await self.client.db.fetchval(
             """
             SELECT auth FROM pmblock_auths
@@ -124,7 +127,7 @@ class PmBlock(Module):
             """,
             event.from_user.id,
         )
-        if auth or not self.pmbl:
+        if auth:
             return
 
         res = await event._client.get_inline_bot_results(
