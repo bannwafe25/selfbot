@@ -16,12 +16,13 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import ikm
 
-pattern = re.compile(r"^help/?(mod|info|page)?/?(\d{1}|[a-z]+)?$")
+pattern = re.compile(r"^help/?(mod|info|page)?/?(\d{1}|[a-zA-Z]+)?$")
 
 
 class Help(Module):
     name = "Help"
-    hide = True
+    cmds = "help(/{name})?"
+    desc = {"name": "String as Module Name", "?": "Optional", "e.g.": "help/debug"}
 
     async def on_starting(self) -> None:
         self.mod = {}
@@ -77,6 +78,32 @@ class Help(Module):
 
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
+        if len(event.query.split("/")) == 2:
+            name = event.query.split("/")[1].strip().lower()
+            if name in self.mod:
+                await event.edit_message_text(
+                    self.mod[name],
+                    reply_markup=ikm(
+                        [("« Back", f"help/page/{self.map[name]}"), ("Close", "0")]
+                    ),
+                )
+            else:
+                names = [
+                    f"  {n}. <code>{i}</code>"
+                    for n, i in enumerate(list(self.client.modules.keys()), 1)
+                ]
+                await event.edit_message_text(
+                    (
+                        f"<code>No Module with Name '{name}'</code>\n\n"
+                        f"<b>Available Modules:</b>\n{'\n'.join(names)}\n\n"
+                        "Get with Prefix '<code>help/</code>'\n"
+                        "<b>e.g.</b> <code>help/debug</code>"
+                    ),
+                    reply_markup=ikm(("Close", "0")),
+                )
+
+            return
+
         await event.edit_message_text(
             "<b>Selfbot Modules</b>", reply_markup=ikm(self.build())
         )
