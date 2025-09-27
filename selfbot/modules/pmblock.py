@@ -124,7 +124,7 @@ class PmBlock(Module):
             """,
             event.from_user.id,
         )
-        if auth:
+        if auth or not self.pmbl:
             return
 
         res = await event._client.get_inline_bot_results(
