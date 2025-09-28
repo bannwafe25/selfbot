@@ -1,30 +1,28 @@
-FROM python:3.13-alpine AS builder
+FROM python:3.13-slim AS base
 
-RUN apk add --no-cache gcc musl-dev libffi-dev curl git
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    POETRY_NO_INTERACTION=true \
+    POETRY_VIRTUALENVS_CREATE=true \
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
 
-ENV POETRY_HOME="/opt/poetry"
-RUN curl -sSL https://install.python-poetry.org | python3 - \
-    ; ln -s $POETRY_HOME/bin/poetry /usr/local/bin/poetry
-
-RUN poetry config virtualenvs.create false
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+      build-essential libffi-dev curl git \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry install --no-interaction --no-ansi --only main
-
-
-FROM python:3.13-alpine
-
-RUN apk add --no-cache libffi git
-
-WORKDIR /app
-
-COPY --from=builder /usr/local/lib/python3.13/site-packages \
-    /usr/local/lib/python3.13/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+RUN python -m pip install --upgrade pip setuptools wheel \
+ && python -m pip install "poetry>=1.8.0" \
+ && poetry install --no-root --only main -E pytgcalls
 
 COPY . .
 
-CMD ["poetry", "run", "selfbot"]
+ENV VENV_PATH=/app/.venv \
+    PATH="/app/.venv/bin:$PATH"
+
+CMD ["python", "-m", "selfbot"]

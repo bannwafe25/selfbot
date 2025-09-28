@@ -1,0 +1,13 @@
+services:
+  selfbot:
+    build: .
+    env_file:
+      - .env
+    container_name: selfbot
+    restart: unless-stopped
+    working_dir: /srv/selfbot
+    volumes:
+      - .:/srv/selfbot
+    environment:
+      - TZ=Asia/Jakarta
+    command: ["python", "-m", "selfbot"]
