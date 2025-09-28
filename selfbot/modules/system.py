@@ -77,9 +77,7 @@ class System(Module):
                 InlineQueryResultCachedSticker(
                     sticker_file_id=self.client.config["sticker_file_id"],
                     reply_markup=ikm((">_", "user_id", event._client.me.id)),
-                    input_message_content=InputTextMessageContent(
-                        "<code>Update and Restart...</code>"
-                    ),
+                    input_message_content=InputTextMessageContent("<code>...</code>"),
                 )
             ],
             cache_time=900,
