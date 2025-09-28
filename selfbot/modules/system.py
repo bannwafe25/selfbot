@@ -18,13 +18,18 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr, ikm, shell
 
-pattern = re.compile(r"^r$")
+pattern = re.compile(r"^r(?:\s-f)?$")
 
 
 class System(Module):
     name = "System"
-    cmds = "r"
-    desc = "Restart Selfbot"
+    cmds = "r (-f)?"
+    desc = {
+        "r": "Restart Selfbot",
+        "-f": "Fetch Upstream",
+        "?": "Optional",
+        "e.g.": "r -f",
+    }
 
     async def on_starting(self) -> None:
         data = await asyncio.to_thread(self._get, "r.txt")
@@ -87,20 +92,22 @@ class System(Module):
 
         setattr(self.client, "restart", True)
 
-        if os.path.isdir(".git"):
-            await shell("rm -fr .git")
+        if event.query.endswith("-f"):
+            if os.path.isdir(".git"):
+                await shell("rm -fr .git")
 
-        await asyncio.gather(
-            event.edit_message_text("<code>Fetch Upstream...</code>"),
-            shell(
-                f"git init; git remote add origin {self.remote}; git fetch"
-                f"; git reset --hard origin/{self.branch}"
-            ),
-        )
-        await asyncio.gather(
-            event.edit_message_text("<code>Update Dependencies...</code>"),
-            shell("pip install -U pip; pip install -r requirements.txt"),
-        )
+            await asyncio.gather(
+                event.edit_message_text("<code>Fetch Upstream...</code>"),
+                shell(
+                    f"git init; git remote add origin {self.remote}; git fetch"
+                    f"; git reset --hard origin/{self.branch}"
+                ),
+            )
+            await asyncio.gather(
+                event.edit_message_text("<code>Update Dependencies...</code>"),
+                shell("pip install -U pip; pip install -r requirements.txt"),
+            )
+
         await asyncio.gather(
             event.edit_message_text("<code>Restart System...</code>"),
             asyncio.to_thread(
