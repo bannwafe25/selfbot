@@ -31,9 +31,9 @@ class System(Module):
         "e.g.": "r -f",
     }
 
-    async def on_starting(self) -> None:
-        self.file = "r.txt"
+    file = "r.txt"
 
+    async def on_starting(self) -> None:
         data = await asyncio.to_thread(self.getid)
         if data:
             await self.client.bot.edit_inline_text(
