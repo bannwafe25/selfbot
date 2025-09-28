@@ -32,7 +32,9 @@ class System(Module):
     }
 
     async def on_starting(self) -> None:
-        data = await asyncio.to_thread(self._get, "r.txt")
+        self.file = "r.txt"
+
+        data = await asyncio.to_thread(self.getid)
         if data:
             await self.client.bot.edit_inline_text(
                 data[0],
@@ -85,7 +87,7 @@ class System(Module):
 
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
-        if getattr(self.client, "restart", None):
+        if getattr(self.client, "restart", False) or os.path.exists(self.file):
             return await event.edit_message_text(
                 "<code>Restart is Called</code>", reply_markup=ikm(("Close", b"0"))
             )
@@ -111,8 +113,7 @@ class System(Module):
         await asyncio.gather(
             event.edit_message_text("<code>Restart System...</code>"),
             asyncio.to_thread(
-                self._put,
-                "r.txt",
+                self.putid,
                 f"{event.inline_message_id}\n{datetime.datetime.now().timestamp()}",
             ),
         )
@@ -122,19 +123,17 @@ class System(Module):
         finally:
             os.execv(sys.executable, (sys.executable, "-m", "selfbot"))
 
-    @staticmethod
-    def _get(file: str) -> tuple | None:
-        if os.path.exists(file):
-            with open(file) as f:
+    def getid(self) -> tuple | None:
+        if os.path.exists(self.file):
+            with open(self.file) as f:
                 try:
                     data = f.readlines()
                     return data[0], float(data[1])
                 finally:
-                    os.remove(file)
+                    os.remove(self.file)
 
         return None
 
-    @staticmethod
-    def _put(file: str, text: str) -> None:
-        with open(file, "w") as f:
+    def putid(self, text: str) -> None:
+        with open(self.file, "w") as f:
             f.write(text)
