@@ -29,6 +29,7 @@ pattern = re.compile(
 
 class Schedule(Module):
     name = "Schedule"
+
     cmds = "sch(me)? [1-99][mhdw](*[1-99])? {content}"
     desc = {
         "period": "{m: minute, h: hour, d: day, w: week}",

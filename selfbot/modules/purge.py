@@ -22,6 +22,7 @@ pattern = re.compile(r"^purge(me)?(\s(\d{1,3}))?$")
 
 class Purge(Module):
     name = "Purge"
+
     cmds = "purge(me)? [1-999]?"
     desc = {"?": "Optional", "e.g.": "purgeme 99"}
 

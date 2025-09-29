@@ -70,7 +70,7 @@ class Telegram(abc.ABC):
             asyncio.to_thread(self.loads),
             asyncio.to_thread(self.conf),
         )
-        self.loop.create_task(self.dispatch("starting"))
+        asyncio.create_task(self.dispatch("starting"))
 
     async def idle(self) -> None:
         if self.__event__ and not self.__event__.is_set():
@@ -83,7 +83,7 @@ class Telegram(abc.ABC):
                 self.__event__.set()
 
         for signame in signames:
-            self.loop.add_signal_handler(
+            asyncio.get_running_loop().add_signal_handler(
                 signame, functools.partial(sighandler, signame)
             )
 
@@ -93,7 +93,7 @@ class Telegram(abc.ABC):
         finally:
             for signame in signames:
                 with contextlib.suppress(Exception):
-                    self.loop.remove_signal_handler(signame)
+                    asyncio.get_running_loop().remove_signal_handler(signame)
 
     def updates(self) -> None:
         fltapp = flt.user(self.app.me.id)
@@ -122,7 +122,7 @@ class Telegram(abc.ABC):
             if name in self.listeners and self.listeners[name]:
 
                 async def callback(_: Client, event: Update, bound=name) -> None:
-                    await self.dispatch(bound, event)
+                    asyncio.create_task(self.dispatch(bound, event))
 
                 dispatcher = (handler(callback, filters), group)
                 try:

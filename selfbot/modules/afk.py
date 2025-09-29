@@ -34,24 +34,27 @@ pattern = re.compile(r"^(?:#)?(un)?afk(?:/since)?(?:\s(.+))?$")
 
 class Afk(Module):
     name = "AFK"
+
     cmds = "(un)?afk {reason}?"
     desc = {"reason": "String", "?": "Optional", "e.g.": "afk Undefined"}
+
+    _afk: bool
 
     async def on_starting(self) -> None:
         self.data = asyncio.Queue()
         self.lock = asyncio.Lock()
 
         await self.client.db.execute(QUERY)
-        self.afk = await self.client.db.fetchval("SELECT status FROM afk;")
+        self._afk = await self.client.db.fetchval("SELECT status FROM afk;")
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         data = pattern.match(event.content).groups()
         if data[0]:
-            if not self.afk:
+            if not self._afk:
                 return await event.edit("<code>Already Online!</code>")
         else:
-            if self.afk:
+            if self._afk:
                 return await event.edit("<code>Already AFK!</code>")
 
         async with self.lock:
@@ -71,7 +74,7 @@ class Afk(Module):
 
     @listener.handler(~filters.private, 2)
     async def on_message_in(self, event: Message) -> None:
-        if not self.afk:
+        if not self._afk:
             return
 
         async with self.lock:
@@ -152,7 +155,7 @@ class Afk(Module):
                 data[1],
                 now,
             )
-            self.afk = True
+            self._afk = True
         else:
             rows = await self.client.db.fetch("SELECT chat_id, msg_id FROM afk_ids;")
             for row in rows:
@@ -162,7 +165,7 @@ class Afk(Module):
                     continue
 
             await self.client.db.execute("DELETE FROM afk_ids; DELETE FROM afk;")
-            self.afk = False
+            self._afk = False
 
         await event.edit_message_text(
             fmtstr(

@@ -13,16 +13,6 @@ from pyrogram.types import (
     ReplyParameters,
 )
 
-load = True
-try:
-    from pytgcalls import PyTgCalls
-    from pytgcalls.pytgcalls_session import PyTgCallsSession
-    from pytgcalls.types import GroupCallConfig
-except Exception:
-    load = False
-else:
-    PyTgCallsSession.notice_displayed = True
-
 from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr, ids, ikm
@@ -47,6 +37,7 @@ pattern = re.compile(
 
 class Call(Module):
     name = "Call"
+
     cmds = "{action}call {chat}? (as@{peer})? (-t {title})?"
     desc = {
         "action": "join|leave|start|end",
@@ -57,8 +48,19 @@ class Call(Module):
         "e.g.": "startcall @durov -t Untitled",
     }
 
+    load: bool
+    try:
+        from pytgcalls import PyTgCalls
+        from pytgcalls.pytgcalls_session import PyTgCallsSession
+        from pytgcalls.types import GroupCallConfig
+    except Exception:
+        load = False
+    else:
+        load = True
+        PyTgCallsSession.notice_displayed = True
+
     async def on_starting(self) -> None:
-        if not load:
+        if not self.load:
             return self.client.unload(self)
 
         self.data = asyncio.Queue()

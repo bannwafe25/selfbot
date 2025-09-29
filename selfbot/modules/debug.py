@@ -29,36 +29,41 @@ pattern = re.compile(r"^.*#$", flags=re.DOTALL)
 
 class Debug(Module):
     name = "Debug"
+
     cmds = "{code}#"
     desc = {"code": "String as Python Code", "e.g.": 'print("Hello, World!")#'}
 
+    args = {
+        "asyncio": asyncio,
+        "dt": datetime,
+        "inspect": inspect,
+        "io": io,
+        "re": re,
+        "pyrogram": pyrogram,
+        "filters": filters,
+        "enums": pyrogram.enums,
+        "raw": pyrogram.raw,
+        "types": pyrogram.types,
+        "utils": pyrogram.utils,
+        "selfbot": selfbot,
+        "aexec": aexec,
+        "fmtexc": fmtexc,
+        "fmtsec": fmtsec,
+        "ids": ids,
+        "ikm": ikm,
+        "shell": shell,
+    }
+
     async def on_starting(self) -> None:
-        self.args = {
-            "asyncio": asyncio,
-            "dt": datetime,
-            "inspect": inspect,
-            "io": io,
-            "re": re,
-            "pyrogram": pyrogram,
-            "filters": filters,
-            "enums": pyrogram.enums,
-            "raw": pyrogram.raw,
-            "types": pyrogram.types,
-            "utils": pyrogram.utils,
-            "selfbot": selfbot,
-            "aexec": aexec,
-            "fmtexc": fmtexc,
-            "fmtsec": fmtsec,
-            "ids": ids,
-            "ikm": ikm,
-            "shell": shell,
-            "cls": self,
-            "self": self.client,
-            "db": self.client.db,
-            "app": self.client.app,
-            "bot": self.client.bot,
-            "loop": self.client.loop,
-        }
+        self.args.update(
+            {
+                "cls": self,
+                "self": self.client,
+                "db": self.client.db,
+                "app": self.client.app,
+                "bot": self.client.bot,
+            }
+        )
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -156,7 +161,7 @@ class Debug(Module):
 
             if msg:
                 if msg.outgoing or (msg.from_user and msg.from_user.is_self):
-                    self.client.loop.create_task(msg.delete(True))
+                    asyncio.create_task(msg.delete(True))
 
             return await cmd.delete(True)
 
@@ -199,7 +204,7 @@ class Debug(Module):
 
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            fut = self.client.loop.create_task(
+            fut = asyncio.create_task(
                 aexec(code, self.args), name=event.inline_message_id
             )
             now = datetime.datetime.now()

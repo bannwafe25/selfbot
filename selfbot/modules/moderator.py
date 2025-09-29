@@ -32,6 +32,7 @@ pattern = re.compile(
 
 class Moderator(Module):
     name = "Moderator"
+
     cmds = "{action} {target} ([1-99][mhdw])? (-r {reason})?"
     desc = {
         "action": "ban|kick|mute|unban|unmute",

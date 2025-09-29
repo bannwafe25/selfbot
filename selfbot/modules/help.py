@@ -12,7 +12,7 @@ from pyrogram.types import (
     ReplyParameters,
 )
 
-from selfbot import listener
+from selfbot import __version__, listener
 from selfbot.module import Module
 from selfbot.utils import ikm
 
@@ -21,31 +21,32 @@ pattern = re.compile(r"^help/?(mod|info|page)?/?(\d{1}|[a-zA-Z]+)?$")
 
 class Help(Module):
     name = "Help"
+
     cmds = "help(/{name})?"
     desc = {"name": "String as Module Name", "?": "Optional", "e.g.": "help/debug"}
 
-    async def on_starting(self) -> None:
-        self.mod = {}
-        self.map = {}
-        self.ikb = []
+    mods: dict[str, int]
+    maps: dict[str, str]
+    ikbs: list[list]
 
+    async def on_starting(self) -> None:
         mods = [mod for mod in self.client.modules.values() if not mod.hide]
         page = []
         for i, mod in enumerate(mods):
             name = mod.name.lower()
-            self.map[name] = len(self.ikb)
-            self.mod[name] = (
+            self.maps[name] = len(self.ikbs)
+            self.mods[name] = (
                 f"<b>{mod.name}</b>"
                 f"\n\n{' ' * 2}<b>Pattern</b>\n{' ' * 4}<code>{mod.cmds}</code>"
                 f"\n\n{self._fmthelp(mod.desc)}"
             )
             page.append((mod.name, f"help/mod/{name}"))
             if len(page) == 4:
-                self.ikb.append([page[i : i + 2] for i in range(0, 4, 2)])
+                self.ikbs.append([page[i : i + 2] for i in range(0, 4, 2)])
                 page = []
 
         if page:
-            self.ikb.append([page[i : i + 2] for i in range(0, len(page), 2)])
+            self.ikbs.append([page[i : i + 2] for i in range(0, len(page), 2)])
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -80,11 +81,11 @@ class Help(Module):
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         if len(event.query.split("/")) == 2:
             name = event.query.split("/")[1].strip().lower()
-            if name in self.mod:
+            if name in self.mods:
                 await event.edit_message_text(
-                    self.mod[name],
+                    self.mods[name],
                     reply_markup=ikm(
-                        [("« Back", f"help/page/{self.map[name]}"), ("Close", "0")]
+                        [("« Back", f"help/page/{self.maps[name]}"), ("Close", "0")]
                     ),
                 )
             else:
@@ -114,11 +115,11 @@ class Help(Module):
         if act == "info":
             return await event.answer(
                 (
-                    f"Selfbot Version {self.client.version}\n"
+                    f"Selfbot Version {__version__}\n"
                     f"\n    {len(self.client.handlers)} Handlers"
                     f"\n    {len(self.client.listeners)} Listeners"
                     f"\n    {len(self.client.modules)} Modules"
-                    f"\n\n{len(self.ikb)} Pages"
+                    f"\n\n{len(self.ikbs)} Pages"
                 ),
                 show_alert=True,
                 cache_time=900,
@@ -126,9 +127,9 @@ class Help(Module):
 
         await event.answer(cache_time=0)
         if act == "mod":
-            page = self.map.get(val, 0)
+            page = self.maps.get(val, 0)
             return await event.edit_message_text(
-                self.mod[val],
+                self.mods[val],
                 reply_markup=ikm([("« Back", f"help/page/{page}"), ("Close", b"0")]),
             )
 
@@ -137,8 +138,8 @@ class Help(Module):
         )
 
     def build(self, page: int = 0) -> list:
-        idx = max(0, min(page, len(self.ikb) - 1))
-        ikb = self.ikb[idx][:]
+        idx = max(0, min(page, len(self.ikbs) - 1))
+        ikb = self.ikbs[idx][:]
         ikb.append([("Selfbot Info", "help/info")])
 
         nav = []
@@ -146,7 +147,7 @@ class Help(Module):
             nav.append((f"« ({idx})", f"help/page/{idx - 1}"))
 
         nav.append(("Close", b"0"))
-        if idx < len(self.ikb) - 1:
+        if idx < len(self.ikbs) - 1:
             nav.append((f"({idx + 2}) »", f"help/page/{idx + 1}"))
 
         ikb.append(nav)

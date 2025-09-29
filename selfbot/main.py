@@ -33,8 +33,5 @@ def run() -> None:
     else:
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
     aiorun.logger.disabled = True
-    aiorun.run(Selfbot.launch(config(), loop=loop), loop=loop)
+    aiorun.run(Selfbot.launch(config()))

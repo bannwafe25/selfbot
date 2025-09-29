@@ -23,6 +23,7 @@ pattern = re.compile(
 
 class Translate(Module):
     name = "Translate"
+
     cmds = "tr (-to {language})? {content}"
     desc = {
         "language": "ISO 639-1 (Default: id)",

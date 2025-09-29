@@ -3,8 +3,6 @@ import logging
 
 from httpx import AsyncClient
 
-from selfbot import __version__
-
 from .database import Database
 from .dispatcher import Dispatcher
 from .extender import Extender
@@ -16,25 +14,19 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
         self.logger = logging.getLogger("Selfbot")
         self.config = config
 
-        self.loop: asyncio.AbstractEventLoop = None
         self.http: AsyncClient = None
-
-        self.version = __version__
 
         super().__init__()
 
     @classmethod
-    async def launch(
-        cls, config: dict, *, loop: asyncio.AbstractEventLoop = None
-    ) -> "Selfbot":
-        if loop:
-            asyncio.set_event_loop(loop)
+    async def launch(cls, config: dict) -> "Selfbot":
 
         selfbot = cls(config)
-        selfbot.loop, selfbot.http = loop, AsyncClient()
         try:
+            selfbot.http = AsyncClient()
             await selfbot.run()
         finally:
+            loop = asyncio.get_running_loop()
             if loop and not loop.is_closed():
                 loop.call_soon(loop.stop)
 

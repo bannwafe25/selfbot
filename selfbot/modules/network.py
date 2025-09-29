@@ -24,6 +24,7 @@ pattern = re.compile(r"^ping$")
 
 class Network(Module):
     name = "Network"
+
     cmds = "ping"
     desc = "Selfbot Latency"
 

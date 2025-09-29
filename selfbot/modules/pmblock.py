@@ -42,6 +42,7 @@ pattern = re.compile(
 
 class PmBlock(Module):
     name = "PMBlock"
+
     cmds = "pmbl ((msg|url) {content})? | auth {user}?"
     desc = {
         "content": "String",
@@ -49,6 +50,10 @@ class PmBlock(Module):
         "?": "Optional",
         "e.g.": "pmbl msg Sorry, No PMs!",
     }
+
+    pmbl: bool
+    text: str
+    link: str
 
     async def on_starting(self) -> None:
         self.data = asyncio.Queue()

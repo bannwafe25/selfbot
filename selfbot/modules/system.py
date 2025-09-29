@@ -14,7 +14,7 @@ from pyrogram.types import (
     ReplyParameters,
 )
 
-from selfbot import listener
+from selfbot import __version__, listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr, ikm, shell
 
@@ -23,6 +23,7 @@ pattern = re.compile(r"^r(?:\s-f)?$")
 
 class System(Module):
     name = "System"
+
     cmds = "r (-f)?"
     desc = {
         "r": "Restart Selfbot",
@@ -41,7 +42,7 @@ class System(Module):
                 fmtstr(
                     "Selfbot Restarted",
                     {
-                        "Version": self.client.version,
+                        "Version": __version__,
                         "Modules": len(self.client.modules),
                         "Handlers": len(self.client.handlers),
                         "Listeners": len(self.client.listeners),
