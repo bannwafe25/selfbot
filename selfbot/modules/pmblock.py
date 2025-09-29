@@ -217,8 +217,8 @@ class PmBlock(Module):
                 "SELECT user_id FROM pmblock_auths WHERE auth = $1;",
                 False if data["action"].startswith("un") else True,
             )
-            head = "PM Block - {data['action].title()}"
-            text = [f"{n}. {i['user_id']}" for n, i in enumerate(res, 1)]
+            head = f"PM Block - {data['action'].title()}"
+            text = [str(i["user_id"]) for i in res]
             if len(text) > 16:
                 link = (
                     await self.client.http.post(
