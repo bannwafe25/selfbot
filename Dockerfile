@@ -1,4 +1,4 @@
-FROM python:3.13-slim AS base
+FROM python:3.13-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -9,7 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     POETRY_CACHE_DIR=/tmp/poetry_cache
 
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-      build-essential libffi-dev curl git \
+      build-essential libffi-dev libpq-dev curl git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -22,7 +22,21 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 
 COPY . .
 
-ENV VENV_PATH=/app/.venv \
-    PATH="/app/.venv/bin:$PATH"
+FROM python:3.13-slim AS runner
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+      libffi8 libpq5 git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app /app
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 CMD ["python", "-m", "selfbot"]
