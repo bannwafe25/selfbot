@@ -5,7 +5,6 @@ import re
 from pyrogram import filters
 from pyrogram.errors import RPCError
 from pyrogram.types import (
-    CallbackQuery,
     ChosenInlineResult,
     InlineQuery,
     InlineQueryResultCachedSticker,
@@ -116,10 +115,22 @@ class Afk(Module):
     @listener.handler(filters.regex(pattern), 4)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         if event.query.startswith("#"):
-            reason = await self.client.db.fetchval("SELECT reason FROM afk;")
+            since, reason = await self.client.db.fetchval(
+                "SELECT (since, reason) FROM afk;"
+            )
             return await event.edit_message_text(
-                fmtstr("Away from Keyboard", {"Reason": reason or "N/A"}),
-                reply_markup=ikm(("Since", "afk/since")),
+                fmtstr(
+                    "Away from Keyboard",
+                    {
+                        "Since": (
+                            since.strftime("%B %-d, %-I:%M %p") if since else "N/A"
+                        ),
+                        "Timezone": "UTC+7\n",
+                        "Reason": reason or "N/A",
+                    },
+                    fmtsec(since) if since else "N/A",
+                ),
+                reply_markup=ikm(("Close", "0")),
             )
 
         if self.data.empty():
@@ -161,15 +172,3 @@ class Afk(Module):
             ),
             reply_markup=ikm(("Close", "0")),
         )
-
-    @listener.handler(filters.regex(pattern), 5)
-    async def on_inline_callback(self, event: CallbackQuery) -> None:
-        since = await self.client.db.fetchval("SELECT since FROM afk;")
-        if since:
-            return await event.answer(
-                since.strftime("%B %-d, %-I:%M %p (UTC+7)"),
-                show_alert=True,
-                cache_time=45,
-            )
-
-        await event.answer("Not AFK!", cache_time=900)

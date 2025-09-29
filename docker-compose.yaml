@@ -11,5 +11,5 @@ services:
     environment:
       - TZ=Asia/Jakarta
     command: ["python", "-m", "selfbot"]
-    cpus: 0.5            
+    cpus: 0.5
     mem_limit: 512m
