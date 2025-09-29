@@ -25,9 +25,9 @@ class Help(Module):
     cmds = "help(/{name})?"
     desc = {"name": "String as Module Name", "?": "Optional", "e.g.": "help/debug"}
 
-    mods: dict[str, int]
-    maps: dict[str, str]
-    ikbs: list[list]
+    mods: dict[str, int] = {}
+    maps: dict[str, str] = {}
+    ikbs: list[list] = []
 
     async def on_starting(self) -> None:
         mods = [mod for mod in self.client.modules.values() if not mod.hide]

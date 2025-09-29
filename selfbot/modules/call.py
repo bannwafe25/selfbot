@@ -13,6 +13,17 @@ from pyrogram.types import (
     ReplyParameters,
 )
 
+load: bool
+try:
+    from pytgcalls import PyTgCalls
+    from pytgcalls.pytgcalls_session import PyTgCallsSession
+    from pytgcalls.types import GroupCallConfig
+except Exception:
+    load = False
+else:
+    load = True
+    PyTgCallsSession.notice_displayed = True
+
 from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr, ids, ikm
@@ -47,17 +58,6 @@ class Call(Module):
         "?": "Optional",
         "e.g.": "startcall @durov -t Untitled",
     }
-
-    load: bool
-    try:
-        from pytgcalls import PyTgCalls
-        from pytgcalls.pytgcalls_session import PyTgCallsSession
-        from pytgcalls.types import GroupCallConfig
-    except Exception:
-        load = False
-    else:
-        load = True
-        PyTgCallsSession.notice_displayed = True
 
     async def on_starting(self) -> None:
         if not self.load:
