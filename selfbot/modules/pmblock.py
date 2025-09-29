@@ -48,7 +48,7 @@ class PmBlock(Module):
         "0": "Off",
         "1": "On",
         "content": "String",
-        "user": "User ID, Username, <Reply to User>",
+        "user": "User ID or Username or <Reply to User>",
         "?": "Optional",
         "e.g.": "pmbl msg Sorry, No PMs!",
     }

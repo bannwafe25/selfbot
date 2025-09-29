@@ -27,7 +27,7 @@ class Translate(Module):
     cmds = "tr (-to {language})? {content}"
     desc = {
         "language": "ISO 639-1 (Default: id)",
-        "content": "String or Reply to Content",
+        "content": "String or <Reply or Quote to Content>",
         "?": "Optional",
         "e.g.": "tr -to ja Hello, World!",
     }

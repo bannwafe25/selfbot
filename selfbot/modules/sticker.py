@@ -35,7 +35,7 @@ class Sticker(Module):
     cmds = "{action}sticker {name}? (emoji)?"
     desc = {
         "action": "add|get|set",
-        "name": "Sticker short_name",
+        "name": "Sticker Short Name",
         "?": "Optional",
         "e.g.": "addsticker unnamed",
     }

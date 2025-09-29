@@ -25,7 +25,7 @@ class Purge(Module):
 
     cmds = "<Reply to Message>? purge(me)? [1-999]?"
     desc = {
-        "Reply to Message": "as Min ID (Default: 1)",
+        "Reply to Message": "as Start ID (Default: 1)",
         "?": "Optional",
         "e.g.": "purgeme 99",
     }

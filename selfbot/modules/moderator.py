@@ -36,7 +36,7 @@ class Moderator(Module):
     cmds = "{action} {target} ([1-99][mhdw])? (-r {reason})?"
     desc = {
         "action": "ban|kick|mute|unban|unmute",
-        "target": "User ID, Username, <Reply to User>",
+        "target": "User ID or Username or <Reply to User>",
         "period": "{m: minute, h: hour, d: day, w: week}",
         "reason": "String",
         "?": "Optional",

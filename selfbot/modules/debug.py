@@ -30,8 +30,13 @@ pattern = re.compile(r"^.*#$", flags=re.DOTALL)
 class Debug(Module):
     name = "Debug"
 
-    cmds = "{code}#"
-    desc = {"code": "String as Python Code", "e.g.": 'print("Hello, World!")#'}
+    cmds = "{code}##?"
+    desc = {
+        "code": "String as Python Code",
+        "#": "Return (No Output)",
+        "?": "Optional",
+        "e.g.": 'print("Hello, World!")#',
+    }
 
     args = {
         "asyncio": asyncio,

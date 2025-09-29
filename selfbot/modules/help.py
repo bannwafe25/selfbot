@@ -24,7 +24,11 @@ class Help(Module):
     name = "Help"
 
     cmds = "help(/{name})?"
-    desc = {"name": "String as Module Name", "?": "Optional", "e.g.": "help/debug"}
+    desc = {
+        "name": "String as Module Name (Insensitive, Will Be Force Lower)",
+        "?": "Optional",
+        "e.g.": "help/debug",
+    }
 
     mods: dict[str, int] = {}
     maps: dict[str, str] = {}

@@ -52,8 +52,8 @@ class Call(Module):
     cmds = "{action}call {chat}? (as@{peer})? (-t {title})?"
     desc = {
         "action": "join|leave|start|end",
-        "chat": "chat_id|username",
-        "peer": "chat_id|username",
+        "chat": "Chat ID or Username (Default: Current Chat)",
+        "peer": "Chat ID or Username (Default: Self)",
         "title": "String",
         "?": "Optional",
         "e.g.": "startcall @durov -t Untitled",
