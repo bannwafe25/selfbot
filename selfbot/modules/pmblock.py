@@ -233,8 +233,8 @@ class PmBlock(Module):
             auth = await self.client.db.fetchval(
                 "SELECT auth FROM pmblock_auths WHERE user_id = $1;", data["user"]
             )
-            if (auth and data["action"].endswith("1")) or (
-                not auth and data["action"].endswith("0")
+            if (not auth and data["action"].startswith("un")) or (
+                auth and data["action"] == "auth"
             ):
                 pass
             else:
