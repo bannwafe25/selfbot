@@ -130,7 +130,8 @@ class Help(Module):
                 cache_time=0,
             )
 
-        await event.answer(cache_time=0)
+        await event.answer("Processing...", cache_time=0)
+
         if act == "mod":
             page = self.maps.get(val, 0)
             return await event.edit_message_text(
