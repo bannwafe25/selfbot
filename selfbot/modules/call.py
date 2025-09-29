@@ -184,7 +184,7 @@ class Call(Module):
                 cids = cids[:4]
 
             return await event.edit_message_text(
-                fmtstr("List Joined Chat IDs", cids, fmtsec(now)),
+                fmtstr("Call-Joined Chat IDs", cids, fmtsec(now)),
                 reply_markup=ikm(keyb),
             )
 
