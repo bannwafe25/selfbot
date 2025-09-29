@@ -60,7 +60,7 @@ class Call(Module):
     }
 
     async def on_starting(self) -> None:
-        if not self.load:
+        if not load:
             return self.client.unload(self)
 
         self.data = asyncio.Queue()
