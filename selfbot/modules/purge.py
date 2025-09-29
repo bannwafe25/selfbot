@@ -23,8 +23,12 @@ pattern = re.compile(r"^purge(me)?(\s(\d{1,3}))?$")
 class Purge(Module):
     name = "Purge"
 
-    cmds = "purge(me)? [1-999]?"
-    desc = {"?": "Optional", "e.g.": "purgeme 99"}
+    cmds = "<Reply to Message>? purge(me)? [1-999]?"
+    desc = {
+        "Reply to Message": "as Min ID (Default: 1)",
+        "?": "Optional",
+        "e.g.": "purgeme 99",
+    }
 
     async def on_starting(self) -> None:
         self.data = asyncio.Queue()
