@@ -2,7 +2,6 @@ import abc
 import asyncio
 import bisect
 import contextlib
-from typing import Any
 
 from pyrogram.errors import FloodWait, MessageNotModified, QueryIdInvalid, SlowmodeWait
 from pyrogram.types import Update
@@ -17,7 +16,7 @@ class Dispatcher(abc.ABC):
 
         super().__init__(**kwargs)
 
-    async def dispatch(self, event: str, *args: Any, **kwargs: Any) -> None:
+    async def dispatch(self, event: str, *args: any, **kwargs: any) -> None:
         for listener in self.listeners.get(event, []):
             try:
                 if listener.filters and args and isinstance(args[0], Update):

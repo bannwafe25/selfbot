@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS pmblock_auths (
 
 pattern = re.compile(
     r"^"
-    r"(?P<action>(?:#)?pmbl|auth)"
+    r"(?P<action>(?:#)?pmbl(?:\s(1|0)$)?|(:?un)?auth(:?s$)?)"
     r"(?:\s(?P<user>@?[a-zA-Z][a-zA-Z0-9_]{4,32}|\d{5,10})$)?"
     r"(?:\s(?P<set>msg|url)\s(?P<content>.+))?"
     r"$",
@@ -43,8 +43,10 @@ pattern = re.compile(
 class PmBlock(Module):
     name = "PMBlock"
 
-    cmds = "pmbl ((msg|url) {content})? | auth {user}?"
+    cmds = "pmbl ([01|(msg|url) {content})? | (un)?auth(s|{user})?"
     desc = {
+        "0": "Off",
+        "1": "On",
         "content": "String",
         "user": "user_id|username|reply_user",
         "?": "Optional",
@@ -83,7 +85,7 @@ class PmBlock(Module):
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         data = pattern.match(event.content).groupdict()
-        if data["action"] == "auth":
+        if data["action"] in ["auth", "unauth"]:
             if data["user"]:
                 try:
                     user = await event._client.get_users(data["user"])
@@ -174,7 +176,7 @@ class PmBlock(Module):
             data = await self.data.get()
 
         now = datetime.datetime.now()
-        if data["action"] == "pmbl":
+        if data["action"].startswith("pmbl"):
             if data["set"]:
                 if data["set"] == "msg":
                     self.text = data["content"]
@@ -187,10 +189,15 @@ class PmBlock(Module):
                         "UPDATE pmblock SET Feedback = $1", self.link
                     )
             else:
-                self.pmbl = not self.pmbl
-                await self.client.db.execute(
-                    "UPDATE pmblock SET active = $1", self.pmbl
-                )
+                if (data["action"].endswith("1") and self.pmbl) or (
+                    data["action"].endswith("0") and not self.pmbl
+                ):
+                    pass
+                else:
+                    self.pmbl = not self.pmbl
+                    await self.client.db.execute(
+                        "UPDATE pmblock SET active = $1", self.pmbl
+                    )
 
             return await event.edit_message_text(
                 fmtstr(
@@ -201,24 +208,48 @@ class PmBlock(Module):
                 reply_markup=ikm(("Close", "0")),
             )
 
-        auth = await self.client.db.fetchval(
-            "SELECT auth FROM pmblock_auths WHERE user_id = $1;", data["user"]
-        )
-        await self.client.db.execute(
-            """
-            INSERT INTO pmblock_auths (user_id, auth)
-            VALUES ($1, $2)
-            ON CONFLICT (user_id) DO UPDATE SET
-                auth = EXCLUDED.auth
-            """,
-            data["user"],
-            not auth,
-        )
+        head: str
+        text: any
+
+        keyb = [("Close", "0")]
+        if data["action"].endswith("s"):
+            res = await self.client.db.fetch(
+                "SELECT user_id FROM pmblock_auths WHERE auth = $1;",
+                False if data["action"].startswith("un") else True,
+            )
+            head = "PM Block - {data['action].title()}"
+            text = [f"{n}. {i['user_id']}" for n, i in enumerate(res, 1)]
+            if len(text) > 16:
+                link = (
+                    await self.client.http.post(
+                        "https://paste.rs", data="\n".join(text).encode()
+                    )
+                ).text.strip()
+                keyb.insert(0, ("Full", "url", link))
+                text = text[:8]
+        else:
+            auth = await self.client.db.fetchval(
+                "SELECT auth FROM pmblock_auths WHERE user_id = $1;", data["user"]
+            )
+            if (auth and data["action"].endswith("1")) or (
+                not auth and data["action"].endswith("0")
+            ):
+                pass
+            else:
+                await self.client.db.execute(
+                    """
+                    INSERT INTO pmblock_auths (user_id, auth)
+                    VALUES ($1, $2)
+                    ON CONFLICT (user_id) DO UPDATE SET
+                        auth = EXCLUDED.auth
+                    """,
+                    data["user"],
+                    not auth,
+                )
+
+            head = "PM Auto Block"
+            text = {"User ID": data["user"], "Authorized": not auth}
+
         await event.edit_message_text(
-            fmtstr(
-                "PM Auto Block",
-                {"User ID": data["user"], "Authorized": not auth},
-                fmtsec(now),
-            ),
-            reply_markup=ikm(("Close", "0")),
+            fmtstr(head, text, fmtsec(now)), reply_markup=ikm(keyb)
         )
