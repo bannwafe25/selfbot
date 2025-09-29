@@ -43,7 +43,7 @@ pattern = re.compile(
 class PmBlock(Module):
     name = "PMBlock"
 
-    cmds = "pmbl ([01|(msg|url) {content})? | (un)?auth(s|{user})?"
+    cmds = "pmbl ([01]|(msg|url) {content})? | (un)?auths? {user}?"
     desc = {
         "0": "Off",
         "1": "On",
@@ -189,8 +189,10 @@ class PmBlock(Module):
                         "UPDATE pmblock SET Feedback = $1", self.link
                     )
             else:
-                if (data["action"].endswith("1") and self.pmbl) or (
-                    data["action"].endswith("0") and not self.pmbl
+                if (
+                    data["action"] == "pmbl"
+                    or (data["action"].endswith("1") and self.pmbl)
+                    or (data["action"].endswith("0") and not self.pmbl)
                 ):
                     pass
                 else:
@@ -217,7 +219,7 @@ class PmBlock(Module):
                 "SELECT user_id FROM pmblock_auths WHERE auth = $1;",
                 False if data["action"].startswith("un") else True,
             )
-            head = f"PM Block - {data['action'].title()}"
+            head = f"Private Message {data['action'].title()}"
             text = [str(i["user_id"]) for i in res]
             if len(text) > 16:
                 link = (
