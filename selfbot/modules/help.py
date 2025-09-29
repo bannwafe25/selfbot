@@ -1,4 +1,5 @@
 import asyncio
+import html
 import re
 
 from pyrogram import filters
@@ -157,7 +158,7 @@ class Help(Module):
     def _fmthelp(data: any) -> str:
         if isinstance(data, dict):
             res = [
-                f"{' ' * 4}• <b>{k}</b>\n{' ' * 6}<code>{v}</code>"
+                f"{' ' * 4}• <b>{k}</b>\n{' ' * 6}<code>{html.escape(v)}</code>"
                 for k, v in data.items()
             ]
             return "\n".join(res)
