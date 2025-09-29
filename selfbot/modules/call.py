@@ -66,7 +66,7 @@ class Call(Module):
         self.data = asyncio.Queue()
         self.lock = asyncio.Lock()
 
-        self.client.tgc = PyTgCalls(self.client.app, 1, 1)
+        self.client.tgc = PyTgCalls(self.client.app, 1, 15)
         await self.client.tgc.start()
 
         for group in list(self.client.app.dispatcher.groups.keys()):
@@ -151,7 +151,7 @@ class Call(Module):
                     ),
                 )
             ],
-            cache_time=900,
+            cache_time=0,
         )
 
     @listener.handler(filters.regex(pattern), 3)

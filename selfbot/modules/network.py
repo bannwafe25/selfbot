@@ -54,7 +54,7 @@ class Network(Module):
                     ),
                 )
             ],
-            cache_time=900,
+            cache_time=0,
         )
 
     @listener.handler(filters.regex(pattern), 3)
@@ -64,7 +64,7 @@ class Network(Module):
     @listener.handler(filters.regex(pattern), 4)
     async def on_inline_callback(self, event: CallbackQuery) -> None:
         if event.from_user.id != self.client.app.me.id:
-            return await event.answer("Who are You?", show_alert=True, cache_time=900)
+            return await event.answer("Who are You?", show_alert=True, cache_time=0)
 
         await event.answer(cache_time=0)
         await self.edit(event)

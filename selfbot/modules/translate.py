@@ -91,7 +91,7 @@ class Translate(Module):
                     ),
                 )
             ],
-            cache_time=900,
+            cache_time=0,
         )
 
     @listener.handler(filters.regex(pattern), 3)

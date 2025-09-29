@@ -142,7 +142,7 @@ class Telegram(abc.ABC):
             api_id=self.config.get("api_id"),
             api_hash=self.config.get("api_hash"),
             parse_mode=ParseMode.HTML,
-            sleep_threshold=900,
+            sleep_threshold=15,
             max_message_cache_size=0,
             link_preview_options=LinkPreviewOptions(is_disabled=True),
             no_joined_notifications=True,

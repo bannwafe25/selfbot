@@ -83,7 +83,7 @@ class System(Module):
                     input_message_content=InputTextMessageContent("<code>...</code>"),
                 )
             ],
-            cache_time=900,
+            cache_time=0,
         )
 
     @listener.handler(filters.regex(pattern), 3)

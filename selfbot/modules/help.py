@@ -79,7 +79,7 @@ class Help(Module):
                     input_message_content=InputTextMessageContent(f"<code>...</code>"),
                 )
             ],
-            cache_time=900,
+            cache_time=0,
         )
 
     @listener.handler(filters.regex(pattern), 3)
@@ -127,7 +127,7 @@ class Help(Module):
                     f"\n\n{len(self.ikbs)} Pages"
                 ),
                 show_alert=True,
-                cache_time=900,
+                cache_time=0,
             )
 
         await event.answer(cache_time=0)

@@ -147,7 +147,7 @@ class Debug(Module):
     @listener.handler(filters.regex(r"^[01]$"), 5)
     async def on_inline_callback(self, event: CallbackQuery) -> None:
         if event.from_user.id != self.client.app.me.id:
-            return await event.answer("Who are You?", show_alert=True, cache_time=900)
+            return await event.answer("Who are You?", show_alert=True, cache_time=0)
 
         (msg, cmd), _ = await asyncio.gather(
             self.msgs(event), event.answer(cache_time=0)
