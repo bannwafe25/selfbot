@@ -150,7 +150,7 @@ class Debug(Module):
             return await event.answer("Who are You?", show_alert=True, cache_time=0)
 
         (msg, cmd), _ = await asyncio.gather(
-            self.msgs(event), event.answer("Processing...", cache_time=0)
+            self.msgs(event), event.answer(r"¯\_(ツ)_/¯", cache_time=0)
         )
         if event.data == "0":
             task = next(

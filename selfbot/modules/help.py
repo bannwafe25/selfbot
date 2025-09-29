@@ -130,7 +130,7 @@ class Help(Module):
                 cache_time=0,
             )
 
-        await event.answer("Processing...", cache_time=0)
+        await event.answer(r"¯\_(ツ)_/¯", cache_time=0)
 
         if act == "mod":
             page = self.maps.get(val, 0)
