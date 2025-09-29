@@ -37,8 +37,8 @@ class Help(Module):
             name = mod.name.lower()
             self.maps[name] = len(self.ikbs)
             self.mods[name] = (
-                f"<b>{mod.name}</b>"
-                f"\n\n{' ' * 2}<b>Pattern</b>\n{' ' * 4}<code>{mod.cmds}</code>"
+                f"<b>{mod.name}</b>\n\n{' ' * 2}<b>Pattern</b>"
+                f"\n{' ' * 4}<code>{html.escape(mod.cmds)}</code>"
                 f"\n\n{self._fmthelp(mod.desc)}"
             )
             page.append((mod.name, f"help/mod/{name}"))
