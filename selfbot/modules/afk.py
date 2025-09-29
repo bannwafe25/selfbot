@@ -157,14 +157,15 @@ class Afk(Module):
             )
             self._afk = True
         else:
-            rows = await self.client.db.fetch("SELECT chat_id, msg_id FROM afk_ids;")
-            for row in rows:
+            res = await self.client.db.fetch("SELECT chat_id, msg_id FROM afk_ids;")
+            for i in res:
                 try:
-                    await self.client.app.delete_messages(row["chat_id"], row["msg_id"])
+                    await self.client.app.delete_messages(i["chat_id"], i["msg_id"])
                 except RPCError:
                     continue
 
             await self.client.db.execute("DELETE FROM afk_ids; DELETE FROM afk;")
+            now = await self.client.db.fetchval("SELECT since FROM afk;")
             self._afk = False
 
         await event.edit_message_text(
