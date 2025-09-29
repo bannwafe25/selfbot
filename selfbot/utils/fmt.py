@@ -3,7 +3,7 @@ import sys
 import traceback
 
 
-def fmtsec(now: datetime.datetime) -> str:
+def fmtsec(now: datetime.datetime, part: int = 3) -> str:
     delta = datetime.datetime.now() - now
     total = int(delta.total_seconds())
     micro = delta.microseconds
@@ -37,7 +37,7 @@ def fmtsec(now: datetime.datetime) -> str:
     if µs:
         parts.append(f"{µs} µs")
 
-    return ", ".join(parts) if parts else "0 µs"
+    return ", ".join(parts[:part]) if parts else "0 µs"
 
 
 def fmtstr(head: str, data: any = None, foot: str = None) -> str:
