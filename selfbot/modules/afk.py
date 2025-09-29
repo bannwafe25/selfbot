@@ -164,8 +164,8 @@ class Afk(Module):
                 except RPCError:
                     continue
 
-            await self.client.db.execute("DELETE FROM afk_ids; DELETE FROM afk;")
             now = await self.client.db.fetchval("SELECT since FROM afk;")
+            await self.client.db.execute("DELETE FROM afk_ids; DELETE FROM afk;")
             self._afk = False
 
         await event.edit_message_text(
