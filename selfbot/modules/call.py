@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS call (
 
 pattern = re.compile(
     r"^"
-    r"(?P<action>(?:start|end|join|leave))call"
+    r"(?P<action>(?:start|end|join|leave)?)call(?:s$)?"
     r"(?:\s+(?P<chat>@?[a-zA-Z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
     r"(?:\s+as@(?P<as>@?[a-z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
     r"(?:\s+-t\s(?P<title>.+))?"
@@ -49,9 +49,10 @@ pattern = re.compile(
 class Call(Module):
     name = "Call"
 
-    cmds = "{action}call {chat}? (as@{peer})? (-t {title})?"
+    cmds = "{action}?calls? {chat}? (as@{peer})? (-t {title})?"
     desc = {
         "action": "join|leave|start|end",
+        "calls": "List Joined Chat IDs (Standalone)",
         "chat": "Chat ID or Username (Default: Current Chat)",
         "peer": "Chat ID or Username (Default: Self)",
         "title": "String",
@@ -165,11 +166,28 @@ class Call(Module):
             data = await self.data.get()
 
         text = {"data": {"Chat": data["chat_id"]}}
+        keyb = [("Close", "0")]
 
         func = None
         args = {"chat_id": data["chat_id"]}
 
         now = datetime.datetime.now()
+        if not data["action"]:
+            cids = [str(i) for i in list(await self.client.tgc.calls)]
+            if len(cids) > 8:
+                link = (
+                    await self.client.http.post(
+                        "https://paste.rs", data="\n".join(cids).encode()
+                    )
+                ).text.strip()
+                keyb.insert(0, ("Full", "url", link))
+                cids = cids[:4]
+
+            return await event.edit_message_text(
+                fmtstr("List Joined Chat IDs", cids, fmtsec(now)),
+                reply_markup=ikm(keyb),
+            )
+
         if data["action"] == "join":
             text["head"] = "Joined Call"
             if not data["as"]:
@@ -180,7 +198,7 @@ class Call(Module):
                 except RPCError as e:
                     return await event.edit_message_text(
                         f"<code>{e.__class__.__name__}</code>\n\n<b>{fmtsec(now)}</b>",
-                        reply_markup=ikm(("Close", b"0")),
+                        reply_markup=ikm(keyb),
                     )
                 else:
                     text["data"]["Peer"] = data["as"]
@@ -210,7 +228,7 @@ class Call(Module):
         except Exception as e:
             await event.edit_message_text(
                 f"<code>{e.__class__.__name__}</code>\n\n<b>{fmtsec(now)}</b>",
-                reply_markup=ikm(("Close", b"0")),
+                reply_markup=ikm(keyb),
             )
         else:
             if data["action"] in ["join", "leave"]:
@@ -228,5 +246,5 @@ class Call(Module):
                 )
 
             await event.edit_message_text(
-                fmtstr(**text, foot=fmtsec(now)), reply_markup=ikm(("Close", b"0"))
+                fmtstr(**text, foot=fmtsec(now)), reply_markup=ikm(keyb)
             )
