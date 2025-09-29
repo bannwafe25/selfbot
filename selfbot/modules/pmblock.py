@@ -233,11 +233,12 @@ class PmBlock(Module):
             auth = await self.client.db.fetchval(
                 "SELECT auth FROM pmblock_auths WHERE user_id = $1;", data["user"]
             )
-            if (auth is True and data["action"] == "auth") or (
-                auth is False and data["action"] == "unauth"
+            if (auth and data["action"] == "auth") or (
+                not auth and data["action"] == "unauth"
             ):
-                pass
+                auth = auth
             else:
+                auth = not auth
                 await self.client.db.execute(
                     """
                     INSERT INTO pmblock_auths (user_id, auth)
@@ -246,11 +247,11 @@ class PmBlock(Module):
                         auth = EXCLUDED.auth
                     """,
                     data["user"],
-                    not auth,
+                    auth,
                 )
 
             head = "PM Auto Block"
-            text = {"User ID": data["user"], "Authorized": not auth}
+            text = {"User ID": data["user"], "Authorized": auth}
 
         await event.edit_message_text(
             fmtstr(head, text, fmtsec(now)), reply_markup=ikm(keyb)
