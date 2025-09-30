@@ -154,8 +154,8 @@ class Moderator(Module):
                     f"<a href=tg://user?id={data['target']}>User</a> {self._past(data['action'])}",
                     {
                         "ID": data["target"],
+                        "Duration": f"{period}\n",
                         "Reason": data["reason"] or "N/A",
-                        "Duration": period,
                     },
                     fmtsec(now),
                 ),

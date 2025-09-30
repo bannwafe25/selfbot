@@ -45,7 +45,7 @@ class Help(Module):
                 f"\n{' ' * 4}<code>{html.escape(mod.cmds)}</code>"
                 f"\n\n{self._fmthelp(mod.desc)}"
             )
-            page.append((mod.name, f"help/mod/{name}"))
+            page.append((mod.name, f"help/mod/{name}".encode()))
             if len(page) == 4:
                 self.ikbs.append([page[i : i + 2] for i in range(0, 4, 2)])
                 page = []
@@ -90,7 +90,7 @@ class Help(Module):
                 await event.edit_message_text(
                     self.mods[name],
                     reply_markup=ikm(
-                        [("« Back", f"help/page/{self.maps[name]}"), ("Close", "0")]
+                        [("« Back", f"help/page/{self.maps[name]}"), ("Close", b"0")]
                     ),
                 )
             else:
@@ -105,7 +105,7 @@ class Help(Module):
                         "Get with Prefix '<code>help/</code>'\n"
                         "<b>e.g.</b> <code>help/debug</code>"
                     ),
-                    reply_markup=ikm(("Close", "0")),
+                    reply_markup=ikm(("Close", b"0")),
                 )
 
             return
@@ -136,7 +136,9 @@ class Help(Module):
             page = self.maps.get(val, 0)
             return await event.edit_message_text(
                 self.mods[val],
-                reply_markup=ikm([("« Back", f"help/page/{page}"), ("Close", b"0")]),
+                reply_markup=ikm(
+                    [("« Back", f"help/page/{page}".encode()), ("Close", b"0")]
+                ),
             )
 
         await event.edit_message_text(
@@ -146,15 +148,15 @@ class Help(Module):
     def build(self, page: int = 0) -> list:
         idx = max(0, min(page, len(self.ikbs) - 1))
         ikb = self.ikbs[idx][:]
-        ikb.append([("Selfbot Info", "help/info")])
+        ikb.append([("Selfbot Info", b"help/info")])
 
         nav = []
         if idx > 0:
-            nav.append((f"« ({idx})", f"help/page/{idx - 1}"))
+            nav.append((f"« ({idx})", f"help/page/{idx - 1}".encode()))
 
         nav.append(("Close", b"0"))
         if idx < len(self.ikbs) - 1:
-            nav.append((f"({idx + 2}) »", f"help/page/{idx + 1}"))
+            nav.append((f"({idx + 2}) »", f"help/page/{idx + 1}".encode()))
 
         ikb.append(nav)
         return ikb

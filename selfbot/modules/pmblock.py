@@ -207,13 +207,13 @@ class PmBlock(Module):
                     {"Active": self.pmbl, "Feedback": self.link, "Message": self.text},
                     fmtsec(now),
                 ),
-                reply_markup=ikm(("Close", "0")),
+                reply_markup=ikm(("Close", b"0")),
             )
 
         head: str
         text: any
 
-        keyb = [("Close", "0")]
+        keyb = [("Close", b"0")]
         if data["action"].endswith("s"):
             res = await self.client.db.fetch(
                 "SELECT user_id FROM pmblock_auths WHERE auth = $1;",

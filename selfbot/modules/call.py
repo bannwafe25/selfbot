@@ -166,7 +166,7 @@ class Call(Module):
             data = await self.data.get()
 
         text = {"data": {"Chat": data["chat_id"]}}
-        keyb = [("Close", "0")]
+        keyb = [("Close", b"0")]
 
         func = None
         args = {"chat_id": data["chat_id"]}

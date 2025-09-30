@@ -133,7 +133,7 @@ class Afk(Module):
                     },
                     fmtsec(since) if since else "N/A",
                 ),
-                reply_markup=ikm(("Close", "0")),
+                reply_markup=ikm(("Close", b"0")),
             )
 
         if self.data.empty():
@@ -174,5 +174,5 @@ class Afk(Module):
                 {"Status": not data[0], "Reason": data[1] if data[1] else "N/A"},
                 fmtsec(now),
             ),
-            reply_markup=ikm(("Close", "0")),
+            reply_markup=ikm(("Close", b"0")),
         )

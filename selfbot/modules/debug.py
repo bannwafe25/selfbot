@@ -188,7 +188,7 @@ class Debug(Module):
         return msg, cmd
 
     async def execute(self, msg: Message, event: Update, btn: bool = False) -> None:
-        ikb, out, rtt = [[("Del", "0")]], "", ""
+        ikb, out, rtt = [[("Del", b"0")]], "", ""
         if btn:
             code = event.query.removesuffix("#").rstrip()
             ikb[0].insert(0, ("Run", "switch_inline_query_current_chat", code))
@@ -205,7 +205,7 @@ class Debug(Module):
                 "event": event,
             }
         )
-        await event.edit_message_reply_markup(ikm(("Cancel", "0")))
+        await event.edit_message_reply_markup(ikm(("Cancel", b"0")))
 
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
