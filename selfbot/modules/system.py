@@ -24,7 +24,6 @@ pattern = re.compile(r"^r(?:\s-f)?$")
 
 class System(Module):
     name = "System"
-
     cmds = "r (-f)?"
     desc = {
         "r": "Restart Selfbot",
@@ -32,31 +31,57 @@ class System(Module):
         "?": "Optional",
         "e.g.": "r -f",
     }
-
     file = "r.txt"
+
+    def _clean_remote(self, url: str) -> str:
+        return url[:-4] if url.endswith(".git") else url
+
+    def _kb(self, old_sha: str | None, new_sha: str | None, head_sha: str | None):
+        if old_sha and new_sha and old_sha != new_sha:
+            txt = f"{old_sha[:7]} > {new_sha[:7]}"
+            url = f"{self.remote}/compare/{old_sha}...{new_sha}"
+        else:
+            hs = (new_sha or head_sha) or ""
+            txt = hs[:7] if hs else "n/a"
+            url = f"{self.remote}/commit/{hs}" if hs else self.remote
+
+        return ikm([[(txt, "url", url)], [("Close", b"0")]])
+
+    def _kb_close(self):
+        return ikm([("Close", b"0")])
 
     async def on_starting(self) -> None:
         data = await asyncio.to_thread(self.getid)
+        self.remote = self._clean_remote(
+            self.client.config.get("remote", "https://github.com/DeltaUniverse/selfbot")
+        )
+        self.branch = self.client.config.get("branch", "staging")
+        g_branch, g_short, g_subject, g_full = await asyncio.to_thread(
+            self._git_info_sync
+        )
+        trunc = (
+            (g_subject + "…")
+            if g_subject and len(g_subject) > 32
+            else (g_subject or "n/a")
+        )
         if data:
+            inline_id, ts, old_sha, new_sha = data
+            kb = self._kb(old_sha, new_sha, g_full)
             await self.client.bot.edit_inline_text(
-                data[0],
+                inline_id,
                 fmtstr(
                     "Selfbot Restarted",
                     {
-                        "Version": __version__,
+                        "Version": __version__ + "-" + g_branch or "N/A",
                         "Modules": len(self.client.modules),
                         "Handlers": len(self.client.handlers),
                         "Listeners": len(self.client.listeners),
+                        "Message": trunc,
                     },
-                    fmtsec(datetime.datetime.fromtimestamp(float(data[1]))),
+                    fmtsec(datetime.datetime.fromtimestamp(float(ts))),
                 ),
-                reply_markup=ikm(("Close", b"0")),
+                reply_markup=kb,
             )
-
-        self.remote = self.client.config.get(
-            "remote", "https://github.com/DeltaUniverse/selfbot"
-        )
-        self.branch = self.client.config.get("branch", "staging")
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -87,171 +112,200 @@ class System(Module):
             cache_time=0,
         )
 
-    async def _pip_install_requirements(self) -> None:
-        def work():
-            try:
-                from pip._internal.cli.main import main as pip_main
-            except Exception:
-                return
+    def _git_info_sync(self) -> tuple[str, str, str, str]:
+        try:
+            repo = git.Repo(".")
+        except Exception:
+            return ("n/a", "n/a", "n/a", "")
 
-            try:
-                pip_main(["install", "--upgrade", "pip", "setuptools", "wheel"])
-            except Exception:
-                pass
+        try:
+            branch = repo.active_branch.name
+        except Exception:
+            branch = "detached"
 
-            if os.path.exists("requirements.txt"):
-                try:
-                    pip_main(["install", "-r", "requirements.txt"])
-                except Exception:
-                    pass
-            elif os.path.exists("pyproject.toml"):
-
-                try:
-                    pip_main(["install", "."])
-                except Exception:
-                    pass
-
-        await asyncio.to_thread(work)
-
-    async def _git_fetch_and_detect(self) -> tuple[bool, str | None, str | None]:
-        """
-        Returns (deps_changed, old_commit_sha, new_commit_sha) without modifying the worktree.
-        """
-
-        def work():
-            if os.path.isdir(".git"):
-                repo = git.Repo(".")
-            else:
-                repo = git.Repo.init(".")
-
-            origin = next((r for r in repo.remotes if r.name == "origin"), None)
-            if origin is None:
-                origin = repo.create_remote("origin", self.remote)
-            else:
-
-                try:
-                    if getattr(origin, "url", None) != self.remote:
-                        origin.set_url(self.remote)
-                except Exception:
-                    origin.set_url(self.remote)
-
-            origin.fetch(prune=True)
-
-            old_commit = (
-                repo.head.commit.hexsha
-                if not repo.head.is_detached
-                else repo.head.commit.hexsha
+        try:
+            c = repo.head.commit
+            return (
+                branch,
+                c.hexsha[:7],
+                (c.message.splitlines()[0] or "").strip(),
+                c.hexsha,
             )
-
-            target_ref = f"origin/{self.branch}"
-            try:
-                new_commit_obj = repo.commit(target_ref)
-            except Exception:
-
-                return False, old_commit, None
-
-            new_commit = new_commit_obj.hexsha
-
-            dep_files = {"requirements.txt", "pyproject.toml", "poetry.lock"}
-            deps_changed = False
-            try:
-                diffs = repo.commit(old_commit).diff(new_commit)
-                for d in diffs:
-                    a = (d.a_path or "").lower()
-                    b = (d.b_path or "").lower()
-                    if a in dep_files or b in dep_files:
-                        deps_changed = True
-                        break
-            except Exception:
-
-                deps_changed = True
-
-            return deps_changed, old_commit, new_commit
-
-        return await asyncio.to_thread(work)
-
-    async def _git_hard_reset_to_remote(self) -> None:
-        def work():
-            repo = git.Repo(".") if os.path.isdir(".git") else git.Repo.init(".")
-            origin = next((r for r in repo.remotes if r.name == "origin"), None)
-            if origin is None:
-                origin = repo.create_remote("origin", self.remote)
-            else:
-                try:
-                    if getattr(origin, "url", None) != self.remote:
-                        origin.set_url(self.remote)
-                except Exception:
-                    origin.set_url(self.remote)
-
-            origin.fetch(prune=True)
-            target_ref = f"origin/{self.branch}"
-
-            if self.branch in repo.heads:
-                head = repo.heads[self.branch]
-            else:
-                head = repo.create_head(self.branch, target_ref)
-
-            try:
-                head.set_tracking_branch(repo.remotes.origin.refs[self.branch])
-            except Exception:
-                pass
-
-            head.checkout()
-            repo.git.reset("--hard", target_ref)
-
-        await asyncio.to_thread(work)
+        except Exception:
+            return branch, "n/a", "n/a", ""
 
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         if getattr(self.client, "restart", False) or os.path.exists(self.file):
             return await event.edit_message_text(
-                "<code>Restart is Called</code>", reply_markup=ikm(("Close", b"0"))
+                "<code>Restarting....</code>", reply_markup=self._kb_close()
             )
 
         setattr(self.client, "restart", True)
 
+        persisted_old = None
+        persisted_new = None
+
         if event.query.endswith("-f"):
-            await event.edit_message_text("<code>Checking upstream...</code>")
-            deps_changed, old_sha, new_sha = await self._git_fetch_and_detect()
+            await event.edit_message_text(
+                "<code>Checking upstream...</code>", reply_markup=self._kb_close()
+            )
+
+            def fetch_detect():
+                repo = git.Repo(".") if os.path.isdir(".git") else git.Repo.init(".")
+                origin = next((r for r in repo.remotes if r.name == "origin"), None)
+                if origin is None:
+                    origin = repo.create_remote("origin", self.remote)
+                else:
+                    try:
+                        if getattr(origin, "url", None) != self.remote:
+                            origin.set_url(self.remote)
+                    except Exception:
+                        origin.set_url(self.remote)
+
+                origin.fetch(prune=True)
+                try:
+                    old_sha = repo.head.commit.hexsha
+                except Exception:
+                    old_sha = None
+
+                try:
+                    new_sha = repo.commit(f"origin/{self.branch}").hexsha
+                except Exception:
+                    return False, old_sha, None
+
+                deps_changed = False
+                if old_sha:
+                    dep = {"requirements.txt", "pyproject.toml", "poetry.lock"}
+                    try:
+                        for d in repo.commit(old_sha).diff(new_sha):
+                            a = (d.a_path or "").lower()
+                            b = (d.b_path or "").lower()
+                            if a in dep or b in dep:
+                                deps_changed = True
+                                break
+                    except Exception:
+                        deps_changed = True
+
+                return deps_changed, old_sha, new_sha
+
+            deps_changed, old_sha, new_sha = await asyncio.to_thread(fetch_detect)
 
             if new_sha and old_sha and new_sha == old_sha:
-                await event.edit_message_text("<code>No updates found.</code>")
+                await event.edit_message_text(
+                    "<code>No updates found.</code>", reply_markup=self._kb_close()
+                )
+                persisted_new = new_sha
             else:
-                await event.edit_message_text("<code>Applying update...</code>")
-                await self._git_hard_reset_to_remote()
+                await event.edit_message_text(
+                    "<code>Applying update...</code>", reply_markup=self._kb_close()
+                )
+                persisted_old, persisted_new = old_sha, new_sha
+
+                def reset_apply():
+                    repo = (
+                        git.Repo(".") if os.path.isdir(".git") else git.Repo.init(".")
+                    )
+                    origin = next((r for r in repo.remotes if r.name == "origin"), None)
+                    if origin is None:
+                        origin = repo.create_remote("origin", self.remote)
+                    else:
+                        try:
+                            if getattr(origin, "url", None) != self.remote:
+                                origin.set_url(self.remote)
+                        except Exception:
+                            origin.set_url(self.remote)
+
+                    origin.fetch(prune=True)
+                    ref = f"origin/{self.branch}"
+                    if self.branch in repo.heads:
+                        head = repo.heads[self.branch]
+                    else:
+                        head = repo.create_head(self.branch, ref)
+
+                    try:
+                        head.set_tracking_branch(repo.remotes.origin.refs[self.branch])
+                    except Exception:
+                        pass
+
+                    head.checkout()
+                    repo.git.reset("--hard", ref)
+
+                await asyncio.to_thread(reset_apply)
 
                 if deps_changed:
                     await event.edit_message_text(
-                        "<code>Dependencies changed. Updating...</code>"
+                        "<code>Dependencies changed. Updating...</code>",
+                        reply_markup=self._kb_close(),
                     )
-                    await self._pip_install_requirements()
+
+                    def pip_update():
+                        try:
+                            from pip._internal.cli.main import main as pip_main
+                        except Exception:
+                            return
+
+                        try:
+                            pip_main(
+                                ["install", "--upgrade", "pip", "setuptools", "wheel"]
+                            )
+                        except Exception:
+                            pass
+
+                        if os.path.exists("requirements.txt"):
+                            try:
+                                pip_main(["install", "-r", "requirements.txt"])
+                            except Exception:
+                                pass
+                        elif os.path.exists("pyproject.toml"):
+                            try:
+                                pip_main(["install", "."])
+                            except Exception:
+                                pass
+
+                    await asyncio.to_thread(pip_update)
                 else:
-                    await event.edit_message_text("<code>No dependency changes.</code>")
+                    await event.edit_message_text(
+                        "<code>No dependency changes.</code>",
+                        reply_markup=self._kb_close(),
+                    )
+
+        lines = [f"{event.inline_message_id}", f"{datetime.datetime.now().timestamp()}"]
+        if persisted_old:
+            lines.append(persisted_old)
+
+        if persisted_new:
+            lines.append(persisted_new)
 
         await asyncio.gather(
-            event.edit_message_text("<code>Restarting...</code>"),
-            asyncio.to_thread(
-                self.putid,
-                f"{event.inline_message_id}\n{datetime.datetime.now().timestamp()}",
+            event.edit_message_text(
+                "<code>Restarting...</code>", reply_markup=self._kb_close()
             ),
+            asyncio.to_thread(self.putraw, "\n".join(lines)),
         )
-
         try:
             self.client.__event__.set()
         finally:
             os.execv(sys.executable, (sys.executable, "-m", "selfbot"))
 
-    def getid(self) -> tuple[str, float] | None:
-        if os.path.exists(self.file):
-            with open(self.file) as f:
+    def getid(self) -> tuple[str, float, str | None, str | None] | None:
+        if not os.path.exists(self.file):
+            return None
+
+        with open(self.file) as f:
+            try:
+                lines = [ln.strip() for ln in f.readlines()]
+                inline_id = lines[0]
+                ts = float(lines[1]) if len(lines) > 1 else 0.0
+                old_sha = lines[2] if len(lines) > 2 and lines[2] else None
+                new_sha = lines[3] if len(lines) > 3 and lines[3] else None
+                return inline_id, ts, old_sha, new_sha
+            finally:
                 try:
-                    data = f.readlines()
-                    return data[0].strip(), float(data[1])
-                finally:
                     os.remove(self.file)
+                except Exception:
+                    pass
 
-        return None
-
-    def putid(self, text: str) -> None:
+    def putraw(self, text: str) -> None:
         with open(self.file, "w") as f:
             f.write(text)
