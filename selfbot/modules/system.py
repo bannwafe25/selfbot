@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import os
 import re
-import shutil
 import subprocess
 import sys
 
@@ -147,12 +146,14 @@ class System(Module):
             f.write(text)
 
     def reset(self):
-        if os.path.isdir(".git"):
-            shutil.rmtree(".git")
+        repo = git.Repo(".") if os.path.isdir(".git") else git.Repo.init(".")
 
-        repo = git.Repo.init(".")
+        if "origin" in repo.remotes:
+            origin = repo.remotes.origin
+            origin.set_url(self.remote)
+        else:
+            origin = repo.create_remote("origin", self.remote)
 
-        origin = repo.create_remote("origin", self.remote)
         origin.fetch(prune=True)
 
         remote_ref = f"origin/{self.branch}"
