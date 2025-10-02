@@ -39,11 +39,12 @@ class System(Module):
     async def on_starting(self) -> None:
         data = await asyncio.to_thread(self.getraw)
         if data:
-            inline_id, timestamp = data
             ikb = [("Close", b"0")]
             if len(data) == 4:
                 inline_id, timestamp, sha, url = data
                 ikb.insert(0, (sha, "url", url))
+            elif len(data) == 2:
+                inline_id, timestamp = data
 
             await self.client.bot.edit_inline_text(
                 inline_id,
@@ -99,6 +100,7 @@ class System(Module):
         if getattr(self.client, "restart", False) or os.path.exists(self.file):
             return await event.edit_message_text("<code>Restart is Called</code>")
 
+        await event.edit_message_text("<code>Restart...</code>")
         setattr(self.client, "restart", True)
 
         fetch = None
