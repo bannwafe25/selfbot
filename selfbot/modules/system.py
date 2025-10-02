@@ -115,7 +115,7 @@ class System(Module):
                 ),
             )
 
-        raw = [f"{event.inline_message_id}, {datetime.datetime.now().timestamp()}"]
+        raw = [event.inline_message_id, str(datetime.datetime.now().timestamp())]
         if fetch:
             raw.extend(fetch)
 
