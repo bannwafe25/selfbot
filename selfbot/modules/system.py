@@ -163,10 +163,8 @@ class System(Module):
             head = repo.create_head(self.branch, origin.refs[self.branch])
 
         head.set_tracking_branch(origin.refs[self.branch])
-        repo.git.clean("-fd")
-
         head.checkout()
-        repo.git.reset("--hard", remote_ref)
 
+        repo.git.reset("--hard", remote_ref)
         hexsha = repo.head.commit.hexsha
         return hexsha[:7], f"{self.remote}/commit/{hexsha}"
