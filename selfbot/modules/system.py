@@ -183,9 +183,7 @@ class System(Module):
                     except Exception:
                         pass
 
-                    repo.git.clean("-fd", "-e", ".apt")
-
-                    head.checkout()
+                    head.checkout(force=True)
                     repo.git.reset("--hard", ref)
 
                 await asyncio.to_thread(reset_apply)
