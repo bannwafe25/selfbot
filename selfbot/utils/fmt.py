@@ -62,7 +62,7 @@ def fmtstr(head: str, data: any = None, foot: str = None, msgs: str = None) -> s
         text.append(body)
 
     if msgs:
-        text.append(f"<blockquote expandable>{html.escspe(msgs)}</blockquote>")
+        text.append(f"<blockquote expandable>{html.escape(msgs)}</blockquote>")
 
     if foot:
         text.append(f"<b>{foot}</b>")
