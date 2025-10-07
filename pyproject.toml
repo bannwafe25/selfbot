@@ -42,27 +42,27 @@ poetry-plugin-export = ">=1.8"
 python = ">=3.11,<4.0"
 aiorun = ">=2025.1.1,<2026.0.0"
 asyncpg = ">=0.30.0,<1.0.0"
+gitpython = ">=3.1.45,<4.0.0"
 httpx = ">=0.28.1,<1.0.0"
+pyrotgfork = ">=2.2.16,<3.0.0"
 python-dotenv = ">=1.1.1,<2.0.0"
-uvloop = ">=0.21.0,<1.0.0"
-gitpython = "^3.1.45"
 
 [tool.poetry.dependencies.telegraph]
 version = ">=2.2.0,<3.0.0"
 extras = ["aio"]
 
 [tool.poetry.dependencies.py-tgcalls]
-git = "https://github.com/pytgcalls/pytgcalls"
-branch = "master"
+version = ">=2.2.8,<3.0.0"
 optional = true
 
-[tool.poetry.dependencies.pyrotgfork]
-git = "https://github.com/TelegramPlayground/pyrogram"
-branch = "dev"
-
 [tool.poetry.dependencies.pytgcrypto]
-git = "https://github.com/TelegramPlayground/pyrogram-tgcrypto"
-branch = "master"
+version = ">=1.2.11,<2.0.0"
+optional = true
+
+[tool.poetry.dependencies.uvloop]
+version = ">=0.21.0,<1.0.0"
+optional = true
 
 [tool.poetry.extras]
 pytgcalls = ["py-tgcalls"]
+speedups = ["pytgcrypto", "uvloop"]
