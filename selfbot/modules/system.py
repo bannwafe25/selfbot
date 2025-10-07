@@ -41,11 +41,6 @@ class System(Module):
         ).removesuffix(".git")
         self.branch = self.client.config.get("branch", "staging")
         g_branch, g_short, g_subject, g_full = await asyncio.to_thread(self.gitsync)
-        trunc = (
-            (g_subject + "…")
-            if g_subject and len(g_subject) > 32
-            else (g_subject or "N/A")
-        )
         data = await asyncio.to_thread(self.getraw)
         if data:
             inline_id, ts, old_sha, new_sha = data
@@ -58,10 +53,10 @@ class System(Module):
                         "Version": f"{__version__} - {g_branch or 'N/A'}\n",
                         "Modules": len(self.client.modules),
                         "Handlers": len(self.client.handlers),
-                        "Listeners": f"{len(self.client.listeners)}\n",
-                        "Message": trunc,
+                        "Listeners": f"{len(self.client.listeners)}",
                     },
                     fmtsec(datetime.datetime.fromtimestamp(float(ts))),
+                    g_subject or "N/A",
                 ),
                 reply_markup=kb,
             )
