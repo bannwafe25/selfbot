@@ -44,7 +44,7 @@ class System(Module):
         trunc = (
             (g_subject + "…")
             if g_subject and len(g_subject) > 32
-            else (g_subject or "n/a")
+            else (g_subject or "N/A")
         )
         data = await asyncio.to_thread(self.getraw)
         if data:
@@ -55,11 +55,11 @@ class System(Module):
                 fmtstr(
                     "Selfbot Restarted",
                     {
-                        "Version": __version__ + "-" + g_branch or "N/A",
-                        "\nModules": len(self.client.modules),
+                        "Version": f"{__version__} - {g_branch or 'N/A'}\n",
+                        "Modules": len(self.client.modules),
                         "Handlers": len(self.client.handlers),
-                        "Listeners": len(self.client.listeners),
-                        "\nMessage": trunc,
+                        "Listeners": f"{len(self.client.listeners)}\n",
+                        "Message": trunc,
                     },
                     fmtsec(datetime.datetime.fromtimestamp(float(ts))),
                 ),
@@ -98,7 +98,9 @@ class System(Module):
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         if getattr(self.client, "restart", False) or os.path.exists(self.file):
-            return await event.edit_message_text("<code>Restart is Called....</code>")
+            return await event.edit_message_text(
+                "<code>Restart is Called</code>", reply_markup=ikm(("Close", b"0"))
+            )
 
         setattr(self.client, "restart", True)
 
@@ -181,6 +183,8 @@ class System(Module):
                     except Exception:
                         pass
 
+                    repo.git.clean("-fd")
+
                     head.checkout()
                     repo.git.reset("--hard", ref)
 
@@ -261,7 +265,7 @@ class System(Module):
         try:
             repo = git.Repo(".")
         except Exception:
-            return ("n/a", "n/a", "n/a", "")
+            return ("N/A", "N/A", "N/A", "")
 
         try:
             branch = repo.active_branch.name
@@ -277,7 +281,7 @@ class System(Module):
                 c.hexsha,
             )
         except Exception:
-            return branch, "n/a", "n/a", ""
+            return branch, "N/A", "N/A", ""
 
     def ikbsha(self, old_sha: str | None, new_sha: str | None, head_sha: str | None):
         if old_sha and new_sha and old_sha != new_sha:
@@ -285,7 +289,7 @@ class System(Module):
             url = f"{self.remote}/compare/{old_sha}...{new_sha}"
         else:
             hs = (new_sha or head_sha) or ""
-            txt = hs[:7] if hs else "n/a"
+            txt = hs[:7] if hs else "N/A"
             url = f"{self.remote}/commit/{hs}" if hs else self.remote
 
         return ikm([[(txt, "url", url)], [("Close", b"0")]])
