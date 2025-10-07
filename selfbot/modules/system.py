@@ -56,7 +56,7 @@ class System(Module):
                         "Listeners": f"{len(self.client.listeners)}",
                     },
                     fmtsec(datetime.datetime.fromtimestamp(float(ts))),
-                    g_subject or "N/A",
+                    g_subject[:512] if g_subject else "N/A",
                 ),
                 reply_markup=kb,
             )
