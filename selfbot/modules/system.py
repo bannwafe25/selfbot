@@ -183,7 +183,7 @@ class System(Module):
                     except Exception:
                         pass
 
-                    repo.git.clean("-fd")
+                    repo.git.clean("-fd", "-e", ".apt")
 
                     head.checkout()
                     repo.git.reset("--hard", ref)
