@@ -24,6 +24,7 @@ pattern = re.compile(r"^r(?:\s-f)?$")
 
 class System(Module):
     name = "System"
+
     cmds = "r (-f)?"
     desc = {
         "r": "Restart Selfbot",
@@ -31,52 +32,34 @@ class System(Module):
         "?": "Optional",
         "e.g.": "r -f",
     }
+
     file = "r.txt"
 
-    def _clean_remote(self, url: str) -> str:
-        return url[:-4] if url.endswith(".git") else url
-
-    def _kb(self, old_sha: str | None, new_sha: str | None, head_sha: str | None):
-        if old_sha and new_sha and old_sha != new_sha:
-            txt = f"{old_sha[:7]} > {new_sha[:7]}"
-            url = f"{self.remote}/compare/{old_sha}...{new_sha}"
-        else:
-            hs = (new_sha or head_sha) or ""
-            txt = hs[:7] if hs else "n/a"
-            url = f"{self.remote}/commit/{hs}" if hs else self.remote
-
-        return ikm([[(txt, "url", url)], [("Close", b"0")]])
-
-    def _kb_close(self):
-        return ikm([("Close", b"0")])
-
     async def on_starting(self) -> None:
-        data = await asyncio.to_thread(self.getid)
-        self.remote = self._clean_remote(
-            self.client.config.get("remote", "https://github.com/DeltaUniverse/selfbot")
-        )
+        self.remote = self.client.config.get(
+            "remote", "https://github.com/DeltaUniverse/selfbot"
+        ).removesuffix(".git")
         self.branch = self.client.config.get("branch", "staging")
-        g_branch, g_short, g_subject, g_full = await asyncio.to_thread(
-            self._git_info_sync
-        )
+        g_branch, g_short, g_subject, g_full = await asyncio.to_thread(self.gitsync)
         trunc = (
             (g_subject + "…")
             if g_subject and len(g_subject) > 32
             else (g_subject or "n/a")
         )
+        data = await asyncio.to_thread(self.getraw)
         if data:
             inline_id, ts, old_sha, new_sha = data
-            kb = self._kb(old_sha, new_sha, g_full)
+            kb = self.ikbsha(old_sha, new_sha, g_full)
             await self.client.bot.edit_inline_text(
                 inline_id,
                 fmtstr(
                     "Selfbot Restarted",
                     {
                         "Version": __version__ + "-" + g_branch or "N/A",
-                        "Modules": len(self.client.modules),
+                        "\nModules": len(self.client.modules),
                         "Handlers": len(self.client.handlers),
                         "Listeners": len(self.client.listeners),
-                        "Message": trunc,
+                        "\nMessage": trunc,
                     },
                     fmtsec(datetime.datetime.fromtimestamp(float(ts))),
                 ),
@@ -112,34 +95,10 @@ class System(Module):
             cache_time=0,
         )
 
-    def _git_info_sync(self) -> tuple[str, str, str, str]:
-        try:
-            repo = git.Repo(".")
-        except Exception:
-            return ("n/a", "n/a", "n/a", "")
-
-        try:
-            branch = repo.active_branch.name
-        except Exception:
-            branch = "detached"
-
-        try:
-            c = repo.head.commit
-            return (
-                branch,
-                c.hexsha[:7],
-                (c.message.splitlines()[0] or "").strip(),
-                c.hexsha,
-            )
-        except Exception:
-            return branch, "n/a", "n/a", ""
-
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         if getattr(self.client, "restart", False) or os.path.exists(self.file):
-            return await event.edit_message_text(
-                "<code>Restarting....</code>", reply_markup=self._kb_close()
-            )
+            return await event.edit_message_text("<code>Restart is Called....</code>")
 
         setattr(self.client, "restart", True)
 
@@ -147,9 +106,7 @@ class System(Module):
         persisted_new = None
 
         if event.query.endswith("-f"):
-            await event.edit_message_text(
-                "<code>Checking upstream...</code>", reply_markup=self._kb_close()
-            )
+            await event.edit_message_text("<code>Checking Upstream...</code>")
 
             def fetch_detect():
                 repo = git.Repo(".") if os.path.isdir(".git") else git.Repo.init(".")
@@ -192,14 +149,10 @@ class System(Module):
             deps_changed, old_sha, new_sha = await asyncio.to_thread(fetch_detect)
 
             if new_sha and old_sha and new_sha == old_sha:
-                await event.edit_message_text(
-                    "<code>No updates found.</code>", reply_markup=self._kb_close()
-                )
+                await event.edit_message_text("<code>No Updates Found</code>")
                 persisted_new = new_sha
             else:
-                await event.edit_message_text(
-                    "<code>Applying update...</code>", reply_markup=self._kb_close()
-                )
+                await event.edit_message_text("<code>Apply Update...</code>")
                 persisted_old, persisted_new = old_sha, new_sha
 
                 def reset_apply():
@@ -235,8 +188,7 @@ class System(Module):
 
                 if deps_changed:
                     await event.edit_message_text(
-                        "<code>Dependencies changed. Updating...</code>",
-                        reply_markup=self._kb_close(),
+                        "<code>Dependencies Changed. Updating...</code>"
                     )
 
                     def pip_update():
@@ -265,10 +217,7 @@ class System(Module):
 
                     await asyncio.to_thread(pip_update)
                 else:
-                    await event.edit_message_text(
-                        "<code>No dependency changes.</code>",
-                        reply_markup=self._kb_close(),
-                    )
+                    await event.edit_message_text("<code>Dependencies Unchanged</code>")
 
         lines = [f"{event.inline_message_id}", f"{datetime.datetime.now().timestamp()}"]
         if persisted_old:
@@ -278,9 +227,7 @@ class System(Module):
             lines.append(persisted_new)
 
         await asyncio.gather(
-            event.edit_message_text(
-                "<code>Restarting...</code>", reply_markup=self._kb_close()
-            ),
+            event.edit_message_text("<code>Restarting...</code>"),
             asyncio.to_thread(self.putraw, "\n".join(lines)),
         )
         try:
@@ -288,7 +235,7 @@ class System(Module):
         finally:
             os.execv(sys.executable, (sys.executable, "-m", "selfbot"))
 
-    def getid(self) -> tuple[str, float, str | None, str | None] | None:
+    def getraw(self) -> tuple[str, float, str | None, str | None] | None:
         if not os.path.exists(self.file):
             return None
 
@@ -309,3 +256,36 @@ class System(Module):
     def putraw(self, text: str) -> None:
         with open(self.file, "w") as f:
             f.write(text)
+
+    def gitsync(self) -> tuple[str, str, str, str]:
+        try:
+            repo = git.Repo(".")
+        except Exception:
+            return ("n/a", "n/a", "n/a", "")
+
+        try:
+            branch = repo.active_branch.name
+        except Exception:
+            branch = "detached"
+
+        try:
+            c = repo.head.commit
+            return (
+                branch,
+                c.hexsha[:7],
+                (c.message.splitlines()[0] or "").strip(),
+                c.hexsha,
+            )
+        except Exception:
+            return branch, "n/a", "n/a", ""
+
+    def ikbsha(self, old_sha: str | None, new_sha: str | None, head_sha: str | None):
+        if old_sha and new_sha and old_sha != new_sha:
+            txt = f"{old_sha[:7]} > {new_sha[:7]}"
+            url = f"{self.remote}/compare/{old_sha}...{new_sha}"
+        else:
+            hs = (new_sha or head_sha) or ""
+            txt = hs[:7] if hs else "n/a"
+            url = f"{self.remote}/commit/{hs}" if hs else self.remote
+
+        return ikm([[(txt, "url", url)], [("Close", b"0")]])
