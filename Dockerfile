@@ -29,7 +29,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-      libffi8 libpq5 git \
+      libffi8 libpq5 git curl ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
