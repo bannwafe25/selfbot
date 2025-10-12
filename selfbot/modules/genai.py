@@ -79,10 +79,7 @@ class GenAI(Module):
             )
         else:
             args.update(
-                {
-                    "chat_id": event.chat.id,
-                    "message_id": event.reply_to_message_id or event.id,
-                }
+                {"chat_id": event.chat.id, "message_id": event.reply_to_message_id}
             )
 
         res = await event._client.get_inline_bot_results(self.client.bot.me.id, "ask")
