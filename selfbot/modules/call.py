@@ -32,6 +32,7 @@ QUERY = """
 CREATE TABLE IF NOT EXISTS call (
     chat_id BIGINT  PRIMARY KEY,
     joined  BOOLEAN DEFAULT FALSE,
+    mic_on  BOOLEAN DEFAULT FALSE,
     join_as BIGINT
 );
 """
@@ -41,6 +42,7 @@ pattern = re.compile(
     r"(?P<action>(?:start|end|join|leave)?)call(?:s$)?"
     r"(?:\s+(?P<chat>@?[a-zA-Z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
     r"(?:\s+as@(?P<as>@?[a-z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
+    r"(?:\s+(?P<mute>-mute))?"
     r"(?:\s+-t\s(?P<title>.+))?"
     r"$"
 )
@@ -49,7 +51,7 @@ pattern = re.compile(
 class Call(Module):
     name = "Call"
 
-    cmds = "{action}?calls? {chat}? (as@{peer})? (-t {title})?"
+    cmds = "{action}?calls? {chat}? (as@{peer})? (-mute)? (-t {title})?"
     desc = {
         "action": "join|leave|start|end",
         "calls": "List Joined Chat IDs (Standalone)",
@@ -81,7 +83,7 @@ class Call(Module):
 
         await self.client.db.execute(QUERY)
         rows = await self.client.db.fetch(
-            "SELECT chat_id, join_as FROM call WHERE joined = TRUE"
+            "SELECT chat_id, join_as, mic_on FROM call WHERE joined = TRUE"
         )
         for row in rows:
             args = {"chat_id": row["chat_id"]}
@@ -99,6 +101,9 @@ class Call(Module):
                 await self.client.db.execute(
                     "UPDATE call SET joined = FALSE WHERE chat_id = $1;", row["chat_id"]
                 )
+            else:
+                if not row.get("mic_on"):
+                    await self.client.tgc.mute(row["chat_id"])
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -201,6 +206,7 @@ class Call(Module):
                         reply_markup=ikm(keyb),
                     )
                 else:
+                    text["data"]["Mute"] = data["mute"]
                     text["data"]["Peer"] = data["as"]
                     args["config"] = GroupCallConfig(join_as=peer)
 
@@ -232,16 +238,22 @@ class Call(Module):
             )
         else:
             if data["action"] in ["join", "leave"]:
+                mute = True if data["mute"] else False
+                if mute:
+                    await self.client.tgc.mute(data["chat_id"])
+
                 await self.client.db.execute(
                     """
-                    INSERT INTO call (chat_id, joined, join_as)
-                    VALUES ($1, $2, $3)
+                    INSERT INTO call (chat_id, joined, mic_on, join_as)
+                    VALUES ($1, $2, $3, $4)
                     ON CONFLICT (chat_id) DO UPDATE SET
                         joined = EXCLUDED.joined,
+                        mic_on = EXCLUDED.mic_on,
                         join_as = EXCLUDED.join_as;
                     """,
                     data["chat_id"],
-                    True if data["action"] == "join" else False,
+                    data["action"] == "join",
+                    not mute,
                     data["as"],
                 )
 
