@@ -102,7 +102,7 @@ class Telegram(abc.ABC):
                 self.app,
                 MessageHandler,
                 (flt.mentioned | (flt.incoming & flt.private))
-                & (~flt.me & ~flt.bot & ~flt.via_bot),
+                & (~flt.me & ~flt.bot & ~flt.via_bot & ~flt.service),
                 -1,
             ),
             "message_out": (
