@@ -206,7 +206,7 @@ class Call(Module):
                         reply_markup=ikm(keyb),
                     )
                 else:
-                    text["data"]["Mute"] = data["mute"]
+                    text["data"]["Mute"] = bool(data["mute"])
                     text["data"]["Peer"] = data["as"]
                     args["config"] = GroupCallConfig(join_as=peer)
 
@@ -238,8 +238,7 @@ class Call(Module):
             )
         else:
             if data["action"] in ["join", "leave"]:
-                mute = True if data["mute"] else False
-                if mute:
+                if bool(data["mute"]):
                     await self.client.tgc.mute(data["chat_id"])
 
                 await self.client.db.execute(
@@ -253,7 +252,7 @@ class Call(Module):
                     """,
                     data["chat_id"],
                     data["action"] == "join",
-                    not mute,
+                    not bool(data["mute"]),
                     data["as"],
                 )
 
