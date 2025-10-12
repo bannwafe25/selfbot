@@ -238,8 +238,13 @@ class Call(Module):
             )
         else:
             if data["action"] in ["join", "leave"]:
-                if bool(data["mute"]):
-                    await self.client.tgc.mute(data["chat_id"])
+                if data["action"] == "join":
+                    mic = (
+                        self.client.tgc.mute
+                        if bool(data["mute"])
+                        else self.client.tgc.unmute
+                    )
+                    await mic(data["chat_id"])
 
                 await self.client.db.execute(
                     """
