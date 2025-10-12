@@ -114,9 +114,7 @@ class GenAI(Module):
             async with self.lock:
                 self.coll.clear()
 
-            return await resp.edit("<b>Cleared</b>")
-
-        await event.reply("<b>Hello, World!</b>", quote=True)
+            await asyncio.gather(event.delete(True), resp.delete(True))
 
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_query(self, event: InlineQuery) -> None:
