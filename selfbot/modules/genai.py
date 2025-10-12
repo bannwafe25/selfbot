@@ -70,16 +70,24 @@ class GenAI(Module):
         async with self.lock:
             await self.data.put(query)
 
-        if event.external_reply and event.external_reply.message_id:
-            args.update(
-                {
-                    "chat_id": event.external_reply.chat.id,
-                    "message_id": event.external_reply.message_id,
-                }
-            )
+        if event.external_reply:
+            if event.external_reply.message_id:
+                args.update(
+                    {
+                        "chat_id": event.external_reply.chat.id,
+                        "message_id": event.external_reply.message_id,
+                    }
+                )
+            else:
+                args.update(
+                    {"chat_id": event.chat.id, "message_id": event.reply_to_message_id}
+                )
         else:
             args.update(
-                {"chat_id": event.chat.id, "message_id": event.reply_to_message_id}
+                {
+                    "chat_id": event.chat.id,
+                    "message_id": event.reply_to_message_id or event.id,
+                }
             )
 
         res = await event._client.get_inline_bot_results(self.client.bot.me.id, "ask")
