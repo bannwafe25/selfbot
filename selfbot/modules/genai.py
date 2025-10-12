@@ -105,14 +105,16 @@ class GenAI(Module):
             len(event.content.split()) == 2
             and event.content.split()[1].strip() == "clear"
         ):
-            async with self.lock:
-                self.coll.clear()
-
-            return await event.reply(
-                "<b>Cleared</b>",
+            resp = await event.reply(
+                "<code>...</code>",
                 quote=True,
                 reply_markup=ikm(("Ask", "switch_inline_query", "ask ")),
             )
+
+            async with self.lock:
+                self.coll.clear()
+
+            return await resp.edit("<b>Cleared</b>")
 
         await event.reply("<b>Hello, World!</b>", quote=True)
 
