@@ -25,7 +25,11 @@ class GenAI(Module):
     name = "GenAI"
 
     cmds = "ask {query}?"
-    desc = {"query": "String or <Reply or Quote to Content>", "?": "Optional"}
+    desc = {
+        "query": "String or <Reply or Quote to Content>",
+        "?": "Optional",
+        "e.g.": "ask Who are You?",
+    }
 
     async def on_starting(self) -> None:
         if not self.client.config.get("gemini_api_key"):
@@ -95,7 +99,24 @@ class GenAI(Module):
             res.query_id, res.results[0].id, reply_parameters=ReplyParameters(**args)
         )
 
-    @listener.handler(filters.regex(pattern), 2)
+    @listener.handler(filters.command("start"), 2)
+    async def on_message_bot(self, event: Message) -> None:
+        if (
+            len(event.content.split()) == 2
+            and event.content.split()[1].strip() == "clear"
+        ):
+            async with self.lock:
+                self.coll.clear()
+
+            return await event.reply(
+                "<b>Cleared</b>",
+                quote=True,
+                reply_markup=ikm(("Ask", "switch_inline_query", "ask ")),
+            )
+
+        await event.reply("<b>Hello, World!</b>", quote=True)
+
+    @listener.handler(filters.regex(pattern), 3)
     async def on_inline_query(self, event: InlineQuery) -> None:
         await event.answer(
             [
@@ -106,9 +127,11 @@ class GenAI(Module):
                 )
             ],
             cache_time=0,
+            switch_pm_text="Clear Conversation",
+            switch_pm_parameter="clear",
         )
 
-    @listener.handler(filters.regex(pattern), 3)
+    @listener.handler(filters.regex(pattern), 4)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         query: str
 

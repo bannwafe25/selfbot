@@ -111,6 +111,7 @@ class Telegram(abc.ABC):
                 (flt.me & (flt.text | flt.caption)) & ~flt.via_bot,
                 -1,
             ),
+            "message_bot": (self.bot, MessageHandler, fltapp, -1),
             "inline_query": (self.bot, InlineQueryHandler, fltapp, -1),
             "inline_result": (self.bot, ChosenInlineResultHandler, fltapp, -1),
             "inline_callback": (self.bot, CallbackQueryHandler, flt.all, -1),
@@ -170,5 +171,6 @@ class Telegram(abc.ABC):
                 UpdateBotInlineQuery,
                 UpdateBotInlineSend,
                 UpdateInlineBotCallbackQuery,
+                UpdateNewMessage,
             ),
         )
