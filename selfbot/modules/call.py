@@ -195,6 +195,7 @@ class Call(Module):
 
         if data["action"] == "join":
             text["head"] = "Joined Call"
+            text["data"]["Mute"] = bool(data["mute"])
             if not data["as"]:
                 text["data"]["Peer"] = "Self"
             else:
@@ -206,7 +207,6 @@ class Call(Module):
                         reply_markup=ikm(keyb),
                     )
                 else:
-                    text["data"]["Mute"] = bool(data["mute"])
                     text["data"]["Peer"] = data["as"]
                     args["config"] = GroupCallConfig(join_as=peer)
 
