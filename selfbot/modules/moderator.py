@@ -119,7 +119,7 @@ class Moderator(Module):
             func = self.client.app.restrict_chat_member
             args["permissions"] = ChatPermissions(
                 **{
-                    k: True if data["action"] == "unmute" else False
+                    k: data["action"] == "unmute"
                     for k in inspect.signature(ChatPermissions).parameters
                 }
             )

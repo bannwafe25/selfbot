@@ -83,7 +83,11 @@ class Call(Module):
 
         await self.client.db.execute(QUERY)
         rows = await self.client.db.fetch(
-            "SELECT chat_id, join_as, mic_on FROM call WHERE joined = TRUE"
+            """
+            SELECT chat_id, join_as, mic_on
+            FROM call
+            WHERE joined IS TRUE;
+            """
         )
         for row in rows:
             args = {"chat_id": row["chat_id"]}
@@ -99,7 +103,12 @@ class Call(Module):
                 await self.client.tgc.play(**args)
             except Exception:
                 await self.client.db.execute(
-                    "UPDATE call SET joined = FALSE WHERE chat_id = $1;", row["chat_id"]
+                    """
+                    UPDATE call
+                    SET joined = FALSE
+                    WHERE chat_id = $1;
+                    """,
+                    row["chat_id"],
                 )
             else:
                 if not row.get("mic_on"):

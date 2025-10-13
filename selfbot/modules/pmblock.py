@@ -63,7 +63,11 @@ class PmBlock(Module):
 
         await self.client.db.execute(QUERY)
 
-        data = await self.client.db.fetch("SELECT * FROM pmblock;")
+        data = await self.client.db.fetch(
+            """
+            SELECT * FROM pmblock;
+            """
+        )
         if not data:
             self.pmbl = False
             self.text = "<b>Sorry, No PMs!</b>"
@@ -181,12 +185,20 @@ class PmBlock(Module):
                 if data["set"] == "msg":
                     self.text = data["content"]
                     await self.client.db.execute(
-                        "UPDATE pmblock SET message = $1", self.text
+                        """
+                        UPDATE pmblock
+                        SET message = $1;
+                        """,
+                        self.text,
                     )
                 else:
                     self.link = data["content"]
                     await self.client.db.execute(
-                        "UPDATE pmblock SET Feedback = $1", self.link
+                        """
+                        UPDATE pmblock
+                        SET Feedback = $1;
+                        """,
+                        self.link,
                     )
             else:
                 if (
@@ -198,7 +210,11 @@ class PmBlock(Module):
                 else:
                     self.pmbl = not self.pmbl
                     await self.client.db.execute(
-                        "UPDATE pmblock SET active = $1", self.pmbl
+                        """
+                        UPDATE pmblock
+                        SET active = $1;
+                        """,
+                        self.pmbl,
                     )
 
             return await event.edit_message_text(
@@ -216,8 +232,12 @@ class PmBlock(Module):
         keyb = [("Close", b"0")]
         if data["action"].endswith("s"):
             res = await self.client.db.fetch(
-                "SELECT user_id FROM pmblock_auths WHERE auth = $1;",
-                False if data["action"].startswith("un") else True,
+                """
+                SELECT user_id
+                FROM pmblock_auths
+                WHERE auth = $1;
+                """,
+                not data["action"].startswith("un"),
             )
             head = f"Private Message {data['action'].title()}"
             text = [str(i["user_id"]) for i in res]
@@ -231,7 +251,12 @@ class PmBlock(Module):
                 text = text[:8]
         else:
             auth = await self.client.db.fetchval(
-                "SELECT auth FROM pmblock_auths WHERE user_id = $1;", data["user"]
+                """
+                SELECT auth
+                FROM pmblock_auths
+                WHERE user_id = $1;
+                """,
+                data["user"],
             )
             if (auth and data["action"] == "auth") or (
                 not auth and data["action"] == "unauth"
@@ -244,7 +269,7 @@ class PmBlock(Module):
                     INSERT INTO pmblock_auths (user_id, auth)
                     VALUES ($1, $2)
                     ON CONFLICT (user_id) DO UPDATE SET
-                        auth = EXCLUDED.auth
+                        auth = EXCLUDED.auth;
                     """,
                     data["user"],
                     auth,

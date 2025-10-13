@@ -45,7 +45,11 @@ class Afk(Module):
         self.lock = asyncio.Lock()
 
         await self.client.db.execute(QUERY)
-        self._afk = await self.client.db.fetchval("SELECT status FROM afk;")
+        self._afk = await self.client.db.fetchval(
+            """
+            SELECT status FROM afk;
+            """
+        )
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -86,7 +90,12 @@ class Afk(Module):
             )
 
             old = await self.client.db.fetchval(
-                "SELECT msg_id FROM afk_ids WHERE chat_id = $1", msg.chat.id
+                """
+                SELECT msg_id
+                FROM afk_ids
+                WHERE chat_id = $1;
+                """,
+                msg.chat.id,
             )
             if old:
                 await self.client.app.delete_messages(msg.chat.id, old)
@@ -119,7 +128,10 @@ class Afk(Module):
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         if event.query.startswith("#"):
             since, reason = await self.client.db.fetchval(
-                "SELECT (since, reason) FROM afk;"
+                """
+                SELECT (since, reason)
+                FROM afk;
+                """
             )
             return await event.edit_message_text(
                 fmtstr(
@@ -146,7 +158,11 @@ class Afk(Module):
 
         now = datetime.datetime.now()
         if not data[0]:
-            await self.client.db.execute("DELETE FROM afk;")
+            await self.client.db.execute(
+                """
+                DELETE FROM afk;
+                """
+            )
             await self.client.db.execute(
                 """
                 INSERT INTO afk (status, reason, since)
@@ -157,15 +173,36 @@ class Afk(Module):
             )
             self._afk = True
         else:
-            res = await self.client.db.fetch("SELECT chat_id, msg_id FROM afk_ids;")
+            res = await self.client.db.fetch(
+                """
+                SELECT chat_id, msg_id
+                FROM afk_ids;
+                """
+            )
             for i in res:
                 try:
                     await self.client.app.delete_messages(i["chat_id"], i["msg_id"])
                 except RPCError:
                     continue
 
-            now = await self.client.db.fetchval("SELECT since FROM afk;")
-            await self.client.db.execute("DELETE FROM afk_ids; DELETE FROM afk;")
+            now = await self.client.db.fetchval(
+                """
+                SELECT since
+                FROM afk;
+                """
+            )
+            await asyncio.gather(
+                self.client.db.execute(
+                    """
+                    DELETE FROM afk_ids;
+                    """
+                ),
+                self.client.db.execute(
+                    """
+                    DELETE FROM afk;
+                    """
+                ),
+            )
             self._afk = False
 
         await event.edit_message_text(
