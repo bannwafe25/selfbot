@@ -171,7 +171,7 @@ class Info(Module):
                 await event.edit_message_text(
                     fmtstr(
                         "Chat Information",
-                        dict(list(text.items()[:2])),
+                        dict(list(text.items())[:2]),
                         fmtsec(now),
                         e.__class__.__name__,
                     ),
