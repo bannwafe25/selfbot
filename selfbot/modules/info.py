@@ -169,6 +169,11 @@ class Info(Module):
                 ).text.strip()
                 keyb.insert(0, [("Full", "url", link)])
                 await event.edit_message_text(
-                    fmtstr("Chat Information", e.__class__.__name__, fmtsec(now)),
+                    fmtstr(
+                        "Chat Information",
+                        dict(list(text.items()[:2])),
+                        fmtsec(now),
+                        e.__class__.__name__,
+                    ),
                     reply_markup=ikm(keyb),
                 )
