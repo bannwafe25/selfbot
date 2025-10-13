@@ -44,28 +44,28 @@ def fmtsec(now: datetime.datetime, part: int = 3) -> str:
 def fmtstr(head: str, data: any = None, foot: str = None, msgs: str = None) -> str:
     body = ""
     if isinstance(data, dict):
-        padd = max((len(k) for k in data.keys()), default=0)
+        padd = max((len(str(k)) for k in data.keys()), default=0)
         body = "\n".join(
-            f"  <code>{html.escape(k).ljust(padd)}</code> : <code>{html.escape(v)}</code>"
+            f"  <code>{html.escape(str(k)).ljust(padd)}</code> : <code>{html.escape(str(v))}</code>"
             for k, v in data.items()
         )
     elif isinstance(data, list):
         body = "\n".join(
-            f"  <code>{n}</code>. <code>{html.escape(item)}</code>"
+            f"  <code>{n}</code>. <code>{html.escape(str(item))}</code>"
             for n, item in enumerate(data, start=1)
         )
     elif data:
-        body = f"  <code>{html.escape(data)}</code>"
+        body = f"  <code>{html.escape(str(data))}</code>"
 
     text = [f"<b>{head}</b>"]
     if body:
         text.append(body)
 
     if msgs:
-        text.append(f"<blockquote expandable>{html.escape(msgs)}</blockquote>")
+        text.append(f"<blockquote expandable>{html.escape(str(msgs))}</blockquote>")
 
     if foot:
-        text.append(f"<b>{html.escape(foot)}</b>")
+        text.append(f"<b>{html.escape(str(foot))}</b>")
 
     return "\n\n".join(text)
 
