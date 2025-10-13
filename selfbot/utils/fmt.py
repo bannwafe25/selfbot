@@ -46,16 +46,16 @@ def fmtstr(head: str, data: any = None, foot: str = None, msgs: str = None) -> s
     if isinstance(data, dict):
         padd = max((len(k) for k in data.keys()), default=0)
         body = "\n".join(
-            f"  <code>{k.ljust(padd)}</code> : <code>{v}</code>"
+            f"  <code>{html.escape(k).ljust(padd)}</code> : <code>{html.escape(v)}</code>"
             for k, v in data.items()
         )
     elif isinstance(data, list):
         body = "\n".join(
-            f"  <code>{n}</code>. <code>{item}</code>"
+            f"  <code>{n}</code>. <code>{html.escape(item)}</code>"
             for n, item in enumerate(data, start=1)
         )
     elif data:
-        body = f"  <code>{data}</code>"
+        body = f"  <code>{html.escape(data)}</code>"
 
     text = [f"<b>{head}</b>"]
     if body:
@@ -65,7 +65,7 @@ def fmtstr(head: str, data: any = None, foot: str = None, msgs: str = None) -> s
         text.append(f"<blockquote expandable>{html.escape(msgs)}</blockquote>")
 
     if foot:
-        text.append(f"<b>{foot}</b>")
+        text.append(f"<b>{html.escape(foot)}</b>")
 
     return "\n\n".join(text)
 
