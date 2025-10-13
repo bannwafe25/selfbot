@@ -167,7 +167,7 @@ class Info(Module):
                         "https://paste.rs", data=json.dumps(text, indent=2).encode()
                     )
                 ).text.strip()
-                keyb.insert(0, [("Full", "url", link)])
+                keyb.insert(0, [("Full Output", "url", link)])
                 await event.edit_message_text(
                     fmtstr(
                         "Chat Information",
