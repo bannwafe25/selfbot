@@ -53,6 +53,7 @@ WORKDIR /app
 
 COPY --from=builder /app /app
 
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH" \
+    TZ="Asia/Jakarta"
 
 CMD ["python", "-m", "selfbot"]
