@@ -102,14 +102,7 @@ class Call(Module):
             try:
                 await self.client.tgc.play(**args)
             except Exception:
-                await self.client.db.execute(
-                    """
-                    UPDATE call
-                    SET joined = FALSE
-                    WHERE chat_id = $1;
-                    """,
-                    row["chat_id"],
-                )
+                continue
             else:
                 if not row.get("mic_on"):
                     await self.client.tgc.mute(row["chat_id"])
