@@ -138,7 +138,7 @@ class GenAI(Module):
                     f"<code>Reply to Content or Give a Text</code>\n\n<b><blockquote>/del_{event.id}</blockquote></b>"
                 )
 
-            await edit("...")
+            await edit("<code>...</code>")
         else:
             question = f"```Query\n{query}```\n\n"
             await edit(question, parse_mode=ParseMode.MARKDOWN)
@@ -160,7 +160,7 @@ class GenAI(Module):
                     res = f"{res[:1024]}... [TRUNCATED]({link}.markdown)"
 
             await edit(
-                f"{question}{res}\n\n**{rtt}**",
+                f"{question}{res}\n\n> **{rtt}**",
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=ikm(ikb),
             )
