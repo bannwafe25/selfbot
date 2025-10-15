@@ -41,11 +41,6 @@ class Restart(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
-        if event.chat.id != self.client.bot.me.id:
-            return await event.edit_text(
-                f"<code>Only Works on Bot</code>\n<b><blockquote><a href='t.me/{self.client.bot.me.username}'>Open</a></blockquote></b>"
-            )
-
         await event.edit_text("<code>...</code>")
 
         def ensure(repo, remote):
