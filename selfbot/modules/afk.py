@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS afk_ids (
 pattern = re.compile(r"^#?afk(?:\s(.+))?$")
 
 
-class Afk(Module):
+class AFK(Module):
     name = "AFK"
 
     cmds = "afk {reason}?"
