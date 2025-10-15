@@ -13,7 +13,7 @@ class Delete(Module):
     name = "Delete"
 
     cmds = "<Reply to Message>? d(el(ete)?)?"
-    desc = {"id": "Message ID", "?": "Optional", "e.g.": "delete"}
+    desc = {"?": "Optional", "e.g.": "delete"}
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
