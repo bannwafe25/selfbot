@@ -39,7 +39,9 @@ class Graph(Module):
         content, title = pattern.match(event.content.html).groupdict().values()
         if not content:
             if not event.reply_to_message.content:
-                return await event.edit("<code>Reply to Content or Give a Text</code>")
+                return await event.edit_text(
+                    "<code>Reply to Content or Give a Text</code>"
+                )
 
             content = emojiid.sub(
                 r"\1",

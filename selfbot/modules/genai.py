@@ -58,7 +58,7 @@ class GenAI(Module):
             len(event.content.split()) == 2
             and event.content.split()[1].strip() == "clear"
         ):
-            resp = await event.reply(
+            resp = await event.reply_text(
                 "<code>...</code>",
                 quote=True,
                 reply_markup=ikm(("Ask", "switch_inline_query", "ask ")),
@@ -134,7 +134,7 @@ class GenAI(Module):
             elif event.reply_to_message and event.reply_to_message.content:
                 query = event.reply_to_message.content
             else:
-                return await event.edit(
+                return await event.edit_text(
                     f"<code>Reply to Content or Give a Text</code>\n\n<b><blockquote>/del_{event.id}</blockquote></b>"
                 )
 

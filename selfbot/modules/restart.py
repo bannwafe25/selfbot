@@ -18,7 +18,7 @@ class Restart(Module):
     name = "Restart"
 
     cmds = "r"
-    desc = "Update and Restart System"
+    desc = "Restart Selfbot"
 
     file = "/tmp/r.json"
 
@@ -41,7 +41,12 @@ class Restart(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
-        await event.edit("<code>Resetting...</code>")
+        if event.chat.id != self.client.bot.me.id:
+            return await event.edit_text(
+                f"<code>Only Works on Bot</code>\n<b><blockquote><a href='t.me/{self.client.bot.me.username}'>Open</a></blockquote></b>"
+            )
+
+        await event.edit_text("<code>...</code>")
 
         def ensure(repo, remote):
             origin = next((r for r in repo.remotes if r.name == "origin"), None)
@@ -84,7 +89,7 @@ class Restart(Module):
         changed = await asyncio.to_thread(check)
 
         if changed:
-            await event.edit("<code>Update Deps...</code>")
+            await event.edit_text("<code>Update Deps...</code>")
 
             def update():
                 try:
@@ -100,7 +105,7 @@ class Restart(Module):
 
             await asyncio.to_thread(update)
 
-        await event.edit("<code>Restarting...</code>")
+        await event.edit_text("<code>Restarting...</code>")
         with open(self.file, "w") as f:
             json.dump({"cid": event.chat.id, "mid": event.id}, f)
 
