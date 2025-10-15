@@ -31,7 +31,7 @@ class Restart(Module):
                 return json.load(f)
 
         try:
-            data = await asyncio.to_thread(load())
+            data = await asyncio.to_thread(load)
         except Exception:
             return
         else:
@@ -109,5 +109,5 @@ class Restart(Module):
             with open(self.file, "w") as f:
                 json.dump({"cid": event.chat.id, "mid": event.id}, f)
 
-        await asyncio.to_thread(dump())
+        await asyncio.to_thread(dump)
         os.execv(sys.executable, (sys.executable, "-m", "selfbot"))
