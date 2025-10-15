@@ -73,11 +73,11 @@ class Debug(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
-        if event.content.startswith("i\n"):
+        if event.content.startswith("e\n"):
             res, _ = await asyncio.gather(
                 event._client.get_inline_bot_results(self.client.bot.me.id, "#"),
                 event.edit_text(
-                    html.escape(event.content.markdown).removeprefix("i\n")
+                    html.escape(event.content.markdown).removeprefix("e\n")
                 ),
             )
             return await event.reply_inline_bot_result(
