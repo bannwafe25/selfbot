@@ -26,9 +26,12 @@ class Restart(Module):
         if not os.path.exists(self.file):
             return
 
-        try:
+        def load() -> dict:
             with open(self.file) as f:
-                data = json.load(f)
+                return json.load(f)
+
+        try:
+            data = await asyncio.to_thread(load())
         except Exception:
             return
         else:
@@ -43,7 +46,7 @@ class Restart(Module):
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
 
-        def ensure(repo, remote):
+        def fetch(repo, remote):
             origin = next((r for r in repo.remotes if r.name == "origin"), None)
             if origin is None:
                 origin = repo.create_remote("origin", remote)
@@ -63,7 +66,7 @@ class Restart(Module):
             ).removesuffix(".git")
             branch = self.client.config.get("branch", "staging")
 
-            ensure(repo, remote_url)
+            fetch(repo, remote_url)
             repo.git.reset("--hard", f"origin/{branch}")
 
             old = repo.head.commit.hexsha
@@ -101,7 +104,10 @@ class Restart(Module):
             await asyncio.to_thread(update)
 
         await event.edit_text("<code>Restarting...</code>")
-        with open(self.file, "w") as f:
-            json.dump({"cid": event.chat.id, "mid": event.id}, f)
 
+        def dump():
+            with open(self.file, "w") as f:
+                json.dump({"cid": event.chat.id, "mid": event.id}, f)
+
+        await asyncio.to_thread(dump())
         os.execv(sys.executable, (sys.executable, "-m", "selfbot"))

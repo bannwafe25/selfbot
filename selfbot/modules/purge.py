@@ -16,9 +16,10 @@ pattern = re.compile(r"^purge(me)?(?:\s(\d{1,3}))?$")
 class Purge(Module):
     name = "Purge"
 
-    cmds = "<Reply to Message>? purge(me)? [1-999]?"
+    cmds = "<Reply to Message>? purge(me)? {limit}?"
     desc = {
         "Reply to Message": "as Start ID (Default: 1)",
+        "limit": "[1-999] (Default: 100)",
         "?": "Optional",
         "e.g.": "purgeme 99",
     }

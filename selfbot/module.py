@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 class Module:
     name: str = ""
     cmds: str = ""
+
     desc: any = None
 
     def __init__(self, client: "Selfbot") -> None:
