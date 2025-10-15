@@ -24,18 +24,17 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import aexec, fmtexc, fmtsec, ids, ikm, shell
 
-pattern = re.compile(r"^(?:e\n.+)|(?:.*#)$", flags=re.DOTALL)
+pattern = re.compile(r"^(?:e\s+.+)|(?:.+#)|(?:#)$", flags=re.DOTALL)
 
 
 class Debug(Module):
     name = "Debug"
 
-    cmds = "(e\\n)?{code}##?"
+    cmds = "e? {code} #?"
     desc = {
-        "e": "Inline (Suffix '#' No Needed)",
+        "e": "Prefix for No Inline (Suffix '#' No Needed)",
         "code": "String as Python Code",
-        "#": "Suffix",
-        "##": "Return (No Output)",
+        "#": "Suffix for Inline (Prefix 'e' No Needed)",
         "?": "Optional",
         "e.g.": 'print("Hello, World!")#',
     }
@@ -74,11 +73,11 @@ class Debug(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
-        if event.content.startswith("e\n"):
+        if event.content.endswith("#"):
             res, _ = await asyncio.gather(
                 event._client.get_inline_bot_results(self.client.bot.me.id, "#"),
                 event.edit_text(
-                    html.escape(event.content.markdown).removeprefix("e\n")
+                    html.escape(event.content.markdown).removesuffix("#").rstrip()
                 ),
             )
             return await event.reply_inline_bot_result(
@@ -86,7 +85,9 @@ class Debug(Module):
             )
 
         cmd, msg = await asyncio.gather(
-            event.edit_text(html.escape(event.content.markdown).removesuffix("#")),
+            event.edit_text(
+                html.escape(event.content.markdown).removeprefix("e").lstrip()
+            ),
             event.reply_text("<code>...</code>", quote=True),
         )
         await self.execute(cmd, msg)
