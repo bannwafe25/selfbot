@@ -38,21 +38,17 @@ class AFK(Module):
     cmds = "afk {reason}?"
     desc = {"reason": "String", "?": "Optional", "e.g.": "afk Busy!"}
 
-    status: bool
-    reason: str
-
-    since: datetime.datetime
+    afk: bool
 
     async def on_starting(self) -> None:
         self.lock = asyncio.Lock()
 
         await self.client.db.execute(QUERY)
-        data = await self.client.db.fetch(
+        self.afk = await self.client.db.fetchval(
             """
-            SELECT status, since, reason FROM afk;
+            SELECT status FROM afk;
             """
         )
-        self.status, self.since, self.reason = data[0]
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -60,7 +56,7 @@ class AFK(Module):
 
     @listener.handler(~filters.private, 2)
     async def on_message_in(self, event: Message) -> None:
-        if not self.status:
+        if not self.afk:
             return
 
         async with self.lock:
@@ -74,19 +70,23 @@ class AFK(Module):
                     res.query_id, res.results[0].id, quote=True
                 )
             except RPCError:
+                since, reason = await self.client.db.fetchval(
+                    """
+                    SELECT (since, reason)
+                    FROM afk;
+                    """
+                )
                 msg = await event.reply_text(
                     fmtstr(
                         "Away from Keyboard",
                         {
                             "Since": (
-                                self.since.strftime("%B %-d, %-I:%M %p")
-                                if self.since
-                                else None
+                                since.strftime("%B %-d, %-I:%M %p") if since else None
                             ),
                             "Timezone": "UTC+7\n",
-                            "Reason": self.reason,
+                            "Reason": reason,
                         },
-                        fmtsec(self.since) if self.since else None,
+                        fmtsec(since) if since else None,
                     )
                 )
 
@@ -129,19 +129,23 @@ class AFK(Module):
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         if event.query.startswith("#"):
             async with self.lock:
+                since, reason = await self.client.db.fetchval(
+                    """
+                    SELECT (since, reason)
+                    FROM afk;
+                    """
+                )
                 return await event.edit_message_text(
                     fmtstr(
                         "Away from Keyboard",
                         {
                             "Since": (
-                                self.since.strftime("%B %-d, %-I:%M %p")
-                                if self.since
-                                else None
+                                since.strftime("%B %-d, %-I:%M %p") if since else None
                             ),
                             "Timezone": "UTC+7\n",
-                            "Reason": self.reason,
+                            "Reason": reason,
                         },
-                        fmtsec(self.since) if self.since else None,
+                        fmtsec(since) if since else None,
                     ),
                     reply_markup=ikm(("Close", b"0")),
                 )
@@ -160,7 +164,7 @@ class AFK(Module):
             edit = event.edit_text
 
         now, (reason,) = datetime.datetime.now(), pattern.match(text).groups()
-        if self.status:
+        if self.afk:
             now, res = await asyncio.gather(
                 self.client.db.fetchval(
                     """
@@ -199,18 +203,17 @@ class AFK(Module):
                 INSERT INTO afk (status, reason, since)
                 VALUES ($1, $2, $3);
                 """,
-                self.status,
+                self.afk,
                 reason,
                 now,
             )
 
-        self.status = not self.status
+        self.afk = not self.afk
         await edit(
             fmtstr(
                 "Away from Keyboard",
-                {"Status": self.status, "Reason": reason},
+                {"Status": self.afk, "Reason": reason},
                 fmtsec(now),
             ),
             reply_markup=ikm(("Close", b"0")),
         )
-        self.reason, self.since = reason, now
