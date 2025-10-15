@@ -33,7 +33,7 @@ QUERY = """
 CREATE TABLE IF NOT EXISTS call (
     chat_id BIGINT  PRIMARY KEY,
     join_as BIGINT,
-    mute    BOOLEAN DEFAULT FALSE,
+    mute    BOOLEAN DEFAULT FALSE
 );
 """
 
@@ -42,7 +42,7 @@ pattern = re.compile(
     r"(?P<action>(?:start|end|join|leave)?)call"
     r"(?:\s+(?P<chat_id>@?[a-zA-Z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
     r"(?:\s+-as\s(?P<join_as>@?[a-z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
-    r"(?:\s+(?P<mute>-mute))?"
+    r"(?:\s+(?P<mute>-m))?"
     r"(?:\s+-t\s(?P<title>.+))?"
     r"$"
 )
@@ -51,12 +51,13 @@ pattern = re.compile(
 class Call(Module):
     name = "Call"
 
-    cmds = "{action}?call {chat}? (-as {peer})? (-mute)? (-t {title})?"
+    cmds = "{action}?call {chat}? (-as {peer})? (-m)? (-t {title})?"
     desc = {
         "action": "(join|leave|start|end)",
         "call": "Joined Call IDs (Standalone)",
         "chat": "Chat ID or Username (Default: Current Chat)",
         "peer": "Chat ID or Username (Default: Self)",
+        "-m": "Mute",
         "title": "String",
         "?": "Optional",
         "e.g.": "startcall @durov -t Untitled",
