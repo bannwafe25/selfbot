@@ -24,15 +24,15 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import aexec, fmtexc, fmtsec, ids, ikm, shell
 
-pattern = re.compile(r"^(?:i\n)?.+#$", flags=re.DOTALL)
+pattern = re.compile(r"^(e\n.+)|(.*#)$", flags=re.DOTALL)
 
 
 class Debug(Module):
     name = "Debug"
 
-    cmds = "(i\\n)?{code}##?"
+    cmds = "(e\\n)?{code}##?"
     desc = {
-        "i": "Inline Mode",
+        "e": "Inline Mode (Suffix No Need)",
         "code": "String as Python Code",
         "#": "Return (No Output)",
         "?": "Optional",
@@ -77,9 +77,7 @@ class Debug(Module):
             res, _ = await asyncio.gather(
                 event._client.get_inline_bot_results(self.client.bot.me.id, "#"),
                 event.edit_text(
-                    html.escape(event.content.markdown)
-                    .removeprefix("i\n")
-                    .removesuffix("#")
+                    html.escape(event.content.markdown).removeprefix("i\n")
                 ),
             )
             return await event.reply_inline_bot_result(
