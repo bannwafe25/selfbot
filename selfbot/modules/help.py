@@ -35,7 +35,7 @@ class Help(Module):
     ikbs: list[list] = []
 
     async def on_started(self) -> None:
-        mods = [mod for mod in self.client.modules.values() if not mod.hide]
+        mods = [mod for mod in self.client.modules.values()]
         page = []
         for i, mod in enumerate(mods):
             name = mod.name.lower()
