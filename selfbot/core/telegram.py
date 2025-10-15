@@ -24,7 +24,9 @@ from pyrogram.raw.types import (
 )
 from pyrogram.types import LinkPreviewOptions, Update
 
-from .storage import PostgresStorage
+from selfbot import __version__
+from selfbot.core.storage import PostgresStorage
+from selfbot.utils import fmtsec, fmtstr, ikm
 
 
 class Telegram(abc.ABC):
@@ -41,15 +43,31 @@ class Telegram(abc.ABC):
         if self.__event__ and not self.__event__.is_set():
             raise RuntimeError("Selfbot Running")
 
-        self.logger.info(
-            f"{'Restart' if os.path.exists('/tmp/r.json') else 'Start'}ing Client..."
-        )
+        tmp = os.path.exists("/tmp/r.json")
+        now = datetime.datetime.now()
+        self.logger.info(f"{'Restart' if tmp else 'Start'}ing Client...")
         try:
             await self.start()
         except Exception as e:
             self.logger.error(str(e))
         else:
             self.logger.info("Client Started")
+            if not tmp:
+                await self.bot.send_message(
+                    self.app.me.id,
+                    fmtstr(
+                        "Selfbot Started",
+                        {
+                            "Version": f"{__version__}\n",
+                            "Handlers": len(self.handlers),
+                            "Listeners": len(self.listeners),
+                            "Modules": len(self.modules),
+                        },
+                        fmtsec(now),
+                    ),
+                    reply_markup=ikm(("Help", "switch_inline_query", "help")),
+                )
+
             await self.idle()
         finally:
             await self.stop()
@@ -70,7 +88,7 @@ class Telegram(abc.ABC):
             asyncio.to_thread(self.loads),
             asyncio.to_thread(self.conf),
         )
-        asyncio.create_task(self.dispatch("starting"))
+        await self.dispatch("starting")
 
     async def idle(self) -> None:
         if self.__event__ and not self.__event__.is_set():
