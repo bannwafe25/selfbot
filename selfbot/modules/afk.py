@@ -41,7 +41,7 @@ class AFK(Module):
     status: bool
     reason: str
 
-    since: any
+    since: datetime.datetime | None
 
     async def on_starting(self) -> None:
         self.lock = asyncio.Lock()
@@ -81,15 +81,11 @@ class AFK(Module):
                     fmtstr(
                         "Away from Keyboard",
                         {
-                            "Since": (
-                                self.since.strftime("%B %-d, %-I:%M %p")
-                                if self.since
-                                else None
-                            ),
+                            "Since": self.since.strftime("%B %-d, %-I:%M %p"),
                             "Timezone": "UTC+7\n",
                             "Reason": self.reason,
                         },
-                        fmtsec(self.since) if self.since else None,
+                        fmtsec(self.since),
                     )
                 )
 
@@ -136,15 +132,11 @@ class AFK(Module):
                     fmtstr(
                         "Away from Keyboard",
                         {
-                            "Since": (
-                                self.since.strftime("%B %-d, %-I:%M %p")
-                                if self.since
-                                else None
-                            ),
+                            "Since": (self.since.strftime("%B %-d, %-I:%M %p")),
                             "Timezone": "UTC+7\n",
                             "Reason": self.reason,
                         },
-                        fmtsec(self.since) if self.since else None,
+                        fmtsec(self.since),
                     ),
                     reply_markup=ikm(("Close", b"0")),
                 )
@@ -196,20 +188,19 @@ class AFK(Module):
                     """
                 ),
             )
-            self.reason, self.since = "", None
+            self.status, self.reason, self.since = False, "", None
         else:
             await self.client.db.execute(
                 """
                 INSERT INTO afk (status, reason, since)
                 VALUES ($1, $2, $3);
                 """,
-                self.status,
+                True,
                 reason,
                 now,
             )
-            self.reason, self.since = reason, now
+            self.status, self.reason, self.since = True, reason, now
 
-        self.status = not self.status
         await edit(
             fmtstr(
                 "Away from Keyboard",
