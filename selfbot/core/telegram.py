@@ -45,31 +45,45 @@ class Telegram(abc.ABC):
             raise RuntimeError("Selfbot Running")
 
         tmp = os.path.exists("/tmp/r.json")
-        now = datetime.datetime.now()
         self.logger.info(f"{'Restart' if tmp else 'Start'}ing Client...")
+
+        now = datetime.datetime.now()
         try:
             await self.start()
         except Exception as e:
             self.logger.error(str(e))
         else:
             self.logger.info("Client Started")
-            if not tmp:
-                await self.bot.send_message(
-                    self.app.me.id,
-                    fmtstr(
-                        "Selfbot Started",
-                        {
-                            "Version": f"{__version__}\n",
-                            "Handlers": len(self.handlers),
-                            "Listeners": len(self.listeners),
-                            "Modules": len(self.modules),
-                        },
-                        fmtsec(now),
-                    ),
-                    reply_markup=ikm(
-                        ("Help", "switch_inline_query_current_chat", "help")
-                    ),
-                )
+            await self.bot.send_message(
+                self.app.me.id,
+                fmtstr(
+                    "Selfbot Started",
+                    {
+                        "Version": f"{__version__}\n",
+                        "Handlers": len(self.handlers),
+                        "Listeners": len(self.listeners),
+                        "Modules": len(self.modules),
+                    },
+                    fmtsec(now),
+                ),
+                reply_markup=ikm(
+                    [
+                        [
+                            (
+                                "Commit History",
+                                "url",
+                                f"{self.config.get(
+                'remote', 'https://github.com/DeltaUniverse/selfbot'
+            ).removesuffix('.git')}/commits/{self.config.get('branch', 'staging')}",
+                            )
+                        ],
+                        [
+                            ("Ping", "switch_inline_query_current_chat", "ping"),
+                            ("Help", "switch_inline_query_current_chat", "help"),
+                        ],
+                    ]
+                ),
+            )
 
             await self.idle()
         finally:

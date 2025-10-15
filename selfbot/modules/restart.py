@@ -29,15 +29,11 @@ class Restart(Module):
         try:
             with open(self.file) as f:
                 data = json.load(f)
-                chat_id = data["chat_id"]
-                message_id = data["message_id"]
         except Exception:
             return
         else:
             try:
-                await self.client.app.edit_message_text(
-                    chat_id, message_id, "<code>Selfbot Restarted</code>"
-                )
+                await self.client.app.delete_messages(*data.values())
             except Exception:
                 pass
             finally:
@@ -106,6 +102,6 @@ class Restart(Module):
 
         await event.edit("<code>Restarting...</code>")
         with open(self.file, "w") as f:
-            json.dump({"chat_id": event.chat.id, "message_id": event.id}, f)
+            json.dump({"cid": event.chat.id, "mid": event.id}, f)
 
         os.execv(sys.executable, (sys.executable, "-m", "selfbot"))
