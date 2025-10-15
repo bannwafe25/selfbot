@@ -126,9 +126,9 @@ class AFK(Module):
 
     @listener.handler(filters.regex(pattern), 4)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
-        if event.query.startswith("#"):
+        if event.query.startswith("#") and self.status:
             async with self.lock:
-                return await event.edit_message_text(
+                await event.edit_message_text(
                     fmtstr(
                         "Away from Keyboard",
                         {
@@ -140,8 +140,8 @@ class AFK(Module):
                     ),
                     reply_markup=ikm(("Close", b"0")),
                 )
-
-        await self.respond(event)
+        else:
+            await self.respond(event)
 
     async def respond(self, event: Update) -> None:
         text: str
