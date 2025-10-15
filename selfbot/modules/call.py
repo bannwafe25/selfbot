@@ -32,7 +32,7 @@ from selfbot.utils import fmtsec, fmtstr, ids, ikm
 QUERY = """
 CREATE TABLE IF NOT EXISTS call (
     chat_id BIGINT  PRIMARY KEY,
-    join_as BIGINT
+    join_as BIGINT,
     mute    BOOLEAN DEFAULT FALSE,
 );
 """
