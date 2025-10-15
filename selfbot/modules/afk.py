@@ -132,7 +132,7 @@ class AFK(Module):
                     fmtstr(
                         "Away from Keyboard",
                         {
-                            "Since": (self.since.strftime("%B %-d, %-I:%M %p")),
+                            "Since": self.since.strftime("%B %-d, %-I:%M %p"),
                             "Timezone": "UTC+7\n",
                             "Reason": self.reason,
                         },
