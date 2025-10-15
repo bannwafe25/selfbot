@@ -35,7 +35,7 @@ class Debug(Module):
         "e": "Inline (Suffix '#' No Needed)",
         "code": "String as Python Code",
         "#": "Suffix",
-        "#": "Return (No Output)",
+        "##": "Return (No Output)",
         "?": "Optional",
         "e.g.": 'print("Hello, World!")#',
     }
