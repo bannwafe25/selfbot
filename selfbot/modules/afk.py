@@ -154,9 +154,9 @@ class AFK(Module):
             text = event.content
             edit = event.edit_text
 
-        now, (reason,) = datetime.datetime.now(), pattern.match(text).groups()
+        since, (reason,) = datetime.datetime.now(), pattern.match(text).groups()
         if self.status:
-            now, res = await asyncio.gather(
+            since, ids = await asyncio.gather(
                 self.client.db.fetchval(
                     """
                     SELECT since
@@ -170,9 +170,9 @@ class AFK(Module):
                     """
                 ),
             )
-            for i in res:
+            for i in ids:
                 try:
-                    await self.client.app.delete_messages(i["chat_id"], i["msg_id"])
+                    await self.client.app.delete_messages(*i.values())
                 except RPCError:
                     continue
 
@@ -197,15 +197,15 @@ class AFK(Module):
                 """,
                 True,
                 reason,
-                now,
+                since,
             )
-            self.status, self.reason, self.since = True, reason, now
+            self.status, self.reason, self.since = True, reason, since
 
         await edit(
             fmtstr(
                 "Away from Keyboard",
                 {"Status": self.status, "Reason": reason},
-                fmtsec(now),
+                fmtsec(since),
             ),
             reply_markup=ikm(("Close", b"0")),
         )
