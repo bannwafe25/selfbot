@@ -7,14 +7,12 @@ if TYPE_CHECKING:
 
 class Module:
     name: str = ""
-    hide: int = 0
     cmds: str = ""
     desc: any = None
 
     def __init__(self, client: "Selfbot") -> None:
         self.client = client
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.period = {"m": "minutes", "h": "hours", "d": "days", "w": "weeks"}
 
 
 class ModuleError(Exception):
