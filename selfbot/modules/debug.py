@@ -73,6 +73,9 @@ class Debug(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
+        if event.content.strip() == "#":
+            return
+
         if event.content.endswith("#"):
             res, _ = await asyncio.gather(
                 event._client.get_inline_bot_results(self.client.bot.me.id, "#"),
