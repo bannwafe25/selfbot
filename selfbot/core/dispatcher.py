@@ -4,10 +4,17 @@ import bisect
 import contextlib
 
 from pyrogram.errors import FloodWait, MessageNotModified, QueryIdInvalid, SlowmodeWait
-from pyrogram.types import Update
+from pyrogram.types import (
+    CallbackQuery,
+    InlineQuery,
+    InlineQueryResultCachedSticker,
+    InputTextMessageContent,
+    Update,
+)
 
 from selfbot.listener import Listener
 from selfbot.module import Module
+from selfbot.utils import ikm
 
 
 class Dispatcher(abc.ABC):
@@ -20,8 +27,41 @@ class Dispatcher(abc.ABC):
         for listener in self.listeners.get(event, []):
             try:
                 if listener.filters and args and isinstance(args[0], Update):
-                    if not await listener.filters(args[0]._client, args[0]):
+                    update = args[0]
+                    if not await listener.filters(update._client, update):
                         continue
+                    else:
+                        if (
+                            isinstance(update, CallbackQuery | InlineQuery)
+                            and update.from_user.id != self.app.me.id
+                        ):
+                            if isinstance(update, InlineQuery):
+                                await update.answer(
+                                    [
+                                        InlineQueryResultCachedSticker(
+                                            sticker_file_id=self.config[
+                                                "sticker_file_id"
+                                            ],
+                                            reply_markup=ikm(
+                                                (
+                                                    "Source",
+                                                    "url",
+                                                    "https://github.com/DeltaUniverse/selfbot.git",
+                                                )
+                                            ),
+                                            input_message_content=InputTextMessageContent(
+                                                "<b>Who are You?</b>"
+                                            ),
+                                        )
+                                    ],
+                                    cache_time=15,
+                                )
+                            else:
+                                await update.answer(
+                                    "Who are You?", show_alert=True, cache_time=15
+                                )
+
+                            continue
 
                 await listener.func(*args, **kwargs)
 

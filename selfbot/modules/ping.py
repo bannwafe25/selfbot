@@ -50,9 +50,6 @@ class Ping(Module):
 
     @listener.handler(filters.regex(pattern), 4)
     async def on_inline_callback(self, event: CallbackQuery) -> None:
-        if event.from_user.id != self.client.app.me.id:
-            return await event.answer("Who are You?", show_alert=True, cache_time=0)
-
         await self.respond(event)
 
     async def ping(self, client: Client) -> str:
