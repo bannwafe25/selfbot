@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS afk (
     since   TIMESTAMP   DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS afk_ids (
-    chat_id BIGINT PRIMARY KEY,
-    msg_id  INT
+    chat_id     BIGINT PRIMARY KEY,
+    message_id  INT
 );
 """
 
@@ -91,7 +91,7 @@ class AFK(Module):
 
             old = await self.client.db.fetchval(
                 """
-                SELECT msg_id
+                SELECT message_id
                 FROM afk_ids
                 WHERE chat_id = $1;
                 """,
@@ -99,17 +99,24 @@ class AFK(Module):
             )
             if old:
                 await self.client.app.delete_messages(msg.chat.id, old)
-
-            await self.client.db.execute(
-                """
-                INSERT INTO afk_ids (chat_id, msg_id)
-                VALUES ($1, $2)
-                ON CONFLICT (chat_id) DO UPDATE
-                SET msg_id = EXCLUDED.msg_id;
-                """,
-                msg.chat.id,
-                msg.id,
-            )
+                await self.client.db.execute(
+                    """
+                    UPDATE afk_ids
+                    SET message_id = $1
+                    WHERE chat_id = $2;
+                    """,
+                    msg.id,
+                    msg.chat.id,
+                )
+            else:
+                await self.client.db.execute(
+                    """
+                    INSERT INTO afk_ids (chat_id, message_id)
+                    VALUES ($1, $2);
+                    """,
+                    msg.chat.id,
+                    msg.id,
+                )
 
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_query(self, event: InlineQuery) -> None:
@@ -165,7 +172,7 @@ class AFK(Module):
                 ),
                 self.client.db.fetch(
                     """
-                    SELECT chat_id, msg_id
+                    SELECT chat_id, message_id
                     FROM afk_ids;
                     """
                 ),

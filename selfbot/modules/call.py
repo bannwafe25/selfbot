@@ -32,17 +32,16 @@ from selfbot.utils import fmtsec, fmtstr, ids, ikm
 QUERY = """
 CREATE TABLE IF NOT EXISTS call (
     chat_id BIGINT  PRIMARY KEY,
-    joined  BOOLEAN DEFAULT FALSE,
-    mic_on  BOOLEAN DEFAULT FALSE,
     join_as BIGINT
+    mute    BOOLEAN DEFAULT FALSE,
 );
 """
 
 pattern = re.compile(
     r"^"
     r"(?P<action>(?:start|end|join|leave)?)call"
-    r"(?:\s+(?P<chat>@?[a-zA-Z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
-    r"(?:\s+as@(?P<as>@?[a-z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
+    r"(?:\s+(?P<chat_id>@?[a-zA-Z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
+    r"(?:\s+-as\s(?P<join_as>@?[a-z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
     r"(?:\s+(?P<mute>-mute))?"
     r"(?:\s+-t\s(?P<title>.+))?"
     r"$"
@@ -52,7 +51,7 @@ pattern = re.compile(
 class Call(Module):
     name = "Call"
 
-    cmds = "{action}?call {chat}? (as@{peer})? (-mute)? (-t {title})?"
+    cmds = "{action}?call {chat}? (-as {peer})? (-mute)? (-t {title})?"
     desc = {
         "action": "(join|leave|start|end)",
         "call": "Joined Call IDs (Standalone)",
@@ -82,9 +81,8 @@ class Call(Module):
         await self.client.db.execute(QUERY)
         rows = await self.client.db.fetch(
             """
-            SELECT chat_id, join_as, mic_on
-            FROM call
-            WHERE joined IS TRUE;
+            SELECT chat_id, join_as, mute
+            FROM call;
             """
         )
         for row in rows:
@@ -93,7 +91,14 @@ class Call(Module):
                 try:
                     peer = await self.client.app.resolve_peer(row["join_as"])
                 except RPCError:
-                    pass
+                    await self.client.db.execute(
+                        """
+                        UPDATE call
+                        SET join_as = NULL
+                        WHERE chat_id = $1;
+                        """,
+                        row["chat_id"],
+                    )
                 else:
                     args["config"] = GroupCallConfig(join_as=peer)
 
@@ -102,7 +107,7 @@ class Call(Module):
             except Exception:
                 continue
             else:
-                if not row.get("mic_on"):
+                if row.get("mute"):
                     await self.client.tgc.mute(row["chat_id"])
 
     @listener.handler(filters.regex(pattern), 1)
@@ -130,19 +135,14 @@ class Call(Module):
         text: str
         edit: callable
 
-        chat_id: int
-        join_as = None
-
         if isinstance(event, ChosenInlineResult):
             text = event.query
             edit = event.edit_message_text
-            chat_id, _ = ids(event.inline_message_id)
         else:
             text = event.content
             edit = event.edit_text
-            chat_id = event.chat.id
 
-        now, (action, target, join_as, mute, title) = (
+        now, (action, chat_id, join_as, mute, title) = (
             datetime.datetime.now(),
             pattern.match(text).groupdict().values(),
         )
@@ -154,9 +154,9 @@ class Call(Module):
                 reply_markup=ikm(("Close", b"0")),
             )
 
-        if target:
+        if chat_id:
             try:
-                chat = await self.client.app.get_chat(target, False)
+                chat = await self.client.app.get_chat(chat_id, False)
             except RPCError as e:
                 return await edit(
                     fmtstr(
@@ -168,6 +168,11 @@ class Call(Module):
                 )
             else:
                 chat_id = chat.id
+        else:
+            if isinstance(event, ChosenInlineResult):
+                chat_id, _ = ids(event.inline_message_id)
+            else:
+                chat_id = event.chat.id
 
         func: callable
 
@@ -219,24 +224,28 @@ class Call(Module):
                 reply_markup=ikm(("Close", b"0")),
             )
         else:
-            if action in ["join", "leave"]:
-                if action == "join":
-                    mic = self.client.tgc.mute if bool(mute) else self.client.tgc.unmute
-                    await mic(chat_id)
+            if action == "join":
+                if mute:
+                    await self.client.tgc.mute(chat_id)
+                else:
+                    await self.client.tgc.unmute(chat_id)
 
                 await self.client.db.execute(
                     """
-                    INSERT INTO call (chat_id, joined, mic_on, join_as)
-                    VALUES ($1, $2, $3, $4)
-                    ON CONFLICT (chat_id) DO UPDATE SET
-                        joined = EXCLUDED.joined,
-                        mic_on = EXCLUDED.mic_on,
-                        join_as = EXCLUDED.join_as;
+                    INSERT INTO call (chat_id, join_as, mute)
+                    VALUES ($1, $2, $3);
                     """,
                     chat_id,
-                    action == "join",
-                    not bool(mute),
                     join_as,
+                    bool(mute),
+                )
+            elif action == "leave":
+                await self.client.db.execute(
+                    """
+                    DELETE FROM call
+                    WHERE chat_id = $1;
+                    """,
+                    chat_id,
                 )
 
             await edit(
