@@ -32,8 +32,9 @@ class Debug(Module):
 
     cmds = "(e\\n)?{code}##?"
     desc = {
-        "e": "Inline Mode (Suffix No Need)",
+        "e": "Inline (Suffix '#' No Needed)",
         "code": "String as Python Code",
+        "#": "Suffix",
         "#": "Return (No Output)",
         "?": "Optional",
         "e.g.": 'print("Hello, World!")#',
