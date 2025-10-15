@@ -66,7 +66,9 @@ class Telegram(abc.ABC):
                         },
                         fmtsec(now),
                     ),
-                    reply_markup=ikm(("Help", "switch_inline_query", "help")),
+                    reply_markup=ikm(
+                        ("Help", "switch_inline_query_current_chat", "help")
+                    ),
                 )
 
             await self.idle()
