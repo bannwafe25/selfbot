@@ -84,7 +84,7 @@ class Restart(Module):
         changed = await asyncio.to_thread(check)
 
         if changed:
-            await event.edit_text("<code>Update Deps...</code>")
+            await event.edit_text("<code>Updating...</code>")
 
             def update():
                 try:
