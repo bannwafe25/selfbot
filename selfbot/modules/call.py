@@ -54,8 +54,8 @@ class Call(Module):
 
     cmds = "{action}?calls? {chat}? (as@{peer})? (-mute)? (-t {title})?"
     desc = {
-        "action": "join|leave|start|end",
-        "calls": "List Joined Chat IDs (Standalone)",
+        "action": "(join|leave|start|end)",
+        "calls": "Joined Call IDs (Standalone)",
         "chat": "Chat ID or Username (Default: Current Chat)",
         "peer": "Chat ID or Username (Default: Self)",
         "title": "String",
@@ -149,9 +149,7 @@ class Call(Module):
         if not action:
             return await edit(
                 fmtstr(
-                    "Call-Joined Chat IDs",
-                    list(await self.client.tgc.calls),
-                    fmtsec(now),
+                    "Joined Call IDs", list(await self.client.tgc.calls), fmtsec(now)
                 ),
                 reply_markup=ikm(("Close", b"0")),
             )

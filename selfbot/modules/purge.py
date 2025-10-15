@@ -63,5 +63,9 @@ class Purge(Module):
                 await asyncio.sleep(2.5)
 
         await event.edit_text(
-            fmtstr("Purge", f"{res} Message{'' if res == 1 else 's'}", fmtsec(now))
+            fmtstr(
+                f"Purge{'me' if me else ''}",
+                f"{res} Message{'' if res == 1 else 's'}",
+                fmtsec(now),
+            )
         )

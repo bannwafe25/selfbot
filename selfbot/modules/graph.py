@@ -22,7 +22,7 @@ class Graph(Module):
 
     cmds = "graph {content} (-t {title})?"
     desc = {
-        "content": "String or Reply to Content",
+        "content": "String or <Reply to Content>",
         "title": "String",
         "?": "Optional",
         "e.g.": "graph Hello, World! -t Untitled",
@@ -72,5 +72,9 @@ class Graph(Module):
             await event.edit_text(fmtstr(e.__class__.__name__, str(e), fmtsec(now)))
         else:
             await event.edit_text(
-                fmtstr("Graph", {"Title": title or "Untitled", "URL": url}, fmtsec(now))
+                fmtstr(
+                    "Graph Page",
+                    {"Link": url, "Title": title or "Untitled"},
+                    fmtsec(now),
+                )
             )
