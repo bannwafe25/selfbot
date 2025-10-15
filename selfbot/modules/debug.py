@@ -125,22 +125,32 @@ class Debug(Module):
             ),
         )
 
-    @listener.handler(filters.regex(pattern), 3)
+    @listener.handler(filters.regex(pattern) | filters.regex(r"^$"), 3)
     async def on_inline_query(self, event: InlineQuery) -> None:
-        await event.answer(
-            [
-                InlineQueryResultCachedSticker(
-                    sticker_file_id=self.client.config["sticker_file_id"],
-                    reply_markup=ikm((">_", "user_id", event._client.me.id)),
-                    input_message_content=InputTextMessageContent(
-                        event.query.removesuffix("#").rstrip()
-                        if len(event.query) > 1
-                        else "<code>...</code>"
-                    ),
-                )
-            ],
-            cache_time=0,
-        )
+        if not event.query:
+            await event.answer(
+                [
+                    InlineQueryResultCachedSticker(
+                        sticker_file_id=self.client.config["sticker_file_id"]
+                    )
+                ],
+                cache_time=15,
+            )
+        else:
+            await event.answer(
+                [
+                    InlineQueryResultCachedSticker(
+                        sticker_file_id=self.client.config["sticker_file_id"],
+                        reply_markup=ikm((">_", "user_id", event._client.me.id)),
+                        input_message_content=InputTextMessageContent(
+                            event.query.removesuffix("#").rstrip()
+                            if len(event.query) > 1
+                            else "<code>...</code>"
+                        ),
+                    )
+                ],
+                cache_time=0,
+            )
 
     @listener.handler(filters.regex(pattern), 4)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
