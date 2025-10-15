@@ -24,14 +24,15 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import aexec, fmtexc, fmtsec, ids, ikm, shell
 
-pattern = re.compile(r"^.*#$", flags=re.DOTALL)
+pattern = re.compile(r"^(?:i\n)?.*#$", flags=re.DOTALL)
 
 
 class Debug(Module):
     name = "Debug"
 
-    cmds = "{code}##?"
+    cmds = "(i\\n)?{code}##?"
     desc = {
+        "i": "Inline Mode",
         "code": "String as Python Code",
         "#": "Return (No Output)",
         "?": "Optional",
@@ -72,6 +73,19 @@ class Debug(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
+        if event.content.startswith("i\n"):
+            res, _ = await asyncio.gather(
+                event._client.get_inline_bot_results(self.client.bot.me.id, "#"),
+                event.edit_text(
+                    html.escape(event.content.markdown)
+                    .removeprefix("i\n")
+                    .removesuffix("#")
+                ),
+            )
+            return await event.reply_inline_bot_result(
+                res.query_id, res.results[0].id, quote=True
+            )
+
         cmd, msg = await asyncio.gather(
             event.edit_text(html.escape(event.content.markdown).removesuffix("#")),
             event.reply_text("<code>...</code>", quote=True),
@@ -122,7 +136,7 @@ class Debug(Module):
                     input_message_content=InputTextMessageContent(
                         event.query.removesuffix("#").rstrip()
                         if len(event.query) > 1
-                        else "<code>Exec Code...</code>"
+                        else "<code>...</code>"
                     ),
                 )
             ],
