@@ -34,7 +34,7 @@ class Help(Module):
     maps: dict[str, str] = {}
     ikbs: list[list] = []
 
-    async def on_starting(self) -> None:
+    async def on_started(self) -> None:
         mods = [mod for mod in self.client.modules.values() if not mod.hide]
         page = []
         for i, mod in enumerate(mods):

@@ -84,14 +84,20 @@ class Telegram(abc.ABC):
 
         self.logger.info("Starting App...")
         await self.app.start()
+
         self.logger.info("Starting Bot...")
         await self.bot.start()
+
         await asyncio.gather(
             self.app.resolve_peer(self.bot.me.username),
             asyncio.to_thread(self.loads),
             asyncio.to_thread(self.conf),
         )
+
+        self.logger.info("Dispatch On Start...")
         await self.dispatch("starting")
+        await self.dispatch("started")
+        self.logger.info("On Start Dispatched")
 
     async def idle(self) -> None:
         if self.__event__ and not self.__event__.is_set():

@@ -22,7 +22,7 @@ class Restart(Module):
 
     file = "/tmp/r.json"
 
-    async def on_starting(self) -> None:
+    async def on_started(self) -> None:
         if not os.path.exists(self.file):
             return
 
