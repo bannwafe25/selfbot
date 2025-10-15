@@ -35,7 +35,7 @@ class Restart(Module):
             return
         else:
             try:
-                await self.client.edit_message_text(
+                await self.client.app.edit_message_text(
                     chat_id, message_id, "<code>Selfbot Restarted</code>"
                 )
             except Exception:
