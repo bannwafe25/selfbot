@@ -155,7 +155,7 @@ class Telegram(abc.ABC):
             "message_bot": (self.bot, MessageHandler, fltapp, -1),
             "inline_query": (self.bot, InlineQueryHandler, fltapp, -1),
             "inline_result": (self.bot, ChosenInlineResultHandler, fltapp, -1),
-            "inline_callback": (self.bot, CallbackQueryHandler, flt.all, -1),
+            "inline_callback": (self.bot, CallbackQueryHandler, fltapp, -1),
         }
         for name, (client, handler, filters, group) in events.items():
             if name in self.handlers:
