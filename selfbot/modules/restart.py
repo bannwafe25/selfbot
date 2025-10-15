@@ -11,7 +11,7 @@ from pyrogram.types import Message
 from selfbot import listener
 from selfbot.module import Module
 
-pattern = re.compile(r"^r$")
+pattern = re.compile(r"^(?:r)$")
 
 
 class Restart(Module):

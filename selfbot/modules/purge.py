@@ -10,7 +10,7 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr
 
-pattern = re.compile(r"^purge(me)?(\s(\d{1,3}))?$")
+pattern = re.compile(r"^purge(me)?(?:\s(\d{1,3}))?$")
 
 
 class Purge(Module):
@@ -26,12 +26,12 @@ class Purge(Module):
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
-        match, limit = pattern.match(event.content), 0
-        if match.group(2):
-            limit = int(match.group(3))
+        (me, digit), limit = pattern.match(event.content).groups(), 0
+        if digit:
+            limit = int(digit)
 
         ids = []
-        if match.group(1):
+        if me:
             ids = [
                 m.id
                 async for m in event._client.search_messages(
