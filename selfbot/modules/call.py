@@ -177,12 +177,12 @@ class Call(Module):
 
         func: callable
 
+        text = {"data": {"Chat ID": chat_id}}
         args = {"chat_id": chat_id}
-        text = {"data": {"Chat": chat_id}}
 
         if action == "join":
+            func = self.client.tgc.play
             text["head"] = "Joined Call"
-            text["data"]["Mute"] = bool(mute)
             if join_as:
                 try:
                     peer = await self.client.app.resolve_peer(join_as)
@@ -197,23 +197,22 @@ class Call(Module):
                     )
                 else:
                     join_as = get_channel_id(peer.channel_id)
-                    text["data"]["Peer"] = join_as
+                    text["data"]["Join as"] = join_as
                     args["config"] = GroupCallConfig(join_as=peer)
 
-            func = self.client.tgc.play
+            text["data"]["Mute"] = bool(mute)
         elif action == "leave":
-            text["head"] = "Left Call"
             func = self.client.tgc.leave_call
+            text["head"] = "Left Call"
         elif action == "start":
+            func = self.client.app.create_video_chat
             text["head"] = "Started Call"
             if title:
                 args["title"] = title
                 text["data"]["Title"] = title
-
-            func = self.client.app.create_video_chat
         else:
-            text["head"] = "Ended Call"
             func = self.client.app.discard_group_call
+            text["head"] = "Ended Call"
 
         try:
             await func(**args)
