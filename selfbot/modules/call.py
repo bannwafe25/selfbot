@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS call (
 
 pattern = re.compile(
     r"^"
-    r"(?P<action>(?:start|end|join|leave)?)call(?:s$)?"
+    r"(?P<action>(?:start|end|join|leave)?)call"
     r"(?:\s+(?P<chat>@?[a-zA-Z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
     r"(?:\s+as@(?P<as>@?[a-z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
     r"(?:\s+(?P<mute>-mute))?"
@@ -52,10 +52,10 @@ pattern = re.compile(
 class Call(Module):
     name = "Call"
 
-    cmds = "{action}?calls? {chat}? (as@{peer})? (-mute)? (-t {title})?"
+    cmds = "{action}?call {chat}? (as@{peer})? (-mute)? (-t {title})?"
     desc = {
         "action": "(join|leave|start|end)",
-        "calls": "Joined Call IDs (Standalone)",
+        "call": "Joined Call IDs (Standalone)",
         "chat": "Chat ID or Username (Default: Current Chat)",
         "peer": "Chat ID or Username (Default: Self)",
         "title": "String",
