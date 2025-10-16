@@ -46,7 +46,7 @@ class Restart(Module):
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
 
-        def fetch(repo, remote):
+        def fetch(repo, remote) -> None:
             origin = next((r for r in repo.remotes if r.name == "origin"), None)
             if origin is None:
                 origin = repo.create_remote("origin", remote)
@@ -59,14 +59,14 @@ class Restart(Module):
 
             origin.fetch(prune=True)
 
-        def check():
+        def check() -> bool:
             repo = git.Repo(".") if os.path.isdir(".git") else git.Repo.init(".")
-            remote_url = self.client.config.get(
+            remote = self.client.config.get(
                 "remote", "https://github.com/DeltaUniverse/selfbot"
             ).removesuffix(".git")
             branch = self.client.config.get("branch", "staging")
 
-            fetch(repo, remote_url)
+            fetch(repo, remote)
             repo.git.reset("--hard", f"origin/{branch}")
 
             old = repo.head.commit.hexsha
@@ -85,7 +85,6 @@ class Restart(Module):
             return False
 
         changed = await asyncio.to_thread(check)
-
         if changed:
             await event.edit_text("<code>Updating...</code>")
 
@@ -105,7 +104,7 @@ class Restart(Module):
 
         await event.edit_text("<code>Restarting...</code>")
 
-        def dump():
+        def dump() -> None:
             with open(self.file, "w") as f:
                 json.dump({"cid": event.chat.id, "mid": event.id}, f)
 
