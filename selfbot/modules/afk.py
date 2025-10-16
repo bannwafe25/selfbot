@@ -93,9 +93,6 @@ class AFK(Module):
             return
 
         async with self.lock:
-            res = await event._client.get_inline_bot_results(
-                self.client.bot.me.id, "#afk"
-            )
             msg = await event.reply_text(
                 fmtstr(
                     "Away from Keyboard",
