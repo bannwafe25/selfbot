@@ -10,7 +10,7 @@ from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr
 
 pattern = re.compile(
-    r"^graph(?:\s(?P<content>(?!-t\s.+).*?))?(?:\s-t\s(?P<title>.+))?$", re.DOTALL
+    r"^graph(?:\s(?P<content>(?!-t\s.+).*?))?(?:\s-t\s(?P<title>.+))?$", flags=re.DOTALL
 )
 spoiler = re.compile(r"</?spoiler\b[^>]*>")
 emojiid = re.compile(r"<emoji id=\"\d+\">(.*?)</emoji>")
