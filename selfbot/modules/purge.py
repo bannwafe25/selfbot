@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import html
 import re
 
 from pyrogram import filters
@@ -46,7 +47,9 @@ class Purge(Module):
             ]
         else:
             if event.chat.type not in [ChatType.SUPERGROUP, ChatType.CHANNEL]:
-                return
+                return await event.edit_text(
+                    f"<code>Unsupported {html.escape(f'<{event.chat.type}>')}</code>"
+                )
             elif event.reply_to_message_id:
                 if limit:
                     ids = range(

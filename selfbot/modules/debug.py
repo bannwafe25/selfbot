@@ -202,10 +202,8 @@ class Debug(Module):
         edit: callable
         if isinstance(event, Message):
             edit = event.edit_text
-            self.args.pop("event", None)
         else:
             edit = event.edit_message_text
-            self.args.update({"event": event})
 
         ikb, out, rtt = [[("Del", b"0")]], "", ""
         if btn:
@@ -221,6 +219,7 @@ class Debug(Module):
                 "rep": msg.reply_to_message,
                 "chat": msg.chat,
                 "user": (msg.reply_to_message or msg).from_user,
+                "event": event,
             }
         )
         if not isinstance(event, Message):
