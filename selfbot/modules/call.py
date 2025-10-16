@@ -80,12 +80,7 @@ class Call(Module):
             self.client.app.dispatcher.groups.pop(group, None)
 
         await self.client.db.execute(QUERY)
-        rows = await self.client.db.fetch(
-            """
-            SELECT chat_id, join_as, mute
-            FROM call;
-            """
-        )
+        rows = await self.client.db.fetch("SELECT chat_id, join_as, mute FROM call;")
         for row in rows:
             args = {"chat_id": row["chat_id"]}
             if row.get("join_as"):
@@ -93,11 +88,7 @@ class Call(Module):
                     peer = await self.client.app.resolve_peer(row["join_as"])
                 except RPCError:
                     await self.client.db.execute(
-                        """
-                        UPDATE call
-                        SET join_as = NULL
-                        WHERE chat_id = $1;
-                        """,
+                        "UPDATE call SET join_as = NULL WHERE chat_id = $1;",
                         row["chat_id"],
                     )
                 else:
@@ -238,8 +229,8 @@ class Call(Module):
                     DO UPDATE SET
                         join_as = EXCLUDED.join_as,
                         mute = EXCLUDED.mute
-                    WHERE call.join_as IS DISTINCT FROM EXCLUDED.join_as
-                        OR call.mute IS DISTINCT FROM EXCLUDED.mute;
+                    WHERE call.join_as  IS DISTINCT FROM EXCLUDED.join_as
+                        OR call.mute    IS DISTINCT FROM EXCLUDED.mute;
                     """,
                     chat_id,
                     join_as,
@@ -247,11 +238,7 @@ class Call(Module):
                 )
             elif action == "leave":
                 await self.client.db.execute(
-                    """
-                    DELETE FROM call
-                    WHERE chat_id = $1;
-                    """,
-                    chat_id,
+                    "DELETE FROM call WHERE chat_id = $1;", chat_id
                 )
 
             await edit(

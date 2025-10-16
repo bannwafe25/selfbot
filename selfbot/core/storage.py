@@ -126,25 +126,13 @@ class PostgresStorage(Storage):
         async with self.pool.acquire() as conn:
             async with conn.transaction():
                 await conn.execute(
-                    """
-                    DELETE FROM peers
-                    WHERE session = $1;
-                    """,
-                    self.session,
+                    "DELETE FROM peers WHERE session = $1;", self.session
                 )
                 await conn.execute(
-                    """
-                    DELETE FROM update_state
-                    WHERE session = $1;
-                    """,
-                    self.session,
+                    "DELETE FROM update_state WHERE session = $1;", self.session
                 )
                 await conn.execute(
-                    """
-                    DELETE FROM sessions
-                    WHERE session = $1;
-                    """,
-                    self.session,
+                    "DELETE FROM sessions WHERE session = $1;", self.session
                 )
 
     async def update_peers(
@@ -221,7 +209,7 @@ class PostgresStorage(Storage):
 
             if value is None:
                 await conn.execute(
-                    "DELETE FROM update_state WHERE session = $1", self.session
+                    "DELETE FROM update_state WHERE session = $1;", self.session
                 )
             else:
                 await conn.execute(
@@ -259,7 +247,7 @@ class PostgresStorage(Storage):
                 SELECT id, access_hash, type
                 FROM peers
                 WHERE session = $1
-                AND id = $2;
+                    AND id = $2;
                 """,
                 self.session,
                 peer_id_int,
@@ -303,8 +291,9 @@ class PostgresStorage(Storage):
             r = await conn.fetchrow(
                 """
                 SELECT id, access_hash, type
-                FROM peers WHERE session = $1
-                AND phone_number = $2;
+                FROM peers
+                WHERE session = $1
+                    AND phone_number = $2;
                 """,
                 self.session,
                 phone_number,
@@ -318,12 +307,7 @@ class PostgresStorage(Storage):
     async def _get(self, attr: str) -> Any:
         async with self.pool.acquire() as conn:
             return await conn.fetchval(
-                f"""
-                SELECT {attr}
-                FROM sessions
-                WHERE session = $1;
-                """,
-                self.session,
+                f"SELECT {attr} FROM sessions WHERE session = $1;", self.session
             )
 
     async def _set(self, attr: str, value: Any) -> None:
@@ -332,10 +316,7 @@ class PostgresStorage(Storage):
 
         async with self.pool.acquire() as conn:
             await conn.execute(
-                f"""
-                UPDATE sessions SET {attr} = $1
-                WHERE session = $2;
-                """,
+                f"UPDATE sessions SET {attr} = $1 WHERE session = $2;",
                 value,
                 self.session,
             )
@@ -408,10 +389,10 @@ class PostgresStorage(Storage):
     async def version(self, value: Any = Object) -> int | None:
         async with self.pool.acquire() as conn:
             if value is Object:
-                v = await conn.fetchval("SELECT number FROM version")
+                v = await conn.fetchval("SELECT number FROM version;")
                 return cast(int, v)
 
-            await conn.execute("UPDATE version SET number = $1", value)
+            await conn.execute("UPDATE version SET number = $1;", value)
             return None
 
     async def update(self) -> None:

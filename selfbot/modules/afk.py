@@ -47,11 +47,7 @@ class AFK(Module):
         self.lock = asyncio.Lock()
 
         await self.client.db.execute(QUERY)
-        data = await self.client.db.fetchval(
-            """
-            SELECT (status, reason, since) FROM afk;
-            """
-        )
+        data = await self.client.db.fetchval("SELECT (status, reason, since) FROM afk;")
         if data:
             self.status, self.reason, self.since = data
         else:
@@ -90,30 +86,18 @@ class AFK(Module):
                 )
 
             old = await self.client.db.fetchval(
-                """
-                SELECT message_id
-                FROM afk_ids
-                WHERE chat_id = $1;
-                """,
-                msg.chat.id,
+                "SELECT message_id FROM afk_ids WHERE chat_id = $1;", msg.chat.id
             )
             if old:
                 await self.client.app.delete_messages(msg.chat.id, old)
                 await self.client.db.execute(
-                    """
-                    UPDATE afk_ids
-                    SET message_id = $1
-                    WHERE chat_id = $2;
-                    """,
+                    "UPDATE afk_ids SET message_id = $1 WHERE chat_id = $2;",
                     msg.id,
                     msg.chat.id,
                 )
             else:
                 await self.client.db.execute(
-                    """
-                    INSERT INTO afk_ids (chat_id, message_id)
-                    VALUES ($1, $2);
-                    """,
+                    "INSERT INTO afk_ids (chat_id, message_id) VALUES ($1, $2);",
                     msg.chat.id,
                     msg.id,
                 )
@@ -164,18 +148,8 @@ class AFK(Module):
         since, (reason,) = datetime.datetime.now(), pattern.match(text).groups()
         if self.status:
             since, ids = await asyncio.gather(
-                self.client.db.fetchval(
-                    """
-                    SELECT since
-                    FROM afk;
-                    """
-                ),
-                self.client.db.fetch(
-                    """
-                    SELECT chat_id, message_id
-                    FROM afk_ids;
-                    """
-                ),
+                self.client.db.fetchval("SELECT since FROM afk;"),
+                self.client.db.fetch("SELECT chat_id, message_id FROM afk_ids;"),
             )
             for i in ids:
                 try:
@@ -183,25 +157,11 @@ class AFK(Module):
                 except RPCError:
                     continue
 
-            await asyncio.gather(
-                self.client.db.execute(
-                    """
-                    DELETE FROM afk_ids;
-                    """
-                ),
-                self.client.db.execute(
-                    """
-                    DELETE FROM afk;
-                    """
-                ),
-            )
+            await self.client.db.execute("TRUNCATE afk, afk_ids;"),
             self.status, self.reason, self.since = False, "", None
         else:
             await self.client.db.execute(
-                """
-                INSERT INTO afk (status, reason, since)
-                VALUES ($1, $2, $3);
-                """,
+                "INSERT INTO afk (status, reason, since) VALUES ($1, $2, $3);",
                 True,
                 reason,
                 since,
