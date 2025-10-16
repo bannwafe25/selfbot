@@ -190,8 +190,8 @@ class Call(Module):
                     DO UPDATE SET
                         join_as = EXCLUDED.join_as,
                         mute = EXCLUDED.mute
-                    WHERE call.join_as  IS DISTINCT FROM EXCLUDED.join_as
-                        OR call.mute    IS DISTINCT FROM EXCLUDED.mute;
+                    WHERE join_as IS DISTINCT FROM EXCLUDED.join_as
+                       OR mute    IS DISTINCT FROM EXCLUDED.mute;
                     """,
                     chat_id,
                     join_as,
