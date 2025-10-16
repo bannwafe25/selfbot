@@ -42,7 +42,9 @@ CREATE TABLE IF NOT EXISTS usernames (
     id          BIGINT  NOT NULL,
     username    TEXT    NOT NULL,
     PRIMARY KEY (session, username),
-    FOREIGN KEY (session, id) REFERENCES peers (session, id) ON DELETE CASCADE
+    FOREIGN KEY (session, id)
+        REFERENCES peers (session, id)
+        ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS update_state (
@@ -55,9 +57,14 @@ CREATE TABLE IF NOT EXISTS update_state (
     PRIMARY KEY (session, id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_peers_session_id ON peers (session, id);
-CREATE INDEX IF NOT EXISTS idx_peers_phone_number ON peers (session, phone_number);
-CREATE INDEX IF NOT EXISTS idx_usernames_username ON usernames (session, username);
+CREATE INDEX IF NOT EXISTS idx_peers_session_id
+    ON peers (session, id);
+
+CREATE INDEX IF NOT EXISTS idx_peers_phone_number
+    ON peers (session, phone_number);
+
+CREATE INDEX IF NOT EXISTS idx_usernames_username
+    ON usernames (session, username);
 """
 
 
@@ -90,7 +97,11 @@ class PostgresStorage(Storage):
         async with pool.acquire() as conn:
             await conn.execute(SCHEMA)
             await conn.execute(
-                "INSERT INTO version (number) VALUES ($1) ON CONFLICT DO NOTHING",
+                """
+                INSERT INTO version (number)
+                VALUES ($1)
+                ON CONFLICT DO NOTHING;
+                """,
                 PostgresStorage.VERSION,
             )
 
@@ -100,7 +111,7 @@ class PostgresStorage(Storage):
                 """
                 INSERT INTO sessions (session, dc_id, date)
                 VALUES ($1, 2, 0)
-                ON CONFLICT (session) DO NOTHING
+                ON CONFLICT (session) DO NOTHING;
                 """,
                 self.session,
             )
@@ -114,12 +125,26 @@ class PostgresStorage(Storage):
     async def delete(self) -> None:
         async with self.pool.acquire() as conn:
             async with conn.transaction():
-                await conn.execute("DELETE FROM peers WHERE session = $1", self.session)
                 await conn.execute(
-                    "DELETE FROM update_state WHERE session = $1", self.session
+                    """
+                    DELETE FROM peers
+                    WHERE session = $1;
+                    """,
+                    self.session,
                 )
                 await conn.execute(
-                    "DELETE FROM sessions WHERE session = $1", self.session
+                    """
+                    DELETE FROM update_state
+                    WHERE session = $1;
+                    """,
+                    self.session,
+                )
+                await conn.execute(
+                    """
+                    DELETE FROM sessions
+                    WHERE session = $1;
+                    """,
+                    self.session,
                 )
 
     async def update_peers(
@@ -143,13 +168,19 @@ class PostgresStorage(Storage):
             async with conn.transaction():
                 await conn.executemany(
                     """
-                    INSERT INTO peers (session, id, access_hash, type, phone_number)
+                    INSERT INTO peers (
+                        session,
+                        id,
+                        access_hash,
+                        type,
+                        phone_number
+                    )
                     VALUES ($1, $2, $3, $4, $5)
                     ON CONFLICT (session, id) DO UPDATE SET
                         access_hash = EXCLUDED.access_hash,
                         type = EXCLUDED.type,
                         phone_number = EXCLUDED.phone_number,
-                        last_update_on = EXTRACT(epoch FROM now())
+                        last_update_on = EXTRACT(epoch FROM now());
                     """,
                     peer_records,
                 )
@@ -159,7 +190,7 @@ class PostgresStorage(Storage):
                         INSERT INTO usernames (session, id, username)
                         VALUES ($1, $2, $3)
                         ON CONFLICT (session, username) DO UPDATE SET
-                            id = EXCLUDED.id
+                            id = EXCLUDED.id;
                         """,
                         username_records,
                     )
@@ -174,7 +205,16 @@ class PostgresStorage(Storage):
         async with self.pool.acquire() as conn:
             if value is Object:
                 rows = await conn.fetch(
-                    "SELECT id, pts, qts, date, seq FROM update_state WHERE session = $1",
+                    """
+                    SELECT
+                        id,
+                        pts,
+                        qts,
+                        date,
+                        seq
+                    FROM update_state
+                    WHERE session = $1;
+                    """,
                     self.session,
                 )
                 return [cast(tuple, tuple(r)) for r in rows]
@@ -186,11 +226,20 @@ class PostgresStorage(Storage):
             else:
                 await conn.execute(
                     """
-                    INSERT INTO update_state (session, id, pts, qts, date, seq)
+                    INSERT INTO update_state (
+                        session,
+                        id,
+                        pts,
+                        qts,
+                        date,
+                        seq
+                    )
                     VALUES ($1, $2, $3, $4, $5, $6)
                     ON CONFLICT (session, id) DO UPDATE SET
-                        pts = EXCLUDED.pts, qts = EXCLUDED.qts,
-                        date = EXCLUDED.date, seq = EXCLUDED.seq
+                        pts = EXCLUDED.pts,
+                        qts = EXCLUDED.qts,
+                        date = EXCLUDED.date,
+                        seq = EXCLUDED.seq;
                     """,
                     self.session,
                     *value,
@@ -206,7 +255,12 @@ class PostgresStorage(Storage):
 
         async with self.pool.acquire() as conn:
             r = await conn.fetchrow(
-                "SELECT id, access_hash, type FROM peers WHERE session = $1 AND id = $2",
+                """
+                SELECT id, access_hash, type
+                FROM peers
+                WHERE session = $1
+                AND id = $2;
+                """,
                 self.session,
                 peer_id_int,
             )
@@ -220,10 +274,17 @@ class PostgresStorage(Storage):
         async with self.pool.acquire() as conn:
             r = await conn.fetchrow(
                 """
-                SELECT p.id, p.access_hash, p.type, p.last_update_on
+                SELECT
+                    p.id,
+                    p.access_hash,
+                    p.type,
+                    p.last_update_on
                 FROM peers AS p
-                JOIN usernames AS u ON p.id = u.id AND p.session = u.session
-                WHERE u.session = $1 AND u.username = $2
+                JOIN usernames AS u
+                    ON p.id = u.id
+                    AND p.session = u.session
+                WHERE u.session = $1
+                    AND u.username = $2;
                 """,
                 self.session,
                 username,
@@ -240,7 +301,11 @@ class PostgresStorage(Storage):
     async def get_peer_by_phone_number(self, phone_number: str) -> InputPeer:
         async with self.pool.acquire() as conn:
             r = await conn.fetchrow(
-                "SELECT id, access_hash, type FROM peers WHERE session = $1 AND phone_number = $2",
+                """
+                SELECT id, access_hash, type
+                FROM peers WHERE session = $1
+                AND phone_number = $2;
+                """,
                 self.session,
                 phone_number,
             )
@@ -253,7 +318,12 @@ class PostgresStorage(Storage):
     async def _get(self, attr: str) -> Any:
         async with self.pool.acquire() as conn:
             return await conn.fetchval(
-                f'SELECT "{attr}" FROM sessions WHERE session = $1', self.session
+                f"""
+                SELECT {attr}
+                FROM sessions
+                WHERE session = $1;
+                """,
+                self.session,
             )
 
     async def _set(self, attr: str, value: Any) -> None:
@@ -262,7 +332,10 @@ class PostgresStorage(Storage):
 
         async with self.pool.acquire() as conn:
             await conn.execute(
-                f'UPDATE sessions SET "{attr}" = $1 WHERE session = $2',
+                f"""
+                UPDATE sessions SET {attr} = $1
+                WHERE session = $2;
+                """,
                 value,
                 self.session,
             )
