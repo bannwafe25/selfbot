@@ -4,14 +4,7 @@ import re
 
 from pyrogram import filters
 from pyrogram.errors import RPCError
-from pyrogram.types import (
-    ChosenInlineResult,
-    InlineQuery,
-    InlineQueryResultCachedSticker,
-    InputTextMessageContent,
-    Message,
-    Update,
-)
+from pyrogram.types import Message
 from pyrogram.utils import get_channel_id
 
 load: bool
@@ -27,10 +20,12 @@ else:
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtsec, fmtstr, ids, ikm
+from selfbot.utils import fmtsec, fmtstr, ikm
 
-QUERY = """
-CREATE TABLE IF NOT EXISTS call (
+schema = """
+CREATE SCHEMA IF NOT EXISTS call;
+
+CREATE TABLE IF NOT EXISTS call.chats (
     chat_id BIGINT  PRIMARY KEY,
     join_as BIGINT,
     mute    BOOLEAN DEFAULT FALSE
@@ -79,8 +74,10 @@ class Call(Module):
 
             self.client.app.dispatcher.groups.pop(group, None)
 
-        await self.client.db.execute(QUERY)
-        rows = await self.client.db.fetch("SELECT chat_id, join_as, mute FROM call;")
+        await self.client.db.execute(schema)
+        rows = await self.client.db.fetch(
+            "SELECT chat_id, join_as, mute FROM call.chats;"
+        )
         for row in rows:
             args = {"chat_id": row["chat_id"]}
             if row.get("join_as"):
@@ -88,7 +85,7 @@ class Call(Module):
                     peer = await self.client.app.resolve_peer(row["join_as"])
                 except RPCError:
                     await self.client.db.execute(
-                        "UPDATE call SET join_as = NULL WHERE chat_id = $1;",
+                        "UPDATE call.chats SET join_as = NULL WHERE chat_id = $1;",
                         row["chat_id"],
                     )
                 else:
@@ -104,87 +101,51 @@ class Call(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
-        await self.respond(event)
-
-    @listener.handler(filters.regex(pattern), 2)
-    async def on_inline_query(self, event: InlineQuery) -> None:
-        await event.answer(
-            [
-                InlineQueryResultCachedSticker(
-                    sticker_file_id=self.client.config["sticker_file_id"],
-                    reply_markup=ikm((">_", "user_id", event._client.me.id)),
-                    input_message_content=InputTextMessageContent("<code>...</code>"),
-                )
-            ],
-            cache_time=0,
-        )
-
-    @listener.handler(filters.regex(pattern), 3)
-    async def on_inline_result(self, event: ChosenInlineResult) -> None:
-        await self.respond(event)
-
-    async def respond(self, event: Update) -> None:
-        text: str
-        edit: callable
-
-        if isinstance(event, ChosenInlineResult):
-            text = event.query
-            edit = event.edit_message_text
-        else:
-            text = event.content
-            edit = event.edit_text
-
         now, (action, chat_id, join_as, mute, title) = (
             datetime.datetime.now(),
-            pattern.match(text).groupdict().values(),
+            pattern.match(event.content).groupdict().values(),
         )
         if not action:
-            return await edit(
+            return await event.edit_text(
                 fmtstr(
                     "Joined Call IDs", list(await self.client.tgc.calls), fmtsec(now)
                 ),
                 reply_markup=ikm(("Close", b"0")),
             )
 
-        if chat_id:
+        if not chat_id:
+            chat_id = event.chat.id
+        else:
             try:
-                chat = await self.client.app.get_chat(chat_id, False)
+                chat = await event._client.get_chat(chat_id, False)
             except RPCError as e:
-                return await edit(
+                return await event.edit_text(
                     fmtstr(
                         e.__class__.__name__,
                         e.MESSAGE.format(value=e.value),
                         fmtsec(now),
-                    ),
-                    reply_markup=ikm(("Close", b"0")),
+                    )
                 )
             else:
                 chat_id = chat.id
-        else:
-            if isinstance(event, ChosenInlineResult):
-                chat_id, _ = ids(event.inline_message_id)
-            else:
-                chat_id = event.chat.id
 
         func: callable
 
         text = {"data": {"Chat ID": chat_id}}
         args = {"chat_id": chat_id}
-
         if action == "join":
             func = self.client.tgc.play
             text["head"] = "Joined Call"
             if join_as:
                 try:
-                    peer = await self.client.app.resolve_peer(join_as)
+                    peer = await event._client.resolve_peer(join_as)
                 except RPCError as e:
-                    return await edit(
+                    return await event.edit_text(
                         fmtstr(
                             e.__class__.__name__,
                             e.MESSAGE.format(value=e.value),
                             fmtsec(now),
-                        ),
-                        reply_markup=ikm(("Close", b"0")),
+                        )
                     )
                 else:
                     join_as = get_channel_id(peer.channel_id)
@@ -196,19 +157,19 @@ class Call(Module):
             func = self.client.tgc.leave_call
             text["head"] = "Left Call"
         elif action == "start":
-            func = self.client.app.create_video_chat
+            func = event._client.create_video_chat
             text["head"] = "Started Call"
             if title:
                 args["title"] = title
                 text["data"]["Title"] = title
         else:
-            func = self.client.app.discard_group_call
+            func = event._client.discard_group_call
             text["head"] = "Ended Call"
 
         try:
             await func(**args)
         except RPCError as e:
-            await edit(
+            await event.edit_text(
                 fmtstr(
                     e.__class__.__name__, e.MESSAGE.format(value=e.value), fmtsec(now)
                 ),
@@ -223,7 +184,7 @@ class Call(Module):
 
                 await self.client.db.execute(
                     """
-                    INSERT INTO call (chat_id, join_as, mute)
+                    INSERT INTO call.chats (chat_id, join_as, mute)
                     VALUES ($1, $2, $3)
                     ON CONFLICT (chat_id)
                     DO UPDATE SET
@@ -238,9 +199,9 @@ class Call(Module):
                 )
             elif action == "leave":
                 await self.client.db.execute(
-                    "DELETE FROM call WHERE chat_id = $1;", chat_id
+                    "DELETE FROM call.chats WHERE chat_id = $1;", chat_id
                 )
 
-            await edit(
+            await event.edit_text(
                 fmtstr(**text, foot=fmtsec(now)), reply_markup=ikm(("Close", b"0"))
             )
