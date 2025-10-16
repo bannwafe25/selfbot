@@ -20,7 +20,7 @@ else:
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtsec, fmtstr, ikm
+from selfbot.utils import fmtsec, fmtstr
 
 schema = """
 CREATE SCHEMA IF NOT EXISTS call;
@@ -109,8 +109,7 @@ class Call(Module):
             return await event.edit_text(
                 fmtstr(
                     "Joined Call IDs", list(await self.client.tgc.calls), fmtsec(now)
-                ),
-                reply_markup=ikm(("Close", b"0")),
+                )
             )
 
         if not chat_id:
@@ -172,8 +171,7 @@ class Call(Module):
             await event.edit_text(
                 fmtstr(
                     e.__class__.__name__, e.MESSAGE.format(value=e.value), fmtsec(now)
-                ),
-                reply_markup=ikm(("Close", b"0")),
+                )
             )
         else:
             if action == "join":
@@ -184,14 +182,14 @@ class Call(Module):
 
                 await self.client.db.execute(
                     """
-                    INSERT INTO call.chats (chat_id, join_as, mute)
+                    INSERT INTO call.chats AS c (chat_id, join_as, mute)
                     VALUES ($1, $2, $3)
                     ON CONFLICT (chat_id)
                     DO UPDATE SET
                         join_as = EXCLUDED.join_as,
                         mute = EXCLUDED.mute
-                    WHERE join_as IS DISTINCT FROM EXCLUDED.join_as
-                       OR mute    IS DISTINCT FROM EXCLUDED.mute;
+                    WHERE c.join_as IS DISTINCT FROM EXCLUDED.join_as
+                       OR c.mute    IS DISTINCT FROM EXCLUDED.mute;
                     """,
                     chat_id,
                     join_as,
@@ -202,6 +200,4 @@ class Call(Module):
                     "DELETE FROM call.chats WHERE chat_id = $1;", chat_id
                 )
 
-            await event.edit_text(
-                fmtstr(**text, foot=fmtsec(now)), reply_markup=ikm(("Close", b"0"))
-            )
+            await event.edit_text(fmtstr(**text, foot=fmtsec(now)))
