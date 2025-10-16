@@ -69,6 +69,7 @@ class Restart(Module):
             branch = self.client.config.get("branch", "staging")
 
             fetch(repo, remote)
+            repo.git.reset("--hard", f"origin/{branch}")
 
             old = repo.head.commit.hexsha
             new = repo.commit(f"origin/{branch}").hexsha
