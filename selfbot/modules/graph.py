@@ -81,6 +81,7 @@ class Graph(Module):
                     is_disabled=False,
                     url=url,
                     prefer_small_media=True,
+                    prefer_large_media=False,
                     show_above_text=True,
                 ),
             )
