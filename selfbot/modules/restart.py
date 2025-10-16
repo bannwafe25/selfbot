@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import subprocess
 import sys
 
 import git
@@ -46,7 +47,7 @@ class Restart(Module):
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
 
-        def fetch(repo, remote):
+        def fetch(repo, remote) -> None:
             origin = next((r for r in repo.remotes if r.name == "origin"), None)
             if origin is None:
                 origin = repo.create_remote("origin", remote)
@@ -59,15 +60,15 @@ class Restart(Module):
 
             origin.fetch(prune=True)
 
-        def check():
+        def check() -> bool:
             repo = git.Repo(".") if os.path.isdir(".git") else git.Repo.init(".")
-            remote_url = self.client.config.get(
+
+            remote = self.client.config.get(
                 "remote", "https://github.com/DeltaUniverse/selfbot"
             ).removesuffix(".git")
             branch = self.client.config.get("branch", "staging")
 
-            fetch(repo, remote_url)
-            repo.git.reset("--hard", f"origin/{branch}")
+            fetch(repo, remote)
 
             old = repo.head.commit.hexsha
             new = repo.commit(f"origin/{branch}").hexsha
@@ -75,31 +76,27 @@ class Restart(Module):
             if old == new:
                 return False
 
-            deps = {"requirements.txt", "pyproject.toml", "poetry.lock"}
+            repo.git.reset("--hard", f"origin/{branch}")
+
             for diff in repo.commit(old).diff(new):
-                if (diff.a_path or "").lower() in deps or (
+                if (diff.a_path or "").lower() == "poetry.lock" or (
                     diff.b_path or ""
-                ).lower() in deps:
+                ).lower() == "poetry.lock":
                     return True
 
             return False
 
         changed = await asyncio.to_thread(check)
-
         if changed:
             await event.edit_text("<code>Updating...</code>")
 
             def update():
                 try:
-                    from pip._internal.cli.main import main as pip
-
-                    pip(["install", "--upgrade", "pip", "setuptools", "wheel"])
-                    if os.path.exists("requirements.txt"):
-                        pip(["install", "-r", "requirements.txt"])
-                    elif os.path.exists("pyproject.toml"):
-                        pip(["install", "."])
-                except Exception:
-                    pass
+                    subprocess.run(["poetry", "--version"], check=True)
+                    subprocess.run(["poetry", "self", "update"], check=True)
+                    subprocess.run(["poetry", "install", "--all-extras"], check=True)
+                except Exception as e:
+                    self.logger.error(f"{e.__class__.__name__}: {e}")
 
             await asyncio.to_thread(update)
 
