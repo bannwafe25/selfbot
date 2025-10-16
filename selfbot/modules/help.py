@@ -54,8 +54,9 @@ class Help(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
-        res = await event._client.get_inline_bot_results(
-            self.client.bot.me.id, event.content
+        _, res = await asyncio.gather(
+            event.edit_text("<code>...</code>"),
+            event._client.get_inline_bot_results(self.client.bot.me.id, event.content),
         )
         await asyncio.gather(
             event.reply_inline_bot_result(
