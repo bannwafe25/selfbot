@@ -45,7 +45,7 @@ class Telegram(abc.ABC):
             raise RuntimeError("Selfbot Running")
 
         tmp = os.path.exists("/tmp/r.json")
-        self.logger.info(f"{'Restart' if tmp else 'Start'}ing Client...")
+        self.logger.info(f"{'Res' if tmp else 'S'}tarting Client...")
 
         now = datetime.datetime.now()
         try:
@@ -57,7 +57,7 @@ class Telegram(abc.ABC):
             await self.bot.send_message(
                 self.app.me.id,
                 fmtstr(
-                    "Selfbot Started",
+                    f"Selfbot {'Res' if tmp else 'S'}tarted",
                     {
                         "Version": f"{__version__}\n",
                         "Handlers": len(self.handlers),
