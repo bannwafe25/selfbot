@@ -233,7 +233,13 @@ class Call(Module):
                 await self.client.db.execute(
                     """
                     INSERT INTO call (chat_id, join_as, mute)
-                    VALUES ($1, $2, $3);
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (chat_id)
+                    DO UPDATE SET
+                        join_as = EXCLUDED.join_as,
+                        mute = EXCLUDED.mute
+                    WHERE call.join_as IS DISTINCT FROM EXCLUDED.join_as
+                        OR call.mute IS DISTINCT FROM EXCLUDED.mute;
                     """,
                     chat_id,
                     join_as,
