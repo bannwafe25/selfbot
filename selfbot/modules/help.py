@@ -66,7 +66,7 @@ class Help(Module):
                     message_id=event.reply_to_message_id or event.id
                 ),
             ),
-            event.delete(True),
+            event.delete(),
         )
 
     @listener.handler(filters.regex(pattern), 2)

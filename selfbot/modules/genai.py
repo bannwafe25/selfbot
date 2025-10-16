@@ -67,7 +67,7 @@ class GenAI(Module):
             async with self.lock:
                 self.data.clear()
 
-            await asyncio.gather(event.delete(True), resp.delete(True))
+            await asyncio.gather(event.delete(), resp.delete())
 
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_query(self, event: InlineQuery) -> None:

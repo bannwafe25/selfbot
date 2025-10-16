@@ -177,9 +177,9 @@ class Debug(Module):
 
             if msg:
                 if msg.outgoing or (msg.from_user and msg.from_user.is_self):
-                    asyncio.create_task(msg.delete(True))
+                    asyncio.create_task(msg.delete())
 
-            return await cmd.delete(True)
+            return await cmd.delete()
 
         if not msg:
             return await cmd.delete()

@@ -10,16 +10,17 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr
 
-pattern = re.compile(r"^purge(me)?(?:\s(\d{1,3}))?$")
+pattern = re.compile(r"^purge(me)?(?:\s(\d{1,3}))?(?:\s(-d))?$")
 
 
 class Purge(Module):
     name = "Purge"
 
-    cmds = "<Reply to Message>? purge(me)? {limit}?"
+    cmds = "<Reply to Message>? purge(me)? {limit}? (-d)?"
     desc = {
         "Reply to Message": "as Start ID (Default: 1)",
         "limit": "[1-999] (Default: 100)",
+        "-d": "Delete Current Message",
         "?": "Optional",
         "e.g.": "purgeme 99",
     }
@@ -27,7 +28,7 @@ class Purge(Module):
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
-        (me, digit), limit = pattern.match(event.content).groups(), 0
+        (me, digit, delete), limit = pattern.match(event.content).groups(), 0
         if digit:
             limit = int(digit)
 
@@ -62,6 +63,9 @@ class Purge(Module):
             res += await self.client.app.delete_messages(event.chat.id, chunk)
             if res % 100 == 0:
                 await asyncio.sleep(2.5)
+
+        if delete:
+            return await event.delete()
 
         await event.edit_text(
             fmtstr(
