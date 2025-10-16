@@ -2,7 +2,7 @@ import datetime
 import re
 
 from pyrogram import filters
-from pyrogram.types import Message
+from pyrogram.types import LinkPreviewOptions, Message
 from telegraph.aio import Telegraph
 
 from selfbot import listener
@@ -76,5 +76,11 @@ class Graph(Module):
                     "Graph Page",
                     {"Link": url, "Title": title or "Untitled"},
                     fmtsec(now),
-                )
+                ),
+                link_preview_options=LinkPreviewOptions(
+                    is_disabled=False,
+                    url=url,
+                    prefer_small_media=True,
+                    show_above_text=True,
+                ),
             )
