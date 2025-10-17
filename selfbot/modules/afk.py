@@ -75,7 +75,7 @@ class AFK(Module):
                 "INSERT INTO afk.meta (status, reason, since) VALUES ($1, $2, $3);",
                 True,
                 reason,
-                since,
+                since.replace(tzinfo=None),
             )
             self.status, self.reason, self.since = True, reason, since
 
