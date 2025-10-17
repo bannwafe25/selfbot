@@ -101,6 +101,7 @@ class Call(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
+        await event.edit_text("<code>...</code>")
         now, (action, chat_id, join_as, mute, title) = (
             datetime.datetime.now(datetime.UTC),
             pattern.match(event.content).groupdict().values(),

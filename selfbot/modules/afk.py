@@ -53,6 +53,7 @@ class AFK(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
+        await event.edit_text("<code>...</code>")
         since, (reason,) = (
             datetime.datetime.now(datetime.UTC),
             pattern.match(event.content).groups(),

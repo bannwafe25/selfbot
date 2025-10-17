@@ -36,6 +36,7 @@ class Graph(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
+        await event.edit_text("<code>...</code>")
         content, title = pattern.match(event.content.html).groupdict().values()
         if not content:
             if not event.reply_to_message.content:
