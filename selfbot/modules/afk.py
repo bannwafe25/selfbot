@@ -54,7 +54,7 @@ class AFK(Module):
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         since, (reason,) = (
-            datetime.datetime.now(),
+            datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))),
             pattern.match(event.content).groups(),
         )
         if self.status:
