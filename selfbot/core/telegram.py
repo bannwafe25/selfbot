@@ -24,7 +24,7 @@ from pyrogram.raw.types import (
     UpdateNewChannelMessage,
     UpdateNewMessage,
 )
-from pyrogram.types import LinkPreviewOptions, Message, Update
+from pyrogram.types import LinkPreviewOptions, Update
 
 from selfbot import __version__
 from selfbot.core.storage import PostgresStorage
@@ -110,7 +110,7 @@ class Telegram(abc.ABC):
             asyncio.to_thread(self.conf),
         )
 
-        msg: Message
+        msg = None
         try:
             await self.bot.send_chat_action(self.app.me.id, ChatAction.TYPING)
         except PeerIdInvalid:
