@@ -102,7 +102,7 @@ class AFK(Module):
                         "Timezone": "UTC+7\n",
                         "Reason": self.reason,
                     },
-                    fmtsec(self.since),
+                    fmtsec(self.since.replace(tzinfo=datetime.UTC)),
                 )
             )
             old = await self.client.db.fetchval(
