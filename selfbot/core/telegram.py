@@ -8,7 +8,8 @@ import signal
 
 from pyrogram import Client
 from pyrogram import filters as flt
-from pyrogram.enums import ParseMode
+from pyrogram.enums import ChatAction, ParseMode
+from pyrogram.errors import PeerIdInvalid, UserIsBlocked
 from pyrogram.handlers import (
     CallbackQueryHandler,
     ChosenInlineResultHandler,
@@ -23,7 +24,7 @@ from pyrogram.raw.types import (
     UpdateNewChannelMessage,
     UpdateNewMessage,
 )
-from pyrogram.types import LinkPreviewOptions, Update
+from pyrogram.types import LinkPreviewOptions, Message, Update
 
 from selfbot import __version__
 from selfbot.core.storage import PostgresStorage
@@ -108,6 +109,17 @@ class Telegram(abc.ABC):
             asyncio.to_thread(self.loads),
             asyncio.to_thread(self.conf),
         )
+
+        msg: Message
+        try:
+            await self.bot.send_chat_action(self.app.me.id, ChatAction.TYPING)
+        except PeerIdInvalid:
+            msg = await self.app.send_message(self.bot.me.id, "/start")
+        except UserIsBlocked:
+            await self.app.unblock_user(self.bot.me.id)
+        finally:
+            if msg:
+                await msg.delete()
 
         self.logger.info("Dispatch On Start...")
         await self.dispatch("starting")
