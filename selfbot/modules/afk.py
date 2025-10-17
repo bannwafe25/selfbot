@@ -83,7 +83,7 @@ class AFK(Module):
             fmtstr(
                 "Away from Keyboard",
                 {"Status": self.status, "Reason": reason},
-                fmtsec(since),
+                fmtsec(since.replace(tzinfo=datetime.UTC)),
             )
         )
 
