@@ -72,7 +72,7 @@ class Graph(Module):
             await event.edit_text(fmtstr(e.__class__.__name__, str(e), fmtsec(now)))
         else:
             if (
-                event.chat.privileges
+                event.chat.admin_privileges
                 or event.chat.permissions.can_add_web_page_previews
             ):
                 await event.edit_text(
