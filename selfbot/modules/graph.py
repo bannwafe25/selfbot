@@ -71,17 +71,22 @@ class Graph(Module):
         except Exception as e:
             await event.edit_text(fmtstr(e.__class__.__name__, str(e), fmtsec(now)))
         else:
-            await event.edit_text(
-                fmtstr(
-                    "Graph Page",
-                    {"Link": url, "Title": title or "Untitled"},
-                    fmtsec(now),
-                ),
-                link_preview_options=LinkPreviewOptions(
-                    is_disabled=False,
-                    url=url,
-                    prefer_small_media=True,
-                    prefer_large_media=False,
-                    show_above_text=True,
-                ),
-            )
+            if event.chat.permissions.can_add_web_page_previews:
+                await event.edit_text(
+                    f"<b><blockquote>{fmtsec(now)}</blockquote></b>",
+                    link_preview_options=LinkPreviewOptions(
+                        is_disabled=False,
+                        url=url,
+                        prefer_small_media=True,
+                        prefer_large_media=False,
+                        show_above_text=True,
+                    ),
+                )
+            else:
+                await event.edit_text(
+                    fmtstr(
+                        "Graph Page",
+                        {"Link": url, "Title": title or "Untitled"},
+                        fmtsec(now),
+                    )
+                )
