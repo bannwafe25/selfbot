@@ -24,7 +24,7 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import aexec, fmtexc, fmtsec, ids, ikm, shell
 
-pattern = re.compile(r"^(?:e\s+.+)|(?:.+#)|(?:#)$", flags=re.DOTALL)
+pattern = re.compile(r"^(?:e\s+.+|.+#|#)$", flags=re.DOTALL)
 
 
 class Debug(Module):
