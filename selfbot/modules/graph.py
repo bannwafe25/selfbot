@@ -2,6 +2,7 @@ import datetime
 import re
 
 from pyrogram import filters
+from pyrogram.enums import ChatType
 from pyrogram.types import LinkPreviewOptions, Message
 from telegraph.aio import Telegraph
 
@@ -72,9 +73,12 @@ class Graph(Module):
         except Exception as e:
             await event.edit_text(fmtstr(e.__class__.__name__, str(e), fmtsec(now)))
         else:
-            if (
-                event.chat.admin_privileges
-                or event.chat.permissions.can_add_web_page_previews
+            if event.chat.type in [ChatType.PRIVATE, ChatType.BOT] or (
+                event.chat.type not in [ChatType.PRIVATE, ChatType.BOT]
+                and (
+                    event.chat.admin_privileges
+                    or event.chat.permissions.can_add_web_page_previews
+                )
             ):
                 await event.edit_text(
                     f"<b><blockquote>{fmtsec(now)}</blockquote></b>",
