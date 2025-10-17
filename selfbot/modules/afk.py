@@ -4,6 +4,7 @@ import re
 
 from pyrogram import filters
 from pyrogram.errors import RPCError
+from pyrogram.raw import functions
 from pyrogram.types import Message
 
 from selfbot import listener
@@ -122,3 +123,18 @@ class AFK(Module):
                     msg.chat.id,
                     msg.id,
                 )
+
+        peer = await event._client.resolve_peer(event.chat.id)
+        await asyncio.gather(
+            event._client.invoke(functions.messages.ReadMentions(peer=peer)),
+            self.client.bot.send_sticker(
+                self.client.config["sticker_file_id"],
+                reply_markup=ikm(
+                    (
+                        "Mention",
+                        "url",
+                        f"tg://openmessage?chat_id={peer.channel_id}&message_id{event.id}",
+                    )
+                ),
+            ),
+        )
