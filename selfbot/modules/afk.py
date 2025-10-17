@@ -134,7 +134,7 @@ class AFK(Module):
                     (
                         "Mention",
                         "url",
-                        f"tg://openmessage?chat_id={peer.channel_id}&message_id{event.id}",
+                        f"tg://openmessage?chat_id={peer.channel_id}&message_id={event.id}",
                     )
                 ),
             ),
