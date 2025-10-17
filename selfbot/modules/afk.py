@@ -17,7 +17,7 @@ CREATE SCHEMA IF NOT EXISTS afk;
 CREATE TABLE IF NOT EXISTS afk.meta (
     status  BOOLEAN     DEFAULT FALSE,
     reason  TEXT,
-    since   TIMESTAMP   DEFAULT CURRENT_TIMESTAMP
+    since   TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS afk.msgs (
@@ -77,7 +77,7 @@ class AFK(Module):
                 "INSERT INTO afk.meta (status, reason, since) VALUES ($1, $2, $3);",
                 True,
                 reason,
-                since.replace(tzinfo=None),
+                since,
             )
             self.status, self.reason, self.since = True, reason, since
 
@@ -85,7 +85,7 @@ class AFK(Module):
             fmtstr(
                 "Away from Keyboard",
                 {"Status": self.status, "Reason": reason},
-                fmtsec(since.replace(tzinfo=datetime.UTC)),
+                fmtsec(since),
             )
         )
 
@@ -104,7 +104,7 @@ class AFK(Module):
                         "Timezone": "UTC+7\n",
                         "Reason": self.reason,
                     },
-                    fmtsec(self.since.replace(tzinfo=datetime.UTC)),
+                    fmtsec(self.since),
                 )
             )
             old = await self.client.db.fetchval(
