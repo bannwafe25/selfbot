@@ -130,6 +130,7 @@ class AFK(Module):
             self.client.bot.send_sticker(
                 event._client.me.id,
                 self.client.config["sticker_file_id"],
+                disable_notification=True,
                 reply_markup=ikm(
                     (
                         "Mention",

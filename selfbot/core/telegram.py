@@ -66,6 +66,7 @@ class Telegram(abc.ABC):
                     },
                     fmtsec(now),
                 ),
+                disable_notification=True,
                 reply_markup=ikm(
                     [
                         [
