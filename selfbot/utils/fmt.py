@@ -5,7 +5,7 @@ import traceback
 
 
 def fmtsec(now: datetime.datetime, part: int = 3) -> str:
-    delta = datetime.datetime.now() - now
+    delta = datetime.datetime.now(datetime.UTC) - now
     total = int(delta.total_seconds())
     micro = delta.microseconds
 

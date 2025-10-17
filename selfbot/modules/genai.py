@@ -144,7 +144,7 @@ class GenAI(Module):
             await edit(question, parse_mode=ParseMode.MARKDOWN)
 
         ikb = [[("Ask", "switch_inline_query_current_chat", "ask "), ("Close", b"0")]]
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(datetime.UTC)
         async with self.lock:
             self.data.append({"role": "user", "parts": [{"text": query}]})
             res = await self.gemini()

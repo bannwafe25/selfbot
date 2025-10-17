@@ -54,7 +54,7 @@ class AFK(Module):
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         since, (reason,) = (
-            datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))),
+            datetime.datetime.now(datetime.UTC),
             pattern.match(event.content).groups(),
         )
         if self.status:
@@ -93,11 +93,12 @@ class AFK(Module):
             return
 
         async with self.lock:
+            wib = self.since.astimezone(datetime.timezone(datetime.timedelta(hours=7)))
             msg = await event.reply_text(
                 fmtstr(
                     "Away from Keyboard",
                     {
-                        "Since": self.since.strftime("%B %-d, %-I:%M %p"),
+                        "Since": wib.strftime("%B %-d, %-I:%M %p"),
                         "Timezone": "UTC+7\n",
                         "Reason": self.reason,
                     },

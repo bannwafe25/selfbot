@@ -59,7 +59,7 @@ class Graph(Module):
             ):
                 content = f"{content}<img src='{event.reply_to_message.web_page.url}'>"
 
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(datetime.UTC)
         try:
             res = await self.graph.create_page(
                 title or "Untitled",

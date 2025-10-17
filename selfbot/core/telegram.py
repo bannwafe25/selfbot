@@ -47,7 +47,7 @@ class Telegram(abc.ABC):
         tmp = os.path.exists("/tmp/r.json")
         self.logger.info(f"{'Res' if tmp else 'S'}tarting Client...")
 
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(datetime.UTC)
         try:
             await self.start()
         except Exception as e:

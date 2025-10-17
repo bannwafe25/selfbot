@@ -235,7 +235,7 @@ class Debug(Module):
                     else event.inline_message_id
                 ),
             )
-            now = datetime.datetime.now()
+            now = datetime.datetime.now(datetime.UTC)
             try:
                 res = await asyncio.wait_for(fut, timeout=900)
             except (asyncio.CancelledError, TimeoutError, Exception):

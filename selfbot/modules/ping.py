@@ -53,7 +53,7 @@ class Ping(Module):
         await self.respond(event)
 
     async def ping(self, client: Client) -> str:
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(datetime.UTC)
         await client.invoke(functions.Ping(ping_id=0))
         return fmtsec(now, 1)
 
@@ -71,7 +71,7 @@ class Ping(Module):
                 ikm(("...", "user_id", event._client.me.id))
             )
 
-        now, (app, bot) = datetime.datetime.now(), await asyncio.gather(
+        now, (app, bot) = datetime.datetime.now(datetime.UTC), await asyncio.gather(
             self.ping(self.client.app), self.ping(event._client)
         )
         await edit(
