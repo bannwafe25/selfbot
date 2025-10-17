@@ -128,6 +128,7 @@ class AFK(Module):
         await asyncio.gather(
             event._client.invoke(functions.messages.ReadMentions(peer=peer)),
             self.client.bot.send_sticker(
+                event._client.me.id,
                 self.client.config["sticker_file_id"],
                 reply_markup=ikm(
                     (
