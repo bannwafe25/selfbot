@@ -71,7 +71,10 @@ class Graph(Module):
         except Exception as e:
             await event.edit_text(fmtstr(e.__class__.__name__, str(e), fmtsec(now)))
         else:
-            if event.chat.permissions.can_add_web_page_previews:
+            if (
+                event.chat.privileges
+                or event.chat.permissions.can_add_web_page_previews
+            ):
                 await event.edit_text(
                     f"<b><blockquote>{fmtsec(now)}</blockquote></b>",
                     link_preview_options=LinkPreviewOptions(
