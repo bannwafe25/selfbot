@@ -1,9 +1,10 @@
 import time
 
 from asyncpg import Pool
-from pyrogram import raw, utils
 from pyrogram.raw.base import InputPeer
+from pyrogram.raw.types import InputPeerChannel, InputPeerChat, InputPeerUser
 from pyrogram.storage import Storage
+from pyrogram.utils import get_channel_id
 
 schema = """
 CREATE SCHEMA IF NOT EXISTS storage;
@@ -51,14 +52,14 @@ Object = object()
 
 def get_input_peer(peer_id: int, access_hash: int, peer_type: str) -> InputPeer:
     if peer_type in ("user", "bot"):
-        return raw.types.InputPeerUser(user_id=peer_id, access_hash=access_hash)
+        return InputPeerUser(user_id=peer_id, access_hash=access_hash)
 
     if peer_type == "group":
-        return raw.types.InputPeerChat(chat_id=-peer_id)
+        return InputPeerChat(chat_id=-peer_id)
 
     if peer_type in ("channel", "supergroup"):
-        return raw.types.InputPeerChannel(
-            channel_id=utils.get_channel_id(peer_id), access_hash=access_hash
+        return InputPeerChannel(
+            channel_id=get_channel_id(peer_id), access_hash=access_hash
         )
 
     raise ValueError(f"Invalid peer type: {peer_type}")
@@ -74,7 +75,11 @@ class PostgreStorage(Storage):
         await self.pool.execute(schema)
         await self.pool.execute(
             """
-            INSERT INTO storage.sessions (name, dc_id, date)
+            INSERT INTO storage.sessions (
+                name,
+                dc_id,
+                date
+            )
             VALUES ($1, $2, $3)
             ON CONFLICT (name) DO NOTHING;
             """,
@@ -108,7 +113,7 @@ class PostgreStorage(Storage):
 
         await self.pool.executemany(
             """
-            INSERT INTO storage.peers (
+            INSERT INTO storage.peers as p (
                 name,
                 id,
                 access_hash,
@@ -117,16 +122,24 @@ class PostgreStorage(Storage):
             )
             VALUES ($1, $2, $3, $4, $5)
             ON CONFLICT (name, id) DO UPDATE SET
-                access_hash = EXCLUDED.access_hash,
-                type = EXCLUDED.type,
-                phone_number = EXCLUDED.phone_number;
+                access_hash     = EXCLUDED.access_hash,
+                type            = EXCLUDED.type,
+                phone_number    = EXCLUDED.phone_number
+            WHERE
+                p.access_hash   IS DISTINCT FROM EXCLUDED.access_hash
+            OR  p.type          IS DISTINCT FROM EXCLUDED.type
+            OR  p.phone_number  IS DISTINCT FROM EXCLUDED.phone_number;
             """,
             peer_records,
         )
         if username_records:
             await self.pool.executemany(
                 """
-                INSERT INTO storage.usernames (name, id, username)
+                INSERT INTO storage.usernames AS u (
+                    name,
+                    id,
+                    username
+                )
                 VALUES ($1, $2, $3)
                 ON CONFLICT (name, username) DO UPDATE SET
                     id = EXCLUDED.id;
@@ -158,7 +171,7 @@ class PostgreStorage(Storage):
         else:
             await self.pool.execute(
                 """
-                INSERT INTO storage.update_state (
+                INSERT INTO storage.update_state AS u (
                     name,
                     id,
                     pts,
@@ -166,12 +179,19 @@ class PostgreStorage(Storage):
                     date,
                     seq
                 )
-                VALUES ($1, $2, $3, $4, $5, $6)
+                VALUES (
+                    $1, $2, $3, $4, $5, $6
+                )
                 ON CONFLICT (name, id) DO UPDATE SET
-                    pts = EXCLUDED.pts,
-                    qts = EXCLUDED.qts,
+                    pts  = EXCLUDED.pts,
+                    qts  = EXCLUDED.qts,
                     date = EXCLUDED.date,
-                    seq = EXCLUDED.seq;
+                    seq  = EXCLUDED.seq
+                WHERE
+                    u.pts   IS DISTINCT FROM EXCLUDED.pts
+                OR  u.qts   IS DISTINCT FROM EXCLUDED.qts
+                OR  u.date  IS DISTINCT FROM EXCLUDED.date
+                OR  u.seq   IS DISTINCT FROM EXCLUDED.seq;
                 """,
                 self.name,
                 *value,
@@ -185,46 +205,52 @@ class PostgreStorage(Storage):
         except (ValueError, TypeError) as e:
             raise KeyError(f"Invalid peer ID: {peer_id}") from e
 
-        res = await self.pool.fetchval(
+        row = await self.pool.fetchrow(
             """
-            SELECT (id, access_hash, type)
+            SELECT
+                id,
+                access_hash,
+                type
             FROM storage.peers
-            WHERE name = $1
-                AND id = $2;
+            WHERE name = $1 AND id = $2;
             """,
             self.name,
             peer_id_int,
         )
-
-        if not res:
+        if not row:
             raise KeyError(f"Peer ID not found: {peer_id_int}")
 
-        return get_input_peer(*res)
+        return get_input_peer(row["id"], row["access_hash"], row["type"])
 
     async def get_peer_by_username(self, username: str) -> InputPeer:
-        res = await self.pool.fetchval(
+        row = await self.pool.fetchrow(
             """
-            SELECT (p.id, p.access_hash, p.type)
+            SELECT
+                p.id,
+                p.access_hash,
+                p.type
             FROM storage.peers AS p
             JOIN storage.usernames AS u
-                ON p.id = u.id
-                AND p.name = u.name
+                ON  p.id    = u.id
+                AND p.name  = u.name
             WHERE u.name = $1
                 AND u.username = $2;
             """,
             self.name,
             username,
         )
-
-        if not res:
+        if not row:
             raise KeyError(f"Username not found: {username}")
 
-        return get_input_peer(*res)
+        return get_input_peer(row["id"], row["access_hash"], row["type"])
 
     async def get_peer_by_phone_number(self, phone_number: str) -> InputPeer:
-        res = await self.pool.fetchval(
+        row = await self.pool.fetchrow(
             """
-            SELECT (id, access_hash, type)
+            SELECT
+                id,
+                access_hash,
+                type
             FROM storage.peers
             WHERE name = $1
                 AND phone_number = $2;
@@ -233,10 +259,10 @@ class PostgreStorage(Storage):
             phone_number,
         )
 
-        if not res:
+        if not row:
             raise KeyError(f"Phone number not found: {phone_number}")
 
-        return get_input_peer(*res)
+        return get_input_peer(row["id"], row["access_hash"], row["type"])
 
     async def dc_id(self, value: any = Object) -> int | None:
         res = await self._value("dc_id", value)

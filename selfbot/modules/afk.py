@@ -4,7 +4,7 @@ import re
 
 from pyrogram import filters
 from pyrogram.errors import RPCError
-from pyrogram.raw import functions
+from pyrogram.raw.functions.messages import ReadMentions
 from pyrogram.types import Message
 
 from selfbot import listener
@@ -36,11 +36,15 @@ class AFK(Module):
     async def on_starting(self) -> None:
         self.lock = asyncio.Lock()
         await self.client.db.execute(schema)
-        data = await self.client.db.fetchval(
-            "SELECT (status, reason, since) FROM afk.meta;"
+        row = await self.client.db.fetchrow(
+            "SELECT status, reason, since FROM afk.meta;"
         )
-        if data:
-            self.status, self.reason, self.since = data
+        if row:
+            self.status, self.reason, self.since = (
+                row["status"],
+                row["reason"],
+                row["since"],
+            )
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -50,13 +54,15 @@ class AFK(Module):
             pattern.match(event.content).groups(),
         )
         if self.status:
-            since, ids = await asyncio.gather(
+            since, rows = await asyncio.gather(
                 self.client.db.fetchval("SELECT since FROM afk.meta;"),
                 self.client.db.fetch("SELECT chat_id, message_id FROM afk.msgs;"),
             )
-            for i in ids:
+            for row in rows:
                 try:
-                    await self.client.app.delete_messages(*i.values())
+                    await self.client.app.delete_messages(
+                        row["chat_id"], row["message_id"]
+                    )
                 except RPCError:
                     continue
 
@@ -97,11 +103,11 @@ class AFK(Module):
                     fmtsec(self.since),
                 )
             )
-            old = await self.client.db.fetchval(
+            val = await self.client.db.fetchval(
                 "SELECT message_id FROM afk.msgs WHERE chat_id = $1;", msg.chat.id
             )
-            if old:
-                await self.client.app.delete_messages(msg.chat.id, old)
+            if val:
+                await self.client.app.delete_messages(msg.chat.id, val)
                 await self.client.db.execute(
                     "UPDATE afk.msgs SET message_id = $1 WHERE chat_id = $2;",
                     msg.id,
@@ -116,7 +122,7 @@ class AFK(Module):
 
         peer = await event._client.resolve_peer(event.chat.id)
         await asyncio.gather(
-            event._client.invoke(functions.messages.ReadMentions(peer=peer)),
+            event._client.invoke(ReadMentions(peer=peer)),
             self.client.bot.send_sticker(
                 event._client.me.id,
                 self.client.config["sticker_file_id"],
