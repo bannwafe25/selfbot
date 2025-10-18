@@ -36,7 +36,7 @@ pattern = re.compile(
     r"^"
     r"(?P<action>(?:start|end|join|leave)?)call"
     r"(?:\s+(?P<chat_id>@?[a-zA-Z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
-    r"(?:\s+-as\s(?P<join_as>@?[a-z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
+    r"(?:\s+-as\s(?P<join_as>@?[a-zA-Z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
     r"(?:\s+(?P<mute>-m))?"
     r"(?:\s+-t\s(?P<title>.+))?"
     r"$"
