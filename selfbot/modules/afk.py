@@ -100,22 +100,22 @@ class AFK(Module):
                     )
                 ),
                 self.client.db.fetchval(
-                    "SELECT message_id FROM afk.msgs WHERE chat_id = $1;", new.chat.id
+                    "SELECT message_id FROM afk.msgs WHERE chat_id = $1;", event.chat.id
                 ),
             )
             if old:
                 await asyncio.gather(
-                    self.client.app.delete_messages(new.chat.id, old),
+                    self.client.app.delete_messages(event.chat.id, old),
                     self.client.db.execute(
                         "UPDATE afk.msgs SET message_id = $1 WHERE chat_id = $2;",
                         new.id,
-                        new.chat.id,
+                        event.chat.id,
                     ),
                 )
             else:
                 await self.client.db.execute(
                     "INSERT INTO afk.msgs (chat_id, message_id) VALUES ($1, $2);",
-                    new.chat.id,
+                    event.chat.id,
                     new.id,
                 )
 
