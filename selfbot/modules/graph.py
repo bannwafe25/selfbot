@@ -20,7 +20,6 @@ mention = re.compile(r"(?<!\S)@([a-zA-Z0-9_]{5,32})(?!\S)")
 
 class Graph(Module):
     name = "Graph"
-
     cmds = "graph {content} (-t {title})?"
     desc = {
         "content": "String or <Reply to Content>",
@@ -28,8 +27,7 @@ class Graph(Module):
         "?": "Optional",
         "e.g.": "graph Hello, World! -t Untitled",
     }
-
-    graph: Telegraph
+    graph = None
 
     async def on_starting(self) -> None:
         self.graph = Telegraph(access_token=None, domain="graph.org")

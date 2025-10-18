@@ -23,7 +23,6 @@ pattern = re.compile(r"^p(?:ing)?$")
 
 class Ping(Module):
     name = "Ping"
-
     cmds = "p(ing)?"
     desc = {"?": "Optional", "e.g.": "ping"}
 
@@ -58,7 +57,7 @@ class Ping(Module):
         return fmtsec(now, 1)
 
     async def respond(self, event: Update) -> None:
-        edit: callable
+        edit = None
         if isinstance(event, Message):
             edit = event.edit_text
         else:

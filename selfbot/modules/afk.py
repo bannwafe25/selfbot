@@ -13,44 +13,34 @@ from selfbot.utils import fmtsec, fmtstr, ikm
 
 schema = """
 CREATE SCHEMA IF NOT EXISTS afk;
-
 CREATE TABLE IF NOT EXISTS afk.meta (
     status  BOOLEAN     DEFAULT FALSE,
     reason  TEXT,
     since   TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS afk.msgs (
     chat_id     BIGINT PRIMARY KEY,
     message_id  INT
 );
 """
-
 pattern = re.compile(r"^#?afk(?:\s(.+))?$")
 
 
 class AFK(Module):
     name = "AFK"
-
     cmds = "afk {reason}?"
     desc = {"reason": "String", "?": "Optional", "e.g.": "afk Busy!"}
 
-    status: bool
-    reason: str
-
-    since: datetime.datetime | None
+    status, reason, since = False, "", None
 
     async def on_starting(self) -> None:
         self.lock = asyncio.Lock()
-
         await self.client.db.execute(schema)
         data = await self.client.db.fetchval(
             "SELECT (status, reason, since) FROM afk.meta;"
         )
         if data:
             self.status, self.reason, self.since = data
-        else:
-            self.status, self.reason, self.since = False, "", None
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
