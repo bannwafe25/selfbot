@@ -14,7 +14,6 @@ from selfbot.utils import fmtsec, fmtstr, ikm
 schema = """
 CREATE SCHEMA IF NOT EXISTS afk;
 CREATE TABLE IF NOT EXISTS afk.meta (
-    status  BOOLEAN     DEFAULT FALSE,
     reason  TEXT,
     since   TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -36,15 +35,10 @@ class AFK(Module):
     async def on_starting(self) -> None:
         self.lock = asyncio.Lock()
         await self.client.db.execute(schema)
-        row = await self.client.db.fetchrow(
-            "SELECT status, reason, since FROM afk.meta;"
-        )
+        row = await self.client.db.fetchrow("SELECT reason, since FROM afk.meta;")
         if row:
-            self.status, self.reason, self.since = (
-                row["status"],
-                row["reason"],
-                row["since"],
-            )
+            self.status = True
+            self.reason, self.since = row["reason"], row["since"]
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -70,10 +64,7 @@ class AFK(Module):
             self.status, self.reason, self.since = False, "", None
         else:
             await self.client.db.execute(
-                "INSERT INTO afk.meta (status, reason, since) VALUES ($1, $2, $3);",
-                True,
-                reason,
-                since,
+                "INSERT INTO afk.meta (reason, since) VALUES ($1, $2);", reason, since
             )
             self.status, self.reason, self.since = True, reason, since
 
