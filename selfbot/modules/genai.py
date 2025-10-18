@@ -1,6 +1,7 @@
 import asyncio
 import collections
 import datetime
+import html
 import re
 
 from httpx import AsyncClient
@@ -19,16 +20,16 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, ikm
 
-pattern = re.compile(r"^(?:ask\s?)(.*)?", flags=re.DOTALL)
+pattern = re.compile(r"^(.*)?(?:\!\?)$", flags=re.DOTALL)
 
 
 class GenAI(Module):
     name = "GenAI"
 
-    cmds = "ask {query}?"
+    cmds = "{query} !?"
     desc = {
         "query": "String or <Reply or Quote to Content>",
-        "?": "Optional",
+        "!?": "as Suffix",
         "e.g.": "ask Who are You?",
     }
 
@@ -61,7 +62,7 @@ class GenAI(Module):
             resp = await event.reply_text(
                 "<code>...</code>",
                 quote=True,
-                reply_markup=ikm(("Ask", "switch_inline_query", "ask ")),
+                reply_markup=ikm(("Ask", "switch_inline_query", "")),
             )
 
             async with self.lock:
@@ -120,10 +121,10 @@ class GenAI(Module):
         if not query:
             if isinstance(event, ChosenInlineResult):
                 return await edit(
-                    "<b>Hello, World!</b>",
+                    "<code>Give Query with Suffix '!?'</code>",
                     reply_markup=ikm(
                         [
-                            ("Ask", "switch_inline_query_current_chat", "ask "),
+                            ("Ask", "switch_inline_query_current_chat", ""),
                             ("Close", b"0"),
                         ]
                     ),
@@ -135,7 +136,7 @@ class GenAI(Module):
                 query = event.reply_to_message.content
             else:
                 return await event.edit_text(
-                    f"<code>Reply to Content or Give a Text</code>\n\n<b><blockquote>/del_{event.id}</blockquote></b>"
+                    f"<code>Give a Query or {html.escape('<Reply or Quote to Content>')}</code>"
                 )
 
             await edit("<code>...</code>")
