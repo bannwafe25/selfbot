@@ -29,7 +29,7 @@ class GenAI(Module):
     desc = {
         "query": "String or <Reply or Quote to Content>",
         "!?": "as Suffix",
-        "e.g.": "ask Who are You?",
+        "e.g.": "Who are You? !?",
     }
 
     async def on_starting(self) -> None:
