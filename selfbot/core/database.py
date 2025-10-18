@@ -8,5 +8,5 @@ class Database(abc.ABC):
         self.db = None
         super().__init__(**kwargs)
 
-    async def database(self) -> None:
+    async def initdb(self) -> None:
         self.db = await create_pool(self.config["database_url"])
