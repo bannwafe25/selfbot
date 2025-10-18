@@ -25,6 +25,7 @@ pattern = re.compile(r"^(.*)?(?:\!\?)$", flags=re.DOTALL)
 
 class GenAI(Module):
     name = "GenAI"
+
     cmds = "{query} !?"
     desc = {
         "query": "String or <Reply or Quote to Content>",
@@ -44,6 +45,7 @@ class GenAI(Module):
             },
             timeout=45,
         )
+
         self.lock = asyncio.Lock()
         self.data = collections.deque(maxlen=32)
 
@@ -87,8 +89,10 @@ class GenAI(Module):
         await self.respond(event)
 
     async def gemini(self, model: str = "gemini-2.5-flash") -> any:
-        json = {"contents": list(self.data), "tools": [{"google_search": {}}]}
-        text = None
+        json, text = {
+            "contents": list(self.data),
+            "tools": [{"google_search": {}}],
+        }, None
         try:
             resp = await self.genai.post(f"/models/{model}:generateContent", json=json)
             resp.raise_for_status()
@@ -103,17 +107,13 @@ class GenAI(Module):
                 self.data.append(text)
 
     async def respond(self, event: Update) -> None:
-        text = ""
-        edit = None
+        text, edit = "", None
         if isinstance(event, ChosenInlineResult):
-            text = event.query
-            edit = event.edit_message_text
+            text, edit = event.query, event.edit_message_text
         else:
-            text = event.content
-            edit = event.edit_text
+            text, edit = event.content, event.edit_text
 
-        (query,) = pattern.match(text).groups()
-        question = ""
+        (query,), question = pattern.match(text).groups(), ""
         if not query:
             if isinstance(event, ChosenInlineResult):
                 return await edit(

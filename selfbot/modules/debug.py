@@ -29,6 +29,7 @@ pattern = re.compile(r"^(?:e\s+.+|.+#|#)$", flags=re.DOTALL)
 
 class Debug(Module):
     name = "Debug"
+
     cmds = "e? {code} #?"
     desc = {
         "e": "Prefix for No Inline (Suffix '#' No Needed)",
@@ -37,6 +38,7 @@ class Debug(Module):
         "?": "Optional",
         "e.g.": 'print("Hello, World!")#',
     }
+
     args = {
         "asyncio": asyncio,
         "dt": datetime,
@@ -197,7 +199,7 @@ class Debug(Module):
         return msg, cmd
 
     async def execute(self, msg: Message, event: Update, btn: bool = False) -> None:
-        edit: callable
+        edit = None
         if isinstance(event, Message):
             edit = event.edit_text
         else:

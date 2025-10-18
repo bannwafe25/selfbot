@@ -23,6 +23,7 @@ pattern = re.compile(r"^p(?:ing)?$")
 
 class Ping(Module):
     name = "Ping"
+
     cmds = "p(ing)?"
     desc = {"?": "Optional", "e.g.": "ping"}
 
@@ -71,7 +72,7 @@ class Ping(Module):
             )
 
         now, (app, bot) = datetime.datetime.now(datetime.UTC), await asyncio.gather(
-            self.ping(self.client.app), self.ping(event._client)
+            self.ping(self.client.app), self.ping(self.client.bot)
         )
         await edit(
             fmtstr("Pong!", {"App": app, "Bot": bot}, fmtsec(now)),

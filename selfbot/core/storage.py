@@ -6,6 +6,7 @@ from pyrogram.raw.types import InputPeerChannel, InputPeerChat, InputPeerUser
 from pyrogram.storage import Storage
 from pyrogram.utils import get_channel_id
 
+Object = object()
 schema = """
 CREATE SCHEMA IF NOT EXISTS storage;
 CREATE TABLE IF NOT EXISTS storage.sessions (
@@ -47,7 +48,6 @@ CREATE TABLE IF NOT EXISTS storage.update_state (
 CREATE INDEX IF NOT EXISTS idx_peers_phone_number
     ON storage.peers (name, phone_number);
 """
-Object = object()
 
 
 def get_input_peer(peer_id: int, access_hash: int, peer_type: str) -> InputPeer:

@@ -16,8 +16,10 @@ pattern = re.compile(r"^(?:r)$")
 
 class Restart(Module):
     name = "Restart"
+
     cmds = "r"
     desc = "Restart Selfbot"
+
     file = "/tmp/r.json"
 
     async def on_started(self) -> None:
@@ -46,7 +48,7 @@ class Restart(Module):
 
         def fetch(repo, remote) -> None:
             origin = next((r for r in repo.remotes if r.name == "origin"), None)
-            if origin is None:
+            if not origin:
                 origin = repo.create_remote("origin", remote)
             else:
                 try:
@@ -59,12 +61,15 @@ class Restart(Module):
 
         def check() -> bool:
             repo = git.Repo(".") if os.path.isdir(".git") else git.Repo.init(".")
+
             remote = self.client.config.get(
                 "remote", "https://github.com/DeltaUniverse/selfbot"
             ).removesuffix(".git")
             branch = self.client.config.get("branch", "staging")
+
             fetch(repo, remote)
             repo.git.reset("--hard", f"origin/{branch}")
+
             old = repo.head.commit.hexsha
             new = repo.commit(f"origin/{branch}").hexsha
             if old == new:
@@ -79,8 +84,7 @@ class Restart(Module):
 
             return False
 
-        changed = await asyncio.to_thread(check)
-        if changed:
+        if await asyncio.to_thread(check):
             await event.edit_text("<code>Updating...</code>")
 
             def update():

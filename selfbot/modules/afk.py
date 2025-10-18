@@ -27,22 +27,26 @@ pattern = re.compile(r"^#?afk(?:\s(.+))?$")
 
 class AFK(Module):
     name = "AFK"
+
     cmds = "afk {reason}?"
     desc = {"reason": "String", "?": "Optional", "e.g.": "afk Busy!"}
 
     status, reason, since = False, "", None
 
     async def on_starting(self) -> None:
-        self.lock = asyncio.Lock()
         await self.client.db.execute(schema)
+
         row = await self.client.db.fetchrow("SELECT reason, since FROM afk.meta;")
         if row:
             self.status = True
             self.reason, self.since = row["reason"], row["since"]
 
+        self.lock = asyncio.Lock()
+
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
+
         since, (reason,) = (
             datetime.datetime.now(datetime.UTC),
             pattern.match(event.content).groups(),
@@ -83,32 +87,36 @@ class AFK(Module):
 
         async with self.lock:
             wib = self.since.astimezone(datetime.timezone(datetime.timedelta(hours=7)))
-            msg = await event.reply_text(
-                fmtstr(
-                    "Away from Keyboard",
-                    {
-                        "Since": wib.strftime("%B %-d, %-I:%M %p"),
-                        "Timezone": "UTC+7\n",
-                        "Reason": self.reason,
-                    },
-                    fmtsec(self.since),
-                )
+            new, old = await asyncio.gather(
+                event.reply_text(
+                    fmtstr(
+                        "Away from Keyboard",
+                        {
+                            "Since": wib.strftime("%B %-d, %-I:%M %p"),
+                            "Timezone": "UTC+7\n",
+                            "Reason": self.reason,
+                        },
+                        fmtsec(self.since),
+                    )
+                ),
+                self.client.db.fetchval(
+                    "SELECT message_id FROM afk.msgs WHERE chat_id = $1;", new.chat.id
+                ),
             )
-            val = await self.client.db.fetchval(
-                "SELECT message_id FROM afk.msgs WHERE chat_id = $1;", msg.chat.id
-            )
-            if val:
-                await self.client.app.delete_messages(msg.chat.id, val)
-                await self.client.db.execute(
-                    "UPDATE afk.msgs SET message_id = $1 WHERE chat_id = $2;",
-                    msg.id,
-                    msg.chat.id,
+            if old:
+                await asyncio.gather(
+                    self.client.app.delete_messages(new.chat.id, old),
+                    self.client.db.execute(
+                        "UPDATE afk.msgs SET message_id = $1 WHERE chat_id = $2;",
+                        new.id,
+                        new.chat.id,
+                    ),
                 )
             else:
                 await self.client.db.execute(
                     "INSERT INTO afk.msgs (chat_id, message_id) VALUES ($1, $2);",
-                    msg.chat.id,
-                    msg.id,
+                    new.chat.id,
+                    new.id,
                 )
 
         peer = await event._client.resolve_peer(event.chat.id)

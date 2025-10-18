@@ -43,6 +43,7 @@ pattern = re.compile(
 
 class Call(Module):
     name = "Call"
+
     cmds = "{action}?call {chat}? (-as {peer})? (-m)? (-t {title})?"
     desc = {
         "action": "(join|leave|start|end)",
@@ -61,6 +62,7 @@ class Call(Module):
 
         self.client.tgc = PyTgCalls(self.client.app, 1, 15)
         await self.client.tgc.start()
+
         for group in list(self.client.app.dispatcher.groups.keys()):
             if group == -1:
                 continue
@@ -71,6 +73,7 @@ class Call(Module):
             self.client.app.dispatcher.groups.pop(group, None)
 
         await self.client.db.execute(schema)
+
         rows = await self.client.db.fetch(
             "SELECT chat_id, join_as, mute FROM call.chats;"
         )
@@ -98,6 +101,7 @@ class Call(Module):
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
+
         now, (action, chat_id, join_as, mute, title) = (
             datetime.datetime.now(datetime.UTC),
             pattern.match(event.content).groupdict().values(),
@@ -125,9 +129,7 @@ class Call(Module):
             else:
                 chat_id = chat.id
 
-        func = None
-        args = {"chat_id": chat_id}
-        text = {"data": {"Chat ID": chat_id}}
+        func, args, text = None, {"chat_id": chat_id}, {"data": {"Chat ID": chat_id}}
         if action == "join":
             func = self.client.tgc.play
             text["head"] = "Joined Call"

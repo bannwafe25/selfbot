@@ -21,12 +21,14 @@ mention = re.compile(r"(?<!\S)@([a-zA-Z0-9_]{5,32})(?!\S)")
 class Graph(Module):
     name = "Graph"
     cmds = "graph {content} (-t {title})?"
+
     desc = {
         "content": "String or <Reply to Content>",
         "title": "String",
         "?": "Optional",
         "e.g.": "graph Hello, World! -t Untitled",
     }
+
     graph = None
 
     async def on_starting(self) -> None:
@@ -36,6 +38,7 @@ class Graph(Module):
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
+
         content, title = pattern.match(event.content.html).groupdict().values()
         if not content:
             if not event.reply_to_message.content:

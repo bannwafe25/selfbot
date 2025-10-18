@@ -34,8 +34,10 @@ class Telegram(abc.ABC):
     def __init__(self, **kwargs) -> None:
         self.app = None
         self.bot = None
-        self.__idle__ = None
+
         self.handlers = {}
+        self.__idle__ = None
+
         super().__init__(**kwargs)
 
     async def run(self) -> None:
@@ -44,6 +46,7 @@ class Telegram(abc.ABC):
 
         tmp = os.path.exists("/tmp/r.json")
         self.logger.info(f"{'Res' if tmp else 'S'}tarting Client...")
+
         now = datetime.datetime.now(datetime.UTC)
         try:
             await self.start()
@@ -88,18 +91,23 @@ class Telegram(abc.ABC):
             self.logger.info("Client Stopped")
 
     async def start(self) -> None:
-        await self.database()
+        await self.initdb()
+
         self.app = self._app
         self.bot = self._bot
+
         self.logger.info("Starting App...")
         await self.app.start()
+
         self.logger.info("Starting Bot...")
         await self.bot.start()
+
         await asyncio.gather(
             self.app.resolve_peer(self.bot.me.username),
             asyncio.to_thread(self.loads),
             asyncio.to_thread(self.conf),
         )
+
         try:
             await self.bot.send_chat_action(self.app.me.id, ChatAction.TYPING)
         except PeerIdInvalid:

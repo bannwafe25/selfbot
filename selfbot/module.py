@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 
 class Module:
     name = ""
+
     cmds = ""
     desc = None
 
@@ -21,6 +22,5 @@ class ModuleError(Exception):
 
 class ModuleExists(ModuleError):
     def __init__(self, old: "Module", new: "Module") -> None:
-        self.old = old
-        self.new = new
+        self.old, self.new = old, new
         super().__init__(f"'{self.old.name}' Exists")

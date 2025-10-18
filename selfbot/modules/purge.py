@@ -16,6 +16,7 @@ pattern = re.compile(r"^purge(me)?(?:\s(\d{1,3}))?(?:\s(-d))?$")
 
 class Purge(Module):
     name = "Purge"
+
     cmds = "<Reply to Message>? purge(me)? {limit}? (-d)?"
     desc = {
         "Reply to Message": "as Start ID (Default: 1)",
@@ -28,6 +29,7 @@ class Purge(Module):
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
+
         (me, digit, delete), limit = pattern.match(event.content).groups(), 0
         if digit:
             limit = int(digit)
