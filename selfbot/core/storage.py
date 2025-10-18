@@ -142,7 +142,8 @@ class PostgreStorage(Storage):
                 )
                 VALUES ($1, $2, $3)
                 ON CONFLICT (name, username) DO UPDATE SET
-                    id = EXCLUDED.id;
+                    id = EXCLUDED.id
+                WHERE u.id IS DISTINCT FROM EXCLUDED.id;
                 """,
                 username_records,
             )
