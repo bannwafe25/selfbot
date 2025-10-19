@@ -58,7 +58,7 @@ class AFK(Module):
             )
             for row in rows:
                 try:
-                    await self.client.app.delete_messages(
+                    await event._client.delete_messages(
                         row["chat_id"], row["message_id"]
                     )
                 except RPCError:
@@ -105,7 +105,7 @@ class AFK(Module):
             )
             if old:
                 await asyncio.gather(
-                    self.client.app.delete_messages(event.chat.id, old),
+                    event._client.delete_messages(event.chat.id, old),
                     self.client.db.execute(
                         "UPDATE afk.msgs SET message_id = $1 WHERE chat_id = $2;",
                         new.id,
