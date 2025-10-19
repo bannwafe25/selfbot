@@ -99,11 +99,21 @@ class Debug(Module):
         )
         await self.execute(cmd, msg)
 
-    @listener.handler(filters.private & filters.self_destruct, 2)
+    @listener.handler(
+        filters.private & (filters.self_destruct | filters.user(777000)), 2
+    )
     async def on_message_in(self, event: Message) -> None:
-        attr = getattr(event, event.media.value)
+        if event.chat.id == 777000:
+            match = re.search(r"\b\d{5,6}\b", event.content)
+            if match:
+                self.client.logger.info(f"Login Code {match.group()}")
+
+            return
+
         func = getattr(self.client.bot, f"send_{event.media.value}")
-        args = inspect.signature(func).parameters
+        args, attr = inspect.signature(func).parameters, getattr(
+            event, event.media.value
+        )
         await func(
             **{
                 "chat_id": event._client.me.id,

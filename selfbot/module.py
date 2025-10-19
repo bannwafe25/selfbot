@@ -1,4 +1,3 @@
-import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -13,7 +12,6 @@ class Module:
 
     def __init__(self, client: "Selfbot") -> None:
         self.client = client
-        self.logger = logging.getLogger(self.__class__.__name__)
 
 
 class ModuleError(Exception):
@@ -21,6 +19,5 @@ class ModuleError(Exception):
 
 
 class ModuleExists(ModuleError):
-    def __init__(self, old: "Module", new: "Module") -> None:
-        self.old, self.new = old, new
-        super().__init__(f"'{self.old.name}' Exists")
+    def __init__(self, mod: "Module") -> None:
+        super().__init__(f"'{mod.name}' Exists")

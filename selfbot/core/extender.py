@@ -27,7 +27,7 @@ class Extender(abc.ABC):
 
     def load(self, mod: "Module") -> None:
         if mod.name in self.modules:
-            raise ModuleExists(type(self.modules[mod.name]), mod)
+            raise ModuleExists(mod)
 
         obj = mod(self)
         try:

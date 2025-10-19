@@ -11,8 +11,8 @@ from .telegram import Telegram
 
 class Selfbot(Database, Dispatcher, Extender, Telegram):
     def __init__(self, config: dict) -> None:
-        self.logger = logging.getLogger("Selfbot")
         self.config = config
+        self.logger = logging.getLogger("Selfbot")
         super().__init__()
 
     @classmethod
