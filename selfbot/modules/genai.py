@@ -147,9 +147,10 @@ class GenAI(Module):
                 ).text.strip()
                 if isinstance(event, ChosenInlineResult):
                     ikb.insert(0, ("Full", "url", f"{link}.markdown"))
-                    res = f"{res[:1024]}... TRUNCATED"
                 else:
-                    res = f"{res[:1024]}... [TRUNCATED]({link}.markdown)"
+                    rtt = f"[{rtt}]({link})"
+
+                res = f"{res[:1024]}..."
 
             await edit(
                 f"{question}{res}\n\n> **{rtt}**",
