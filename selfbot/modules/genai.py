@@ -62,7 +62,7 @@ class GenAI(Module):
             resp = await event.reply_sticker(
                 self.client.config["sticker_file_id"],
                 quote=True,
-                reply_markup=ikm(("GenAI", "switch_inline_query", "")),
+                reply_markup=ikm(("...", "switch_inline_query", "")),
             )
             async with self.lock:
                 self.data.clear()
@@ -118,12 +118,7 @@ class GenAI(Module):
             if isinstance(event, ChosenInlineResult):
                 return await edit(
                     "<code>Give a Query with Suffix '!?'</code>",
-                    reply_markup=ikm(
-                        [
-                            ("GenAI", "switch_inline_query_current_chat", ""),
-                            ("Close", b"0"),
-                        ]
-                    ),
+                    reply_markup=ikm(("Close", b"0")),
                 )
 
             if event.quote and event.quote.text:
@@ -140,7 +135,7 @@ class GenAI(Module):
             question = f"```Query\n{query}```\n\n"
             await edit(question, parse_mode=ParseMode.MARKDOWN)
 
-        ikb = [[("GenAI", "switch_inline_query_current_chat", ""), ("Close", b"0")]]
+        ikb = [("Close", b"0")]
         now = datetime.datetime.now(datetime.UTC)
         async with self.lock:
             self.data.append({"role": "user", "parts": [{"text": query}]})
@@ -151,7 +146,7 @@ class GenAI(Module):
                     await self.client.http.post("https://paste.rs", data=res.encode())
                 ).text.strip()
                 if isinstance(event, ChosenInlineResult):
-                    ikb[0].insert(0, [("Output", "url", f"{link}.markdown")])
+                    ikb.insert(0, ("Full", "url", f"{link}.markdown"))
                     res = f"{res[:1024]}... TRUNCATED"
                 else:
                     res = f"{res[:1024]}... [TRUNCATED]({link}.markdown)"
