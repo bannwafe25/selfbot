@@ -71,6 +71,10 @@ class Debug(Module):
             }
         )
 
+    async def on_started(self) -> None:
+        if hasattr(self.client, "call"):
+            self.args["call"] = self.client.call
+
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         if event.content.strip() == "#":

@@ -60,8 +60,8 @@ class Call(Module):
         if not load:
             return self.client.unload(self)
 
-        self.client.tgc = PyTgCalls(self.client.app, 1, 15)
-        await self.client.tgc.start()
+        self.client.call = PyTgCalls(self.client.app, 1, 15)
+        await self.client.call.start()
 
         for group in list(self.client.app.dispatcher.groups.keys()):
             if group == -1:
@@ -91,12 +91,12 @@ class Call(Module):
                     args["config"] = GroupCallConfig(join_as=peer)
 
             try:
-                await self.client.tgc.play(**args)
+                await self.client.call.play(**args)
             except Exception:
                 continue
             else:
                 if row.get("mute"):
-                    await self.client.tgc.mute(row["chat_id"])
+                    await self.client.call.mute(row["chat_id"])
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -109,7 +109,7 @@ class Call(Module):
         if not action:
             return await event.edit_text(
                 fmtstr(
-                    "Joined Call IDs", list(await self.client.tgc.calls), fmtsec(now)
+                    "Joined Call IDs", list(await self.client.call.calls), fmtsec(now)
                 )
             )
 
@@ -131,7 +131,7 @@ class Call(Module):
 
         func, args, text = None, {"chat_id": chat_id}, {"data": {"Chat ID": chat_id}}
         if action == "join":
-            func = self.client.tgc.play
+            func = self.client.call.play
             text["head"] = "Joined Call"
             if join_as:
                 try:
@@ -151,7 +151,7 @@ class Call(Module):
 
             text["data"]["Mute"] = bool(mute)
         elif action == "leave":
-            func = self.client.tgc.leave_call
+            func = self.client.call.leave_call
             text["head"] = "Left Call"
         elif action == "start":
             func = event._client.create_video_chat
@@ -174,9 +174,9 @@ class Call(Module):
         else:
             if action == "join":
                 if mute:
-                    await self.client.tgc.mute(chat_id)
+                    await self.client.call.mute(chat_id)
                 else:
-                    await self.client.tgc.unmute(chat_id)
+                    await self.client.call.unmute(chat_id)
 
                 await self.client.db.execute(
                     """
