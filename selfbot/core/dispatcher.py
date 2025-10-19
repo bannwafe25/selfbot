@@ -3,7 +3,13 @@ import asyncio
 import bisect
 import contextlib
 
-from pyrogram.errors import FloodWait, MessageNotModified, QueryIdInvalid, SlowmodeWait
+from pyrogram.errors import (
+    FloodWait,
+    MessageIdInvalid,
+    MessageNotModified,
+    QueryIdInvalid,
+    SlowmodeWait,
+)
 from pyrogram.types import Update
 
 from selfbot.listener import Listener
@@ -23,7 +29,7 @@ class Dispatcher(abc.ABC):
                         continue
 
                 await listener.func(*args, **kwargs)
-            except (MessageNotModified, QueryIdInvalid):
+            except (MessageIdInvalid, MessageNotModified, QueryIdInvalid):
                 continue
             except (FloodWait, SlowmodeWait) as e:
                 if e.value <= 30:
