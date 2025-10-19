@@ -45,13 +45,13 @@ class Telegram(abc.ABC):
             raise RuntimeError("Selfbot Running")
 
         tmp = os.path.exists("/tmp/r.json")
-        self.logger.info(f"{'Res' if tmp else 'S'}tarting Client...")
+        self.logger.info(f"{'Res' if tmp else 'S'}tarting Selfbot...")
 
         now = datetime.datetime.now(datetime.UTC)
         try:
             await self.start()
         except Exception as e:
-            self.logger.error(str(e))
+            self.logger.error(f"{e.__class__.__name__}: {e}")
         else:
             self.logger.info("Client Started")
             await self.bot.send_message(
@@ -88,7 +88,7 @@ class Telegram(abc.ABC):
             await self.idle()
         finally:
             await self.stop()
-            self.logger.info("Client Stopped")
+            self.logger.info("Selfbot Stopped")
 
     async def start(self) -> None:
         await self.initdb()

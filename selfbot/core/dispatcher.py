@@ -43,8 +43,8 @@ class Dispatcher(abc.ABC):
                 while tb and tb.tb_next:
                     tb = tb.tb_next
 
-                fn = tb.tb_frame.f_code.co_filename if tb else "-"
-                ln = tb.tb_lineno if tb else "-"
+                fn = getattr(tb.tb_frame.f_code, "co_filename", "-")
+                ln = getattr(tb, "tb_lineno", "-")
                 with contextlib.suppress(Exception):
                     await self.bot.send_message(
                         self.app.me.id,

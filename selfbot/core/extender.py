@@ -34,7 +34,7 @@ class Extender(abc.ABC):
             self.registers(obj)
         except Exception as e:
             self.unregisters(obj)
-            self.logger.error(str(e))
+            self.logger.error(f"{e.__class__.__name__}: {e}")
         else:
             self.logger.info(f"{mod.name} Loaded")
         finally:
@@ -44,7 +44,7 @@ class Extender(abc.ABC):
         try:
             self.unregisters(mod)
         except Exception as e:
-            self.logger.error(str(e))
+            self.logger.error(f"{e.__class__.__name__}: {e}")
         else:
             self.logger.info(f"{mod.name} Unloaded")
         finally:
