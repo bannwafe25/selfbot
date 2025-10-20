@@ -146,10 +146,10 @@ class GenAI(Module):
                     await self.client.http.post("https://paste.rs", data=res.encode())
                 ).text.strip()
                 if isinstance(event, ChosenInlineResult):
+                    res = f"{res[:1024]}..."
                     ikb.insert(0, ("Full", "url", f"{link}.markdown"))
                 else:
                     res = f"{res[:1024]}... [Full]({link}.markdown)"
-                    rtt = f"[{rtt}]({link}.markdown)"
 
             await edit(
                 f"{question}{res}\n\n> **{rtt}**",
