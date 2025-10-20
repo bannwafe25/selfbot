@@ -158,7 +158,7 @@ class Debug(Module):
                     ),
                 )
             ],
-            cache_time=2147483647 if len(event.query) == 1 else 0,
+            cache_time=0,
         )
 
     @listener.handler(filters.regex(pattern), 4)

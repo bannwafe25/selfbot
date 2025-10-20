@@ -79,7 +79,7 @@ class GenAI(Module):
                     input_message_content=InputTextMessageContent("<code>...</code>"),
                 )
             ],
-            cache_time=2147483647,
+            cache_time=0,
             switch_pm_text="Clear Conversation",
             switch_pm_parameter="clear",
         )
