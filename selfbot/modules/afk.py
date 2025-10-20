@@ -107,6 +107,7 @@ class AFK(Module):
                 )
 
         peer = await event._client.resolve_peer(event.chat.id)
+        chat = getattr(peer, "channel_id", None) or abs(getattr(peer, "chat_id", -1))
         await asyncio.gather(
             event._client.invoke(ReadMentions(peer=peer)),
             self.client.bot.send_sticker(
@@ -117,7 +118,7 @@ class AFK(Module):
                     (
                         "Mention",
                         "url",
-                        f"tg://openmessage?chat_id={peer.channel_id}&message_id={event.id}",
+                        f"tg://openmessage?chat_id={chat}&message_id={event.id}",
                     )
                 ),
             ),
