@@ -44,8 +44,11 @@ class Telegram(abc.ABC):
         if self.__idle__ and not self.__idle__.is_set():
             raise RuntimeError("Selfbot Running")
 
-        tmp = os.path.exists("/tmp/r.json")
-        self.logger.info(f"{'Res' if tmp else 'S'}tarting Selfbot...")
+        await self.initdb()
+
+        row = await self.db.fetchrow("SELECT chat_id, message_id FROM restart.msgs;")
+        res = "Res" if row else "S"
+        self.logger.info(f"{res}tarting Selfbot...")
 
         now = datetime.datetime.now(datetime.UTC)
         try:
@@ -53,11 +56,17 @@ class Telegram(abc.ABC):
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
         else:
-            self.logger.info("Client Started")
+            if row:
+                await asyncio.gather(
+                    self.app.delete_messages(row["chat_id"], row["message_id"]),
+                    self.db.execute("TRUNCATE restart.msgs;"),
+                )
+
+            self.logger.info(f"Selfbot {res}tarted")
             await self.bot.send_message(
                 self.app.me.id,
                 fmtstr(
-                    f"Selfbot {'Res' if tmp else 'S'}tarted",
+                    f"Selfbot {prefix}tarted",
                     {
                         "Version": f"{__version__}\n",
                         "Handlers": len(self.handlers),
@@ -91,8 +100,6 @@ class Telegram(abc.ABC):
             self.logger.info("Selfbot Stopped")
 
     async def start(self) -> None:
-        await self.initdb()
-
         self.app = self._app
         self.bot = self._bot
 
@@ -183,7 +190,13 @@ class Telegram(abc.ABC):
     def conf(self) -> None:
         self.config.clear()
         for key in list(os.environ):
-            if key in ["DATABASE_URL", "GEMINI_API_KEY", "STICKER_FILE_ID"]:
+            if key in [
+                "BRANCH",
+                "REMOTE",
+                "DATABASE_URL",
+                "GEMINI_API_KEY",
+                "STICKER_FILE_ID",
+            ]:
                 self.config[key.lower()] = os.environ[key]
 
     def build(self, name: str, updates: tuple = ()) -> Client:

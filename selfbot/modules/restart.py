@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 import re
 import sys
@@ -11,36 +10,24 @@ from pyrogram.types import Message
 from selfbot import listener
 from selfbot.module import Module
 
-pattern = re.compile(r"^(?:r)$")
+schema = """
+CREATE SCHEMA IF NOT EXISTS restart;
+CREATE TABLE IF NOT EXISTS restart.msgs(
+    chat_id     BIGINT,
+    message_id  INT
+);
+"""
+pattern = re.compile(r"^(?:r(estart)?)$")
 
 
 class Restart(Module):
     name = "Restart"
 
-    cmds = "r"
-    desc = "Restart Selfbot"
+    cmds = "r(estart)?"
+    desc = {"?": "Optional", "e.g": "restart"}
 
-    file = "/tmp/r.json"
-
-    async def on_started(self) -> None:
-        if not os.path.exists(self.file):
-            return
-
-        def load() -> dict:
-            with open(self.file) as f:
-                return json.load(f)
-
-        try:
-            data = await asyncio.to_thread(load)
-        except Exception:
-            return
-        else:
-            try:
-                await self.client.app.delete_messages(*data.values())
-            except Exception:
-                pass
-            finally:
-                os.remove(self.file)
+    async def on_starting(self) -> None:
+        await self.client.db.execute(schema)
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -101,11 +88,17 @@ class Restart(Module):
 
             await asyncio.to_thread(update)
 
-        await event.edit_text("<code>Restarting...</code>")
-
-        def dump() -> None:
-            with open(self.file, "w") as f:
-                json.dump({"cid": event.chat.id, "mid": event.id}, f)
-
-        await asyncio.to_thread(dump)
+        await asyncio.gather(
+            event.edit_text("<code>Restarting...</code>"),
+            self.client.db.execute(
+                """
+                INSERT INTO restart.msgs AS r (chat_id, message_id)
+                VALUES ($1, $2)
+                ON CONFLICT (chat_id) DO UPDATE SET
+                    message_id = EXCLUDE.message_id
+                WHERE
+                    r.message_id IS DISTINCT FROM EXCLUDED.message_id;
+                """
+            ),
+        )
         os.execv(sys.executable, (sys.executable, "-m", "selfbot"))
