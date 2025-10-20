@@ -10,13 +10,6 @@ from pyrogram.types import Message
 from selfbot import listener
 from selfbot.module import Module
 
-schema = """
-CREATE SCHEMA IF NOT EXISTS restart;
-CREATE TABLE IF NOT EXISTS restart.msgs(
-    chat_id     BIGINT,
-    message_id  INT
-);
-"""
 pattern = re.compile(r"^(?:r(estart)?)$")
 
 
@@ -25,9 +18,6 @@ class Restart(Module):
 
     cmds = "r(estart)?"
     desc = {"?": "Optional", "e.g": "restart"}
-
-    async def on_starting(self) -> None:
-        await self.client.db.execute(schema)
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
