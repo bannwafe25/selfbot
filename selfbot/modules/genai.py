@@ -149,7 +149,7 @@ class GenAI(Module):
                     res = f"{res[:1024]}..."
                     ikb.insert(0, ("Full", "url", f"{link}.markdown"))
                 else:
-                    res = f"{res[:1024]}... [Full]({link}.markdown)"
+                    res = f"{res[:1024]}[...]({link}.markdown)"
 
             await edit(
                 f"{question}{res}\n\n> **{rtt}**",
