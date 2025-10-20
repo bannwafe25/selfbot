@@ -107,7 +107,7 @@ class AFK(Module):
                 )
 
         peer = await event._client.resolve_peer(event.chat.id)
-        chat = getattr(peer, "channel_id", None) or abs(getattr(peer, "chat_id", -1))
+        chat = getattr(peer, "channel_id", None) or getattr(peer, "chat_id", None)
         await asyncio.gather(
             event._client.invoke(ReadMentions(peer=peer)),
             self.client.bot.send_sticker(
