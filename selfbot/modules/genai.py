@@ -148,9 +148,8 @@ class GenAI(Module):
                 if isinstance(event, ChosenInlineResult):
                     ikb.insert(0, ("Full", "url", f"{link}.markdown"))
                 else:
+                    res = f"{res[:1024]}... [Full]({link}.markdown)"
                     rtt = f"[{rtt}]({link}.markdown)"
-
-                res = f"{res[:1024]}..."
 
             await edit(
                 f"{question}{res}\n\n> **{rtt}**",
