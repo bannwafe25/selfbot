@@ -41,7 +41,7 @@ class Ping(Module):
                     input_message_content=InputTextMessageContent("<code>...</code>"),
                 )
             ],
-            cache_time=0,
+            cache_time=2147483647,
         )
 
     @listener.handler(filters.regex(pattern), 3)
