@@ -23,11 +23,7 @@ class Help(Module):
     name = "Help"
 
     cmds = "help(/{name})?"
-    desc = {
-        "name": "String as Module Name (Insensitive)",
-        "?": "Optional",
-        "e.g.": "help/debug",
-    }
+    desc = {"name": "String as Module Name", "?": "Optional", "e.g.": "help/debug"}
 
     mods = {}
     maps = {}
@@ -89,7 +85,7 @@ class Help(Module):
                             ),
                         )
                     ],
-                    cache_time=0,
+                    cache_time=2147483647,
                 )
             else:
                 names = [
@@ -109,7 +105,7 @@ class Help(Module):
                             ),
                         )
                     ],
-                    cache_time=0,
+                    cache_time=2147483647,
                 )
 
             return
@@ -124,7 +120,7 @@ class Help(Module):
                     ),
                 )
             ],
-            cache_time=0,
+            cache_time=2147483647,
         )
 
     @listener.handler(filters.regex(pattern), 4)
@@ -140,7 +136,7 @@ class Help(Module):
                     f"\n\n{len(self.ikbs)} Pages"
                 ),
                 show_alert=True,
-                cache_time=0,
+                cache_time=2147483647,
             )
 
         if act == "mod":
