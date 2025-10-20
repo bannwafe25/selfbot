@@ -11,17 +11,6 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr, ikm
 
-schema = """
-CREATE SCHEMA IF NOT EXISTS afk;
-CREATE TABLE IF NOT EXISTS afk.meta (
-    reason  TEXT,
-    since   TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS afk.msgs (
-    chat_id     BIGINT PRIMARY KEY,
-    message_id  INT
-);
-"""
 pattern = re.compile(r"^#?afk(?:\s(.+))?$")
 
 
@@ -34,8 +23,6 @@ class AFK(Module):
     status, reason, since = False, "", None
 
     async def on_starting(self) -> None:
-        await self.client.db.execute(schema)
-
         row = await self.client.db.fetchrow("SELECT reason, since FROM afk.meta;")
         if row:
             self.status = True

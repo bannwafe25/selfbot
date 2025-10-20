@@ -7,47 +7,6 @@ from pyrogram.storage import Storage
 from pyrogram.utils import get_channel_id
 
 Object = object()
-schema = """
-CREATE SCHEMA IF NOT EXISTS storage;
-CREATE TABLE IF NOT EXISTS storage.sessions (
-    name        TEXT    PRIMARY KEY,
-    dc_id       INTEGER NOT NULL,
-    api_id      INTEGER,
-    test_mode   BOOLEAN,
-    auth_key    BYTEA,
-    date        BIGINT  NOT NULL,
-    user_id     BIGINT,
-    is_bot      BOOLEAN
-);
-CREATE TABLE IF NOT EXISTS storage.peers (
-    name            TEXT    NOT NULL,
-    id              BIGINT  NOT NULL,
-    access_hash     BIGINT,
-    type            TEXT    NOT NULL,
-    phone_number    TEXT,
-    PRIMARY KEY (name, id)
-);
-CREATE TABLE IF NOT EXISTS storage.usernames (
-    name        TEXT    NOT NULL,
-    id          BIGINT  NOT NULL,
-    username    TEXT    NOT NULL,
-    PRIMARY KEY (name, username),
-    FOREIGN KEY (name, id)
-        REFERENCES storage.peers (name, id)
-        ON DELETE CASCADE
-);
-CREATE TABLE IF NOT EXISTS storage.update_state (
-    name    TEXT    NOT NULL,
-    id      INTEGER NOT NULL,
-    pts     BIGINT,
-    qts     BIGINT,
-    date    BIGINT,
-    seq     BIGINT,
-    PRIMARY KEY (name, id)
-);
-CREATE INDEX IF NOT EXISTS idx_peers_phone_number
-    ON storage.peers (name, phone_number);
-"""
 
 
 def get_input_peer(peer_id: int, access_hash: int, peer_type: str) -> InputPeer:
@@ -72,7 +31,6 @@ class PostgreStorage(Storage):
         self.pool = pool
 
     async def open(self) -> None:
-        await self.pool.execute(schema)
         await self.pool.execute(
             """
             INSERT INTO storage.sessions (

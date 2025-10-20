@@ -22,14 +22,6 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr
 
-schema = """
-CREATE SCHEMA IF NOT EXISTS call;
-CREATE TABLE IF NOT EXISTS call.chats (
-    chat_id BIGINT  PRIMARY KEY,
-    join_as BIGINT,
-    mute    BOOLEAN DEFAULT FALSE
-);
-"""
 pattern = re.compile(
     r"^"
     r"(?P<action>(?:start|end|join|leave)?)call"
@@ -71,8 +63,6 @@ class Call(Module):
                 await asyncio.to_thread(self.client.app.remove_handler, handler, group)
 
             self.client.app.dispatcher.groups.pop(group, None)
-
-        await self.client.db.execute(schema)
 
         rows = await self.client.db.fetch(
             "SELECT chat_id, join_as, mute FROM call.chats;"
