@@ -81,14 +81,7 @@ class Restart(Module):
         await asyncio.gather(
             event.edit_text("<code>Restarting...</code>"),
             self.client.db.execute(
-                """
-                INSERT INTO restart.msgs AS r (chat_id, message_id)
-                VALUES ($1, $2)
-                ON CONFLICT (chat_id) DO UPDATE SET
-                    message_id = EXCLUDED.message_id
-                WHERE
-                    r.message_id IS DISTINCT FROM EXCLUDED.message_id;
-                """,
+                "INSERT INTO restart.msgs (chat_id, message_id) VALUES ($1, $2);",
                 event.chat.id,
                 event.id,
             ),
