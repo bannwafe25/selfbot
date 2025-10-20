@@ -88,7 +88,9 @@ class Restart(Module):
                     message_id = EXCLUDE.message_id
                 WHERE
                     r.message_id IS DISTINCT FROM EXCLUDED.message_id;
-                """
+                """,
+                event.chat.id,
+                event.id,
             ),
         )
         os.execv(sys.executable, (sys.executable, "-m", "selfbot"))
