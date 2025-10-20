@@ -66,7 +66,7 @@ class Telegram(abc.ABC):
             await self.bot.send_message(
                 self.app.me.id,
                 fmtstr(
-                    f"Selfbot {prefix}tarted",
+                    f"Selfbot {res}tarted",
                     {
                         "Version": f"{__version__}\n",
                         "Handlers": len(self.handlers),
