@@ -16,17 +16,6 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
         self.logger = logging.getLogger("Selfbot")
         super().__init__()
 
-    @property
-    def _git(self) -> str:
-        cur = pathlib.Path.cwd().resolve()
-        while cur != cur.parent:
-            if (cur / ".git").is_dir():
-                return str(cur)
-
-            cur = cur.parent
-
-        return str(pathlib.Path.cwd())
-
     @classmethod
     async def launch(cls, config: dict) -> "Selfbot":
         selfbot = cls(config)
@@ -62,3 +51,14 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
                 pass
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
+
+    @property
+    def _git(self) -> str:
+        cur = pathlib.Path.cwd().resolve()
+        while cur != cur.parent:
+            if (cur / ".git").is_dir():
+                return str(cur)
+
+            cur = cur.parent
+
+        return str(pathlib.Path.cwd())

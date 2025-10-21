@@ -15,7 +15,7 @@ from pyrogram.types import Update
 
 from selfbot.listener import Listener
 from selfbot.module import Module
-from selfbot.utils import ikm
+from selfbot.utils import fmtstr, ikm
 
 
 class Dispatcher(abc.ABC):
@@ -63,14 +63,11 @@ class Dispatcher(abc.ABC):
                 fn = getattr(tb.tb_frame.f_code, "co_filename", "-")
                 ln = getattr(tb, "tb_lineno", "-")
                 with contextlib.suppress(Exception):
-                    url = blob(fn, ln)
+                    url = await asyncio.to_thread(blob, fn, ln)
                     await self.bot.send_message(
                         self.app.me.id,
-                        (
-                            f"<b>Line {ln}</b>\n<code>{fn}</code>"
-                            f"\n\n<b>{e.__class__.__name__}</b>\n<code>{e}</code>"
-                        ),
-                        reply_markup=ikm(("Open", "url", url)) if url else None,
+                        fmtstr("Exception", {"File": {fn}, "Line": {ln}}, str(e)),
+                        reply_markup=ikm(("Code", "url", url)) if url else None,
                     )
 
                 self.logger.error(f"{e.__class__.__name__}: {e} at {fn}:{ln}")
