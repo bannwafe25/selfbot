@@ -16,6 +16,7 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
         self.logger = logging.getLogger("Selfbot")
         super().__init__()
 
+    @property
     def _git(self) -> str:
         cur = pathlib.Path.cwd().resolve()
         while cur != cur.parent:
