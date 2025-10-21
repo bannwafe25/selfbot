@@ -80,7 +80,7 @@ class Telegram(abc.ABC):
                     [
                         [
                             (
-                                "Commit History",
+                                "Commits",
                                 "url",
                                 f"{self.config.get(
                 'remote', 'https://github.com/DeltaUniverse/selfbot'
