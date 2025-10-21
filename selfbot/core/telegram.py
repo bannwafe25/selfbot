@@ -34,7 +34,6 @@ class Telegram(abc.ABC):
     def __init__(self, **kwargs) -> None:
         self.app = None
         self.bot = None
-        self.git = None
 
         self.handlers = {}
         self.__idle__ = None
@@ -103,6 +102,7 @@ class Telegram(abc.ABC):
     async def start(self) -> None:
         self.app = self._app
         self.bot = self._bot
+        self.git = self._git
 
         self.logger.info("Starting App...")
         await self.app.start()

@@ -16,8 +16,7 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
         self.logger = logging.getLogger("Selfbot")
         super().__init__()
 
-    @classmethod
-    def dotgit(cls) -> str:
+    def _git(self) -> str:
         cur = pathlib.Path.cwd().resolve()
         while cur != cur.parent:
             if (cur / ".git").is_dir():
@@ -29,7 +28,6 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
 
     @classmethod
     async def launch(cls, config: dict) -> "Selfbot":
-        cls.git = cls.dotgit()
         selfbot = cls(config)
         try:
             selfbot.http = AsyncClient(timeout=900)
