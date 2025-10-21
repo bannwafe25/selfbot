@@ -66,7 +66,7 @@ class Dispatcher(abc.ABC):
                     url = await asyncio.to_thread(blob, fn, ln)
                     await self.bot.send_message(
                         self.app.me.id,
-                        fmtstr("Exception", {"File": {fn}, "Line": {ln}}, str(e)),
+                        fmtstr(e.__class__.__name__, {"File": fn, "Line": ln}, str(e)),
                         reply_markup=ikm(("Code", "url", url)) if url else None,
                     )
 
