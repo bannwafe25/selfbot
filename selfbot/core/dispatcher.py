@@ -15,6 +15,7 @@ from pyrogram.types import Update
 
 from selfbot.listener import Listener
 from selfbot.module import Module
+from selfbot.utils import ikm
 
 
 class Dispatcher(abc.ABC):
