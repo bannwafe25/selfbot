@@ -1579,5 +1579,5 @@ speedups = ["pytgcrypto", "uvloop"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.11,<4.0"
-content-hash = "588e2002a0a2f71467c257c03c9d04cf151c1842de0c744b00d966ee2e792cfd"
+python-versions = ">=3.11,<3.14"
+content-hash = "f7935841d1f1cc26e3edcbcb9ebee37145532d0ffaf08a402ffe9da73daa7e47"

@@ -9,7 +9,7 @@ keywords = [
     "mtproto",
     "pyrogram"
 ]
-requires-python = ">=3.11,<4.0"
+requires-python = ">=3.11,<3.14"
 license = "MIT"
 dependencies = [
     "aiorun (>=2025.1.1,<2026.0.0)",
@@ -28,11 +28,11 @@ name = "DeltaUniverse <deltauniverse@github.org>"
 selfbot = "selfbot.main:run"
 
 [project.optional-dependencies]
-pytgcalls = ["py-tgcalls (>=2.2.8,<3.0.0)"]
 speedups = [
     "pytgcrypto (>=1.2.11,<2.0.0)",
     "uvloop (>=0.21.0,<1.0.0)"
 ]
+pytgcalls = ["py-tgcalls (>=2.2.8,<3.0.0)"]
 
 [build-system]
 requires = ["poetry-core>=2.2.1,<3.0.0"]
