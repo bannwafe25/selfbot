@@ -37,20 +37,19 @@ class GenAI(Module):
         if not self.client.config.get("gemini_api_key"):
             return self.client.unload(self)
 
-        self.genai = AsyncClient(
-            base_url="https://generativelanguage.googleapis.com/v1beta",
+        self.lock = asyncio.Lock()
+        self.data = collections.deque(maxlen=32)
+        self.goog = AsyncClient(
             headers={
                 "Content-Type": "application/json",
                 "x-goog-api-key": self.client.config["gemini_api_key"],
             },
             timeout=45,
+            base_url="https://generativelanguage.googleapis.com/v1beta",
         )
 
-        self.lock = asyncio.Lock()
-        self.data = collections.deque(maxlen=32)
-
     async def on_stopping(self) -> None:
-        await self.genai.close()
+        await self.goog.aclose()
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -97,7 +96,7 @@ class GenAI(Module):
             "tools": [{"google_search": {}}],
         }, None
         try:
-            resp = await self.genai.post(f"/models/{model}:generateContent", json=json)
+            resp = await self.goog.post(f"/models/{model}:generateContent", json=json)
             resp.raise_for_status()
         except Exception as e:
             return f"**{e.__class__.__name__}**:\n  `{e}`"

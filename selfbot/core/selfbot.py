@@ -37,7 +37,7 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
                     self.dispatch("stopping"),
                     self.app.stop(),
                     self.bot.stop(),
-                    self.http.close(),
+                    self.http.aclose(),
                 ],
                 return_exceptions=True,
             )
