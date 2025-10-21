@@ -26,12 +26,11 @@ class Dispatcher(abc.ABC):
     async def dispatch(self, event: str, *args: any, **kwargs: any) -> None:
         def blob(path: str, line: int) -> str | None:
             try:
-                root = os.path.join(os.getcwd(), "selfbot")
                 absp = os.path.abspath(path)
-                if not absp.startswith(root):
+                if not absp.startswith(os.path.join(self.git, "")):
                     return None
 
-                relp = os.path.relpath(absp, root).replace("\\", "/")
+                relp = os.path.relpath(absp, self.git).replace("\\", "/")
             except ValueError:
                 return None
             else:

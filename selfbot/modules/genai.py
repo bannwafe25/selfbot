@@ -49,6 +49,9 @@ class GenAI(Module):
         self.lock = asyncio.Lock()
         self.data = collections.deque(maxlen=32)
 
+    async def on_stopping(self) -> None:
+        await self.genai.close()
+
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await self.respond(event)

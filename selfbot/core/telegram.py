@@ -34,6 +34,7 @@ class Telegram(abc.ABC):
     def __init__(self, **kwargs) -> None:
         self.app = None
         self.bot = None
+        self.git = None
 
         self.handlers = {}
         self.__idle__ = None
