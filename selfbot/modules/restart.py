@@ -39,16 +39,14 @@ class Restart(Module):
         def check() -> bool:
             repo = git.Repo(".") if os.path.isdir(".git") else git.Repo.init(".")
 
-            remote = self.client.config.get(
+            remote, branch = self.client.config.get(
                 "remote", "https://github.com/DeltaUniverse/selfbot"
-            ).removesuffix(".git")
-            branch = self.client.config.get("branch", "staging")
+            ).removesuffix(".git"), self.client.config.get("branch", "staging")
 
             fetch(repo, remote)
             repo.git.reset("--hard", f"origin/{branch}")
 
-            old = repo.head.commit.hexsha
-            new = repo.commit(f"origin/{branch}").hexsha
+            old, new = repo.head.commit.hexsha, repo.commit(f"origin/{branch}").hexsha
             if old == new:
                 return False
 

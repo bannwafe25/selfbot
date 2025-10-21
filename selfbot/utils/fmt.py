@@ -6,10 +6,7 @@ import traceback
 
 def fmtsec(now: datetime.datetime, part: int = 3) -> str:
     delta = datetime.datetime.now(datetime.UTC) - now
-    micro = delta.microseconds
-    total = int(delta.total_seconds())
-
-    parts = []
+    micro, total, parts = delta.microseconds, int(delta.total_seconds()), []
 
     w, r = divmod(total, 7 * 24 * 3600)
     if w:

@@ -135,8 +135,7 @@ class GenAI(Module):
             question = f"```Query\n{query}```\n\n"
             await edit(question, parse_mode=ParseMode.MARKDOWN)
 
-        ikb = [("Close", b"0")]
-        now = datetime.datetime.now(datetime.UTC)
+        ikb, now = [("Close", b"0")], datetime.datetime.now(datetime.UTC)
         async with self.lock:
             self.data.append({"role": "user", "parts": [{"text": query}]})
             res = await self.gemini()

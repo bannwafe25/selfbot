@@ -2,6 +2,7 @@ import abc
 import asyncio
 import bisect
 import contextlib
+import os
 
 from pyrogram.errors import (
     FloodWait,
@@ -22,6 +23,22 @@ class Dispatcher(abc.ABC):
         super().__init__(**kwargs)
 
     async def dispatch(self, event: str, *args: any, **kwargs: any) -> None:
+        def blob(path: str, line: int) -> str | None:
+            try:
+                root = os.path.join(os.getcwd(), "selfbot")
+                absp = os.path.abspath(path)
+                if not absp.startswith(root):
+                    return None
+
+                relp = os.path.relpath(absp, root).replace("\\", "/")
+            except ValueError:
+                return None
+            else:
+                remote, branch = self.config.get(
+                    "remote", "https://github.com/DeltaUniverse/selfbot"
+                ).removesuffix(".git"), self.config.get("branch", "staging")
+                return f"{remote}/blob/{branch}/{relp}#L{line}"
+
         for listener in self.listeners.get(event, []):
             try:
                 if listener.filters and args and isinstance(args[0], Update):
@@ -46,12 +63,14 @@ class Dispatcher(abc.ABC):
                 fn = getattr(tb.tb_frame.f_code, "co_filename", "-")
                 ln = getattr(tb, "tb_lineno", "-")
                 with contextlib.suppress(Exception):
+                    url = blob(fn, ln)
                     await self.bot.send_message(
                         self.app.me.id,
                         (
                             f"<b>Line {ln}</b>\n<code>{fn}</code>"
                             f"\n\n<b>{e.__class__.__name__}</b>\n<code>{e}</code>"
                         ),
+                        reply_markup=ikm(("Open", "url", url)) if url else None,
                     )
 
                 self.logger.error(f"{e.__class__.__name__}: {e} at {fn}:{ln}")

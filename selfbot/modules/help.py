@@ -25,13 +25,10 @@ class Help(Module):
     cmds = "help(/{name})?"
     desc = {"name": "String as Module Name", "?": "Optional", "e.g.": "help/debug"}
 
-    mods = {}
-    maps = {}
-    ikbs = []
+    mods, maps, ikbs = {}, {}, []
 
     async def on_started(self) -> None:
-        mods = [mod for mod in self.client.modules.values()]
-        page = []
+        mods, page = [mod for mod in self.client.modules.values()], []
         for i, mod in enumerate(mods):
             name = mod.name.lower()
             self.maps[name] = len(self.ikbs)
