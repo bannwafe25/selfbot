@@ -25,8 +25,8 @@ from selfbot.utils import fmtsec, fmtstr
 pattern = re.compile(
     r"^"
     r"(?P<action>(?:start|end|join|leave)?)call"
-    r"(?:\s+(?P<chat_id>@?[a-zA-Z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
-    r"(?:\s+-as\s(?P<join_as>@?[a-zA-Z][a-zA-Z0-9_]{3,32}|-100\d{10}))?"
+    r"(?:\s+(?P<chat_id>@?[a-zA-Z][a-zA-Z0-9_]{3,31}|-100[1-9]\d{9}))?"
+    r"(?:\s+-as\s(?P<join_as>@?[a-zA-Z][a-zA-Z0-9_][a-zA-Z0-9]{2,30}))?"
     r"(?:\s+(?P<mute>-m))?"
     r"(?:\s+-t\s(?P<title>.+))?"
     r"$"
@@ -41,7 +41,7 @@ class Call(Module):
         "action": "(join|leave|start|end)",
         "call": "Joined Call IDs (Standalone)",
         "chat": "Chat ID or Username (Default: Current Chat)",
-        "peer": "Chat ID or Username (Default: Self)",
+        "peer": "Username (Default: Self)",
         "-m": "Mute",
         "title": "String",
         "?": "Optional",
