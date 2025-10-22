@@ -11,7 +11,7 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr
 
-pattern = re.compile(r"^purge(me)?(?:\s(\d{1,3}))?(?:\s(-d))?$")
+pattern = re.compile(r"^purge(me)?(?:\s([1-9]\d{0,2}))?(?:\s(-d))?$")
 
 
 class Purge(Module):
