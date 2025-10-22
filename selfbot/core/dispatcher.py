@@ -27,7 +27,7 @@ class Dispatcher(abc.ABC):
         def blob(path: str, line: int) -> str | None:
             try:
                 absp = os.path.abspath(path)
-                if not absp.startswith(os.path.join(self.git, "")):
+                if not absp.startswith(os.path.join(self.git, "selfbot")):
                     return None
 
                 relp = os.path.relpath(absp, self.git).replace("\\", "/")
@@ -37,7 +37,7 @@ class Dispatcher(abc.ABC):
                 remote, branch = self.config.get(
                     "remote", "https://github.com/DeltaUniverse/selfbot"
                 ).removesuffix(".git"), self.config.get("branch", "staging")
-                return f"{remote}/blob/{branch}/{relp}#L{line}"
+                return f"{remote}/blob/{branch}/selfbot/{relp}#L{line}"
 
         for listener in self.listeners.get(event, []):
             try:
