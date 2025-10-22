@@ -189,14 +189,12 @@ class Debug(Module):
             if task:
                 return task.cancel()
 
-            if msg:
-                if msg.outgoing or (msg.from_user and msg.from_user.is_self):
-                    asyncio.create_task(msg.delete())
-
             return await cmd.delete()
 
         if not msg:
-            return await cmd.delete()
+            return await event.answer(
+                r"¯\_(ツ)_/¯", show_alert=True, cache_time=2147483647
+            )
 
         await self.execute(msg, event)
 
