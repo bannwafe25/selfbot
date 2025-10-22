@@ -47,9 +47,12 @@ class Purge(Module):
                 )
             ]
         else:
-            if event.chat.type not in [ChatType.SUPERGROUP, ChatType.CHANNEL]:
+            if event.chat.type not in [ChatType.SUPERGROUP, ChatType.CHANNEL] or (
+                event.chat.type == ChatType.SUPERGROUP
+                and (event.chat.is_direct_messages or event.chat.is_forum)
+            ):
                 return await event.edit_text(
-                    f"<code>Unsupported {html.escape(f'<{event.chat.type}>')}</code>"
+                    f"<code>Unsupported {html.escape('<ChatType>')}</code>"
                 )
             elif event.reply_to_message_id:
                 if limit:
