@@ -37,7 +37,7 @@ class Dispatcher(abc.ABC):
                 remote, branch = self.config.get(
                     "remote", "https://github.com/DeltaUniverse/selfbot"
                 ).removesuffix(".git"), self.config.get("branch", "staging")
-                return f"{remote}/blob/{branch}/selfbot/{relp}#L{line}"
+                return f"{remote}/blob/{branch}/{relp}#L{line}"
 
         for listener in self.listeners.get(event, []):
             try:
