@@ -173,7 +173,7 @@ class GenAI(Module):
                     )
             elif event.reply_to_message and event.reply_to_message.content:
                 parts.append({"text": event.reply_to_message.content})
-            else:
+            elif not query:
                 return await edit(
                     f"<code>Give a Query or {html.escape('<Reply or Quote to Content>')}</code>"
                 )
