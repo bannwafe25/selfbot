@@ -1,6 +1,6 @@
 import struct
 
-from pyrogram.types import CopyTextButton, InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.utils import (
     MIN_MONOFORUM_CHANNEL_ID,
     get_channel_id,
@@ -31,19 +31,12 @@ def ikm(rows: list | tuple) -> InlineKeyboardMarkup:
     ikb = []
     for row in rows:
         line = []
-        for button in row:
-            args = {"text": button[0]}
-            last = button[-1]
-            if len(button) == 2:
-                args.update({"callback_data": last})
-            elif len(button) == 3:
-                arg = button[1]
-                if arg == "user":
-                    args.update({"user_id": last})
-                elif arg == "copy":
-                    args.update({"copy_text": CopyTextButton(text=last)})
-                else:
-                    args.update({arg: last})
+        for i in row:
+            args, last = {"text": i[0]}, i[-1]
+            if len(i) == 2:
+                args["callback_data"] = last
+            elif len(args) == 3:
+                args[i[1]] = last
             else:
                 raise ValueError
 
