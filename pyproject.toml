@@ -18,8 +18,7 @@ dependencies = [
     "httpx (>=0.28.1,<1.0.0)",
     "pyrotgfork (>=2.2.16,<3.0.0)",
     "python-dotenv (>=1.1.1,<2.0.0)",
-    "telegraph[aio] (>=2.2.0,<3.0.0)",
-    "pytgcrypto @ git+https://github.com/TelegramPlayground/pyrogram-tgcrypto@master"
+    "telegraph[aio] (>=2.2.0,<3.0.0)"
 ]
 
 [[project.authors]]
