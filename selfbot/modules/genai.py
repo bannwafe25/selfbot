@@ -136,18 +136,18 @@ class GenAI(Module):
         if not isinstance(event, ChosenInlineResult):
             if event.quote and event.quote.text:
                 parts.append({"text": event.quote.text})
-            elif (
-                event.reply_to_message
-                and event.reply_to_message.media
-                and event.reply_to_message.media
-                in [
+            elif event.reply_to_message and event.reply_to_message.media:
+                if event.reply_to_message.media not in [
                     MessageMediaType.ANIMATION,
                     MessageMediaType.AUDIO,
                     MessageMediaType.DOCUMENT,
                     MessageMediaType.PHOTO,
                     MessageMediaType.VIDEO,
-                ]
-            ):
+                ]:
+                    return await edit(
+                        f"<code>Unsupported {html.escape(f'<{event.reply_to_message.media}>')}</code>"
+                    )
+
                 obj = getattr(
                     event.reply_to_message, event.reply_to_message.media.value
                 )
