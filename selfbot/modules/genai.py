@@ -141,14 +141,19 @@ class GenAI(Module):
                 and event.reply_to_message.media
                 and event.reply_to_message.media
                 in [
+                    MessageMediaType.ANIMATION,
+                    MessageMediaType.AUDIO,
+                    MessageMediaType.DOCUMENT,
                     MessageMediaType.PHOTO,
                     MessageMediaType.VIDEO,
-                    MessageMediaType.DOCUMENT,
                 ]
             ):
                 obj = getattr(
                     event.reply_to_message, event.reply_to_message.media.value
                 )
+                if obj.file_size > 8 * 1024**2:
+                    return await edit("<code>Media too Large (Limit: 8 MB)</code>")
+
                 doc = await event.reply_to_message.download(in_memory=True)
                 parts.append(
                     {
