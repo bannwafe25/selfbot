@@ -35,7 +35,7 @@ def ikm(rows: list | tuple) -> InlineKeyboardMarkup:
             args, last = {"text": i[0]}, i[-1]
             if len(i) == 2:
                 args["callback_data"] = last
-            elif len(args) == 3:
+            elif len(i) == 3:
                 args[i[1]] = last
             else:
                 raise ValueError
