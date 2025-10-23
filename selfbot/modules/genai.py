@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import collections
 import datetime
 import html
@@ -6,7 +7,7 @@ import re
 
 from httpx import AsyncClient
 from pyrogram import filters
-from pyrogram.enums import ParseMode
+from pyrogram.enums import MessageMediaType, ParseMode
 from pyrogram.types import (
     ChosenInlineResult,
     InlineQuery,
@@ -91,10 +92,10 @@ class GenAI(Module):
         await self.respond(event)
 
     async def gemini(self, model: str = "gemini-2.5-flash") -> any:
-        json, text = {
-            "contents": list(self.data),
-            "tools": [{"google_search": {}}],
-        }, None
+        json, text = (
+            {"contents": list(self.data), "tools": [{"google_search": {}}]},
+            None,
+        )
         try:
             resp = await self.goog.post(f"/models/{model}:generateContent", json=json)
             resp.raise_for_status()
@@ -116,30 +117,70 @@ class GenAI(Module):
             text, edit = event.content, event.edit_text
 
         (query,), question = pattern.match(text).groups(), ""
-        if not query:
+        if query:
+            question = f"```Query\n{query}```\n\n"
+            await edit(question, parse_mode=ParseMode.MARKDOWN)
+        else:
             if isinstance(event, ChosenInlineResult):
                 return await edit(
                     "<code>Give a Query with Suffix '!?'</code>",
                     reply_markup=ikm(("Close", b"0")),
                 )
 
+            await edit("<code>...</code>")
+
+        parts = []
+        if query:
+            parts.append({"text": query})
+
+        if not isinstance(event, ChosenInlineResult):
             if event.quote and event.quote.text:
-                query = event.quote.text
+                parts.append({"text": event.quote.text})
+            elif (
+                event.reply_to_message
+                and event.reply_to_message.media
+                and event.reply_to_message.media
+                in [
+                    MessageMediaType.PHOTO,
+                    MessageMediaType.VIDEO,
+                    MessageMediaType.DOCUMENT,
+                ]
+            ):
+                obj = getattr(
+                    event.reply_to_message, event.reply_to_message.media.value
+                )
+                doc = await event.reply_to_message.download(in_memory=True)
+                parts.append(
+                    {
+                        "inline_data": {
+                            "mime_type": (
+                                obj.mime_type
+                                if hasattr(obj, "mime_type")
+                                else "image/jpeg"
+                            ),
+                            "data": base64.b64encode(doc.getvalue()).decode("ascii"),
+                        }
+                    }
+                )
+                if not query:
+                    parts.append(
+                        {
+                            "text": (
+                                "Analyze the media. If there is readable text, extract it."
+                                " Summarize key details and provide brief context."
+                            )
+                        }
+                    )
             elif event.reply_to_message and event.reply_to_message.content:
-                query = event.reply_to_message.content
+                parts.append({"text": event.reply_to_message.content})
             else:
-                return await event.edit_text(
+                return await edit(
                     f"<code>Give a Query or {html.escape('<Reply or Quote to Content>')}</code>"
                 )
 
-            await edit("<code>...</code>")
-        else:
-            question = f"```Query\n{query}```\n\n"
-            await edit(question, parse_mode=ParseMode.MARKDOWN)
-
         ikb, now = [("Close", b"0")], datetime.datetime.now(datetime.UTC)
         async with self.lock:
-            self.data.append({"role": "user", "parts": [{"text": query}]})
+            self.data.append({"role": "user", "parts": parts})
             res = await self.gemini()
             rtt = fmtsec(now)
             if len(res) > 2048:
