@@ -1,7 +1,9 @@
 import asyncio
+import base64
 import collections
 import datetime
 import html
+import mimetypes
 import re
 
 from httpx import AsyncClient
@@ -91,10 +93,10 @@ class GenAI(Module):
         await self.respond(event)
 
     async def gemini(self, model: str = "gemini-2.5-flash") -> any:
-        json, text = {
-            "contents": list(self.data),
-            "tools": [{"google_search": {}}],
-        }, None
+        json, text = (
+            {"contents": list(self.data), "tools": [{"google_search": {}}]},
+            None,
+        )
         try:
             resp = await self.goog.post(f"/models/{model}:generateContent", json=json)
             resp.raise_for_status()
@@ -116,7 +118,112 @@ class GenAI(Module):
             text, edit = event.content, event.edit_text
 
         (query,), question = pattern.match(text).groups(), ""
-        if not query:
+
+        media_parts = []
+        if not isinstance(event, ChosenInlineResult):
+            m = event.reply_to_message
+            if m:
+                if getattr(m, "photo", None):
+                    b = await m.download(in_memory=True)
+                    media_parts.append(
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": base64.b64encode(b.getvalue()).decode("ascii"),
+                            }
+                        }
+                    )
+                elif getattr(m, "document", None):
+                    mt = (
+                        m.document.mime_type
+                        or mimetypes.guess_type(m.document.file_name or "")[0]
+                        or ""
+                    )
+                    if mt.startswith(("image/", "video/", "audio/")) or mt in (
+                        "application/pdf",
+                    ):
+                        b = await m.download(in_memory=True)
+                        media_parts.append(
+                            {
+                                "inline_data": {
+                                    "mime_type": mt,
+                                    "data": base64.b64encode(b.getvalue()).decode(
+                                        "ascii"
+                                    ),
+                                }
+                            }
+                        )
+                elif getattr(m, "video", None):
+                    mt = m.video.mime_type or "video/mp4"
+                    b = await m.download(in_memory=True)
+                    media_parts.append(
+                        {
+                            "inline_data": {
+                                "mime_type": mt,
+                                "data": base64.b64encode(b.getvalue()).decode("ascii"),
+                            }
+                        }
+                    )
+                elif getattr(m, "animation", None):
+                    mt = m.animation.mime_type or "video/mp4"
+                    b = await m.download(in_memory=True)
+                    media_parts.append(
+                        {
+                            "inline_data": {
+                                "mime_type": mt,
+                                "data": base64.b64encode(b.getvalue()).decode("ascii"),
+                            }
+                        }
+                    )
+                elif getattr(m, "audio", None):
+                    mt = m.audio.mime_type or "audio/mpeg"
+                    b = await m.download(in_memory=True)
+                    media_parts.append(
+                        {
+                            "inline_data": {
+                                "mime_type": mt,
+                                "data": base64.b64encode(b.getvalue()).decode("ascii"),
+                            }
+                        }
+                    )
+                elif getattr(m, "voice", None):
+                    mt = "audio/ogg"
+                    b = await m.download(in_memory=True)
+                    media_parts.append(
+                        {
+                            "inline_data": {
+                                "mime_type": mt,
+                                "data": base64.b64encode(b.getvalue()).decode("ascii"),
+                            }
+                        }
+                    )
+                elif getattr(m, "video_note", None):
+                    mt = "video/mp4"
+                    b = await m.download(in_memory=True)
+                    media_parts.append(
+                        {
+                            "inline_data": {
+                                "mime_type": mt,
+                                "data": base64.b64encode(b.getvalue()).decode("ascii"),
+                            }
+                        }
+                    )
+                elif getattr(m, "sticker", None):
+                    mt = m.sticker.mime_type or "image/webp"
+                    if mt.startswith("image/"):
+                        b = await m.download(in_memory=True)
+                        media_parts.append(
+                            {
+                                "inline_data": {
+                                    "mime_type": mt,
+                                    "data": base64.b64encode(b.getvalue()).decode(
+                                        "ascii"
+                                    ),
+                                }
+                            }
+                        )
+
+        if not query and not media_parts:
             if isinstance(event, ChosenInlineResult):
                 return await edit(
                     "<code>Give a Query with Suffix '!?'</code>",
@@ -134,12 +241,23 @@ class GenAI(Module):
 
             await edit("<code>...</code>")
         else:
-            question = f"```Query\n{query}```\n\n"
-            await edit(question, parse_mode=ParseMode.MARKDOWN)
+            if media_parts:
+                if not query:
+                    query = "Analyze the media. If there is readable text, extract it. Summarize key details and provide brief context."
+
+                question = ""
+                await edit("<code>...</code>")
+            else:
+                question = f"```Query\n{query}```\n\n"
+                await edit(question, parse_mode=ParseMode.MARKDOWN)
 
         ikb, now = [("Close", b"0")], datetime.datetime.now(datetime.UTC)
         async with self.lock:
-            self.data.append({"role": "user", "parts": [{"text": query}]})
+            parts = [{"text": query}]
+            if media_parts:
+                parts.extend(media_parts)
+
+            self.data.append({"role": "user", "parts": parts})
             res = await self.gemini()
             rtt = fmtsec(now)
             if len(res) > 2048:
