@@ -137,44 +137,58 @@ class GenAI(Module):
             if event.quote and event.quote.text:
                 parts.append({"text": event.quote.text})
             elif event.reply_to_message and event.reply_to_message.media:
-                if event.reply_to_message.media not in [
+                if event.reply_to_message.media in [
                     MessageMediaType.ANIMATION,
                     MessageMediaType.AUDIO,
                     MessageMediaType.DOCUMENT,
                     MessageMediaType.PHOTO,
+                    MessageMediaType.STICKER,
                     MessageMediaType.VIDEO,
+                    MessageMediaType.VOICE,
                 ]:
-                    return await edit(
-                        f"<code>Unsupported {html.escape(f'<{event.reply_to_message.media}>')}</code>"
+                    obj = getattr(
+                        event.reply_to_message, event.reply_to_message.media.value
                     )
+                    if obj.file_size > 8 * 1024**2:
+                        return await edit("<code>Media too Large (Limit: 8 MB)</code>")
 
-                obj = getattr(
-                    event.reply_to_message, event.reply_to_message.media.value
-                )
-                if obj.file_size > 8 * 1024**2:
-                    return await edit("<code>Media too Large (Limit: 8 MB)</code>")
-
-                doc = await event.reply_to_message.download(in_memory=True)
-                parts.append(
-                    {
-                        "inline_data": {
-                            "mime_type": (
-                                obj.mime_type
-                                if hasattr(obj, "mime_type")
-                                else "image/jpeg"
-                            ),
-                            "data": base64.b64encode(doc.getvalue()).decode("ascii"),
-                        }
-                    }
-                )
-                if not query:
+                    doc = await event._client.download_media(
+                        (
+                            event
+                            if not isinstance(obj, Sticker)
+                            else obj.thumbs[0].file_id
+                        ),
+                        in_memory=True,
+                    )
                     parts.append(
                         {
-                            "text": (
-                                "Analyze the media. If there is readable text, extract it."
-                                " Summarize key details and provide brief context."
-                            )
+                            "inline_data": {
+                                "mime_type": (
+                                    obj.mime_type
+                                    if hasattr(obj, "mime_type")
+                                    else "image/jpeg"
+                                ),
+                                "data": base64.b64encode(doc.getvalue()).decode(
+                                    "ascii"
+                                ),
+                            }
                         }
+                    )
+                    if not query:
+                        parts.append(
+                            {
+                                "text": (
+                                    "Analyze the media."
+                                    " If there is readable text, extract it."
+                                    " Summarize key details and provide brief context."
+                                )
+                            }
+                        )
+                elif event.reply_to_message.media == MessageMediaType.WEB_PAGE:
+                    parts.append({"text": event.reply_to_message.content})
+                else:
+                    return await edit(
+                        f"<code>Unsupported {html.escape(f'<{event.reply_to_message.media}>')}</code>"
                     )
             elif event.reply_to_message and event.reply_to_message.content:
                 parts.append({"text": event.reply_to_message.content})
