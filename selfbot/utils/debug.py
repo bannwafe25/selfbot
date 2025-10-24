@@ -35,8 +35,8 @@ async def aexec(code: str, args: dict = {}) -> any:
     temp = {}
     exec(compile(node, "<string>", "exec"), temp)
 
-    coro = await temp[name](*args.values())
-    return await coro if inspect.iscoroutine(coro) else coro
+    func = await temp[name](*args.values())
+    return await func if inspect.iscoroutine(func) else func
 
 
 async def shell(cmd: str) -> str:

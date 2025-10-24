@@ -92,12 +92,12 @@ class GenAI(Module):
         await self.respond(event)
 
     async def gemini(self, model: str = "gemini-2.5-flash") -> any:
-        json, text = (
-            {"contents": list(self.data), "tools": [{"google_search": {}}]},
-            None,
-        )
+        text = ""
         try:
-            resp = await self.goog.post(f"/models/{model}:generateContent", json=json)
+            resp = await self.goog.post(
+                f"/models/{model}:generateContent",
+                json={"contents": list(self.data), "tools": [{"google_search": {}}]},
+            )
             resp.raise_for_status()
         except Exception as e:
             return f"**{e.__class__.__name__}**:\n  `{e}`"
