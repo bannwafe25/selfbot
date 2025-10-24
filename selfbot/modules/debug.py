@@ -68,6 +68,7 @@ class Debug(Module):
                 "db": self.client.db,
                 "app": self.client.app,
                 "bot": self.client.bot,
+                "http": self.client.http,
             }
         )
 
