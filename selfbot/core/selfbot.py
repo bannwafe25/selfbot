@@ -54,11 +54,11 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
 
     @property
     def _git(self) -> str:
-        cur = pathlib.Path.cwd().resolve()
-        while cur != cur.parent:
-            if (cur / ".git").is_dir():
-                return str(cur)
+        cwd = pathlib.Path.cwd().resolve()
+        while cwd != cwd.parent:
+            if (cwd / ".git").is_dir():
+                return str(cwd)
 
-            cur = cur.parent
+            cwd = cwd.parent
 
         return str(pathlib.Path.cwd())

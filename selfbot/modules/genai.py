@@ -92,12 +92,12 @@ class GenAI(Module):
         await self.respond(event)
 
     async def gemini(self, model: str = "gemini-2.5-flash") -> any:
-        json, text = (
-            {"contents": list(self.data), "tools": [{"google_search": {}}]},
-            None,
-        )
+        text = ""
         try:
-            resp = await self.goog.post(f"/models/{model}:generateContent", json=json)
+            resp = await self.goog.post(
+                f"/models/{model}:generateContent",
+                json={"contents": list(self.data), "tools": [{"google_search": {}}]},
+            )
             resp.raise_for_status()
         except Exception as e:
             return f"**{e.__class__.__name__}**:\n  `{e}`"
@@ -203,14 +203,14 @@ class GenAI(Module):
             res = await self.gemini()
             rtt = fmtsec(now)
             if len(res) > 2048:
-                link = (
+                url = (
                     await self.client.http.post("https://paste.rs", data=res.encode())
                 ).text.strip()
                 if isinstance(event, ChosenInlineResult):
                     res = f"{res[:1024]}..."
-                    ikb.insert(0, ("Full", "url", f"{link}.markdown"))
+                    ikb.insert(0, ("Full", "url", f"{url}.markdown"))
                 else:
-                    res = f"{res[:1024]}[...]({link}.markdown)"
+                    res = f"{res[:1024]}[...]({url}.markdown)"
 
             await edit(
                 f"{question}{res}\n\n> **{rtt}**",
