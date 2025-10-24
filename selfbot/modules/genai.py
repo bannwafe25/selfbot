@@ -153,6 +153,13 @@ class GenAI(Module):
                     if obj.file_size > 8 * 1024**2:
                         return await edit("<code>Media too Large (Limit: 8 MB)</code>")
 
+                    if not obj.mime_type.startswith(
+                        ("audio", "image", "video")
+                    ) or obj.mime_type not in ["text/plain", "application/pdf"]:
+                        return await edit(
+                            f"<code>Unsupported '{obj.mime_type}' MIME Type</code>"
+                        )
+
                     doc = await event._client.download_media(
                         (
                             event.reply_to_message
