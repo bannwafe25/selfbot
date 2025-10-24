@@ -156,7 +156,7 @@ class GenAI(Module):
                     m_t = obj.mime_type.lower().strip()
                     if not isinstance(obj, Sticker) and not (
                         m_t.startswith(("audio", "image", "video"))
-                        or m_t not in ["text/plain", "application/pdf"]
+                        or m_t in ["text/plain", "application/pdf"]
                     ):
                         return await edit(
                             f"<code>Unsupported '{obj.mime_type}' MIME Type</code>"
