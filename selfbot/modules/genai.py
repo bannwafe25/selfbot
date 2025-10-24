@@ -155,12 +155,17 @@ class GenAI(Module):
 
                     m_t = obj.mime_type.lower().strip()
                     if not isinstance(obj, Sticker) and not (
-                        m_t.startswith(("audio", "image", "video"))
-                        or m_t in ["text/plain", "application/pdf"]
+                        m_t.startswith(("audio", "image", "text", "video"))
+                        or m_t == "application/pdf"
                     ):
                         return await edit(
                             f"<code>Unsupported '{obj.mime_type}' MIME Type</code>"
                         )
+
+                    if isinstance(obj, Sticker):
+                        m_t = "image/jpeg"
+                    elif m_t.startswith("text"):
+                        m_t = "text/plain"
 
                     doc = await event._client.download_media(
                         (
@@ -173,12 +178,7 @@ class GenAI(Module):
                     parts.append(
                         {
                             "inline_data": {
-                                "mime_type": (
-                                    obj.mime_type
-                                    if hasattr(obj, "mime_type")
-                                    and not isinstance(obj, Sticker)
-                                    else "image/jpeg"
-                                ),
+                                "mime_type": m_t,
                                 "data": base64.b64encode(doc.getvalue()).decode(
                                     "ascii"
                                 ),
