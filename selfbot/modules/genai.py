@@ -14,6 +14,7 @@ from pyrogram.types import (
     InlineQueryResultCachedSticker,
     InputTextMessageContent,
     Message,
+    Sticker,
     Update,
 )
 
