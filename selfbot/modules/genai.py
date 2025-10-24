@@ -155,7 +155,7 @@ class GenAI(Module):
 
                     doc = await event._client.download_media(
                         (
-                            event
+                            event.reply_to_message
                             if not isinstance(obj, Sticker)
                             else obj.thumbs[0].file_id
                         ),
