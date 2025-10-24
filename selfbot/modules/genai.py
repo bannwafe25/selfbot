@@ -167,6 +167,7 @@ class GenAI(Module):
                                 "mime_type": (
                                     obj.mime_type
                                     if hasattr(obj, "mime_type")
+                                    and not isinstance(obj, Sticker)
                                     else "image/jpeg"
                                 ),
                                 "data": base64.b64encode(doc.getvalue()).decode(
