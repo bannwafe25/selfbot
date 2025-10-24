@@ -13,9 +13,6 @@ from selfbot.utils import fmtsec, fmtstr
 pattern = re.compile(
     r"^graph(?:\s(?P<content>(?!-t\s.+).*?))?(?:\s-t\s(?P<title>.+))?$", flags=re.DOTALL
 )
-spoiler = re.compile(r"</?spoiler\b[^>]*>")
-emojiid = re.compile(r"<emoji id=\"\d+\">(.*?)</emoji>")
-mention = re.compile(r"(?<!\S)@([a-zA-Z0-9_]{5,32})(?!\S)")
 
 
 class Graph(Module):
@@ -46,16 +43,15 @@ class Graph(Module):
                     "<code>Reply to Content or Give a Text</code>"
                 )
 
-            content = emojiid.sub(
-                r"\1",
-                spoiler.sub(
-                    "",
-                    mention.sub(
-                        r"<a href='https://t.me/\1'>@\1</a>",
-                        event.reply_to_message.content.html,
-                    ),
-                ),
-            ).replace("\n", "<br>")
+            content = event.reply_to_message.content.html
+            content = re.sub(r"<emoji id=\"\d+\">(.*?)</emoji>", r"\1", content)
+            content = re.sub(r"</?spoiler\b[^>]*>", "", content)
+            content = re.sub(
+                r"(?<!\S)@([a-zA-Z0-9_]{5,32})(?!\S)",
+                r"<a href='https://t.me/\1'>@\1</a>",
+                content,
+            )
+            content = content.replace("\n", "<br>")
             if (
                 event.reply_to_message.web_page
                 and event.reply_to_message.web_page.photo
