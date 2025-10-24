@@ -153,9 +153,10 @@ class GenAI(Module):
                     if obj.file_size > 8 * 1024**2:
                         return await edit("<code>Media too Large (Limit: 8 MB)</code>")
 
+                    m_t = obj.mime_type.lower().strip()
                     if not isinstance(obj, Sticker) and (
-                        not obj.mime_type.startswith(("audio", "image", "video"))
-                        or obj.mime_type not in ["text/plain", "application/pdf"]
+                        not m_t.startswith(("audio", "image", "video"))
+                        or m_t not in ["text/plain", "application/pdf"]
                     ):
                         return await edit(
                             f"<code>Unsupported '{obj.mime_type}' MIME Type</code>"
