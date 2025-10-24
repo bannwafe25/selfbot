@@ -3,7 +3,7 @@ import datetime
 import re
 
 from pyrogram import filters
-from pyrogram.errors import RPCError
+from pyrogram.errors import ChannelPrivate, PeerIdInvalid, RPCError
 from pyrogram.types import Message
 from pyrogram.utils import get_channel_id
 
@@ -82,8 +82,13 @@ class Call(Module):
 
             try:
                 await self.client.call.play(**args)
-            except Exception:
-                continue
+            except Exception as e:
+                if isinstance(e, (ChannelPrivate, PeerIdInvalid)):
+                    await self.client.db.execute(
+                        "DELETE FROM call.chats WHERE chat_id = $1;", row["chat_id"]
+                    )
+                else:
+                    continue
             else:
                 if row.get("mute"):
                     await self.client.call.mute(row["chat_id"])
