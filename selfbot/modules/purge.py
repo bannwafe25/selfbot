@@ -23,7 +23,7 @@ class Purge(Module):
         "limit": "[1-999] (Default: 100)",
         "-d": "Delete Current Message",
         "?": "Optional",
-        "e.g.": "purgeme 99",
+        "e.g.": "purgeme 99 -d",
     }
 
     @listener.handler(filters.regex(pattern), 1)

@@ -45,7 +45,7 @@ class Call(Module):
         "-m": "Mute",
         "title": "String",
         "?": "Optional",
-        "e.g.": "startcall @durov -t Untitled",
+        "e.g.": "startcall @durov -t Title",
     }
 
     async def on_starting(self) -> None:
@@ -93,7 +93,7 @@ class Call(Module):
                 if row.get("mute"):
                     await self.client.call.mute(row["chat_id"])
 
-    @listener.handler(filters.regex(pattern), 1)
+    @listener.handler(filters.regex(pattern) & ~filters.reply, 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
 

@@ -45,7 +45,7 @@ class Help(Module):
         if page:
             self.ikbs.append([page[i : i + 2] for i in range(0, len(page), 2)])
 
-    @listener.handler(filters.regex(pattern), 1)
+    @listener.handler(filters.regex(pattern) & ~filters.reply, 1)
     async def on_message_out(self, event: Message) -> None:
         _, res = await asyncio.gather(
             event.edit_text("<code>...</code>"),

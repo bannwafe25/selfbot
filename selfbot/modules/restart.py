@@ -19,7 +19,7 @@ class Restart(Module):
     cmds = "r(estart)?"
     desc = {"?": "Optional", "e.g": "restart"}
 
-    @listener.handler(filters.regex(pattern), 1)
+    @listener.handler(filters.regex(pattern) & ~filters.reply, 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
 

@@ -11,13 +11,10 @@ pattern = re.compile(r"^d(?:el(?:ete)?)?$")
 
 class Delete(Module):
     name = "Delete"
-    cmds = "<Reply to Message>? d(el(ete)?)?"
-    desc = {"?": "Optional", "e.g.": "delete"}
 
-    @listener.handler(filters.regex(pattern), 1)
+    cmds = "<Reply to Message> d(el(ete)?)?"
+    desc = {"?": "Optional", "e.g.": "<Reply to Message> delete"}
+
+    @listener.handler(filters.regex(pattern) & filters.reply, 1)
     async def on_message_out(self, event: Message) -> None:
-        mids = [event.id]
-        if event.reply_to_message_id:
-            mids.append(event.reply_to_message_id)
-
-        await event._client.delete_messages(event.chat.id, mids)
+        await asyncio.gather(event.delete(), event.reply_to_message.delete())

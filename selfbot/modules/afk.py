@@ -11,14 +11,14 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr, ikm
 
-pattern = re.compile(r"^#?afk(?:\s(.+))?$")
+pattern = re.compile(r"^#?afk(?:\s-r\s(.+))?$")
 
 
 class AFK(Module):
     name = "AFK"
 
-    cmds = "afk {reason}?"
-    desc = {"reason": "String", "?": "Optional", "e.g.": "afk Busy!"}
+    cmds = "afk (-r {reason})?"
+    desc = {"reason": "String", "?": "Optional", "e.g.": "afk -r Reason"}
 
     status, reason, since = False, "", None
 
@@ -30,7 +30,7 @@ class AFK(Module):
 
         self.lock = asyncio.Lock()
 
-    @listener.handler(filters.regex(pattern), 1)
+    @listener.handler(filters.regex(pattern) & ~filters.reply, 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
 
