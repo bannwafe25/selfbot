@@ -16,8 +16,8 @@ class Delete(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
-        ids = [event.id]
+        mids = [event.id]
         if event.reply_to_message_id:
-            ids.append(event.reply_to_message_id)
+            mids.append(event.reply_to_message_id)
 
-        await event._client.delete_messages(event.chat.id, ids)
+        await event._client.delete_messages(event.chat.id, mids)

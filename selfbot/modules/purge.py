@@ -34,9 +34,9 @@ class Purge(Module):
         if digit:
             limit = int(digit)
 
-        ids = []
+        mids = []
         if me:
-            ids = [
+            mids = [
                 m.id
                 async for m in event._client.search_messages(
                     event.chat.id,
@@ -56,17 +56,17 @@ class Purge(Module):
                 )
             elif event.reply_to_message_id:
                 if limit:
-                    ids = range(
+                    mids = range(
                         event.reply_to_message_id, event.reply_to_message_id + limit
                     )
                 else:
-                    ids = range(event.reply_to_message_id, event.id)
+                    mids = range(event.reply_to_message_id, event.id)
             else:
-                end = limit or 100
-                ids = range(event.id - 1, event.id - (end + 1), -1)
+                last = limit or 100
+                mids = range(event.id - 1, event.id - (last + 1), -1)
 
         res, now = 0, datetime.datetime.now(datetime.UTC)
-        for chunk in [ids[i : i + 100] for i in range(0, len(ids), 100)]:
+        for chunk in [mids[i : i + 100] for i in range(0, len(mids), 100)]:
             res += await event._client.delete_messages(event.chat.id, chunk)
             if res % 100 == 0:
                 await asyncio.sleep(2.5)
