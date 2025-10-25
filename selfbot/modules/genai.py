@@ -162,7 +162,7 @@ class GenAI(Module):
 
                     if not (
                         m_t.startswith(("audio", "image", "text", "video"))
-                        or m_t.endswith("/pdf")
+                        or m_t == "application/pdf"
                     ):
                         return await edit(
                             f"<code>Unsupported '{obj.mime_type}' MIME Type</code>"
