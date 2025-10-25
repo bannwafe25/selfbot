@@ -51,7 +51,8 @@ class GenAI(Module):
         )
 
     async def on_stopping(self) -> None:
-        await self.goog.aclose()
+        if hasattr(self, "goog") and not self.goog.is_closed:
+            await self.goog.aclose()
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
