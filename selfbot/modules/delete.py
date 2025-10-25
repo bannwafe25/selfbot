@@ -16,6 +16,6 @@ class Delete(Module):
     cmds = "<Reply to Message> d(el(ete)?)?"
     desc = {"?": "Optional", "e.g.": "<Reply to Message> delete"}
 
-    @listener.handler(filters.regex(pattern) & filters.reply, 1)
+    @listener.handler(filters.regex(pattern) & listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         await asyncio.gather(event.delete(), event.reply_to_message.delete())

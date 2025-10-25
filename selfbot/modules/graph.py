@@ -29,7 +29,7 @@ class Graph(Module):
         self.graph = Telegraph(access_token=None, domain="graph.org")
         await self.graph.create_account(short_name=self.client.bot.me.username)
 
-    @listener.handler(filters.regex(pattern) & filters.reply, 1)
+    @listener.handler(filters.regex(pattern) & listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         if not event.reply_to_message.content:
             return await event.edit_text("<code>Reply to Content</code>")

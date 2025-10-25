@@ -27,7 +27,7 @@ class Ping(Module):
     cmds = "p(ing)?"
     desc = {"?": "Optional", "e.g.": "ping"}
 
-    @listener.handler(filters.regex(pattern) & ~filters.reply, 1)
+    @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         await self.respond(event)
 

@@ -1,3 +1,8 @@
+from pyrogram import Client, filters
+from pyrogram.enums import MessageServiceType
+from pyrogram.types import Message
+
+
 class Listener:
     def __init__(
         self, mod: type, func: callable, event: str, filters: callable, priority: int
@@ -19,3 +24,13 @@ def handler(filters: callable, priority: int) -> callable:
         return func
 
     return wrapper
+
+
+async def reply(_: filter, __: Client, event: Message) -> bool:
+    return bool(
+        event.reply_to_message
+        and event.reply_to_message.service != MessageServiceType.FORUM_TOPIC_CREATED
+    )
+
+
+fltrep = filters.create(reply, "FltRep")

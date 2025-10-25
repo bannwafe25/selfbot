@@ -30,7 +30,7 @@ class AFK(Module):
 
         self.lock = asyncio.Lock()
 
-    @listener.handler(filters.regex(pattern) & ~filters.reply, 1)
+    @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
 
