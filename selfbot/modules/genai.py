@@ -14,6 +14,7 @@ from pyrogram.types import (
     InlineQueryResultCachedSticker,
     InputTextMessageContent,
     Message,
+    Photo,
     Sticker,
     Update,
 )
@@ -154,8 +155,8 @@ class GenAI(Module):
                     if obj.file_size > 32 * 1024**2:
                         return await edit("<code>Media too Large (Limit: 32 MB)</code>")
 
-                    m_t = obj.mime_type.lower().strip()
-                    if not isinstance(obj, Sticker) and not (
+                    m_t = getattr(obj, "mime_type", "image/jpeg").lower().strip()
+                    if not isinstance(obj, (Photo, Sticker)) and not (
                         m_t.startswith(("audio", "image", "text", "video"))
                         or m_t == "application/pdf"
                     ):
