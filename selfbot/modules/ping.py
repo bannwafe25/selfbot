@@ -3,6 +3,7 @@ import datetime
 import re
 
 from pyrogram import Client, filters
+from pyrogram.raw.functions import Ping as Latency
 from pyrogram.types import (
     CallbackQuery,
     ChosenInlineResult,
@@ -53,8 +54,7 @@ class Ping(Module):
 
     async def ping(self, client: Client) -> str:
         now = datetime.datetime.now(datetime.UTC)
-        # await client.invoke(Latency(ping_id=0))
-        await client.invoke(NameErro(ping_id=0))
+        await client.invoke(Latency(ping_id=0))
         return fmtsec(now, 1)
 
     async def respond(self, event: Update) -> None:
