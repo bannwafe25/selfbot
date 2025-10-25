@@ -14,6 +14,7 @@ from pyrogram.types import (
     InlineQueryResultCachedSticker,
     InputTextMessageContent,
     Message,
+    Photo,
     Sticker,
     Update,
 )
@@ -163,7 +164,7 @@ class GenAI(Module):
                             f"<code>Unsupported '{obj.mime_type}' MIME Type</code>"
                         )
 
-                    if isinstance(obj, Sticker):
+                    if isinstance(obj, (Photo, Sticker)):
                         m_t = "image/jpeg"
                     elif m_t.startswith("text"):
                         m_t = "text/plain"
