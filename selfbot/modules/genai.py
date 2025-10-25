@@ -14,7 +14,6 @@ from pyrogram.types import (
     InlineQueryResultCachedSticker,
     InputTextMessageContent,
     Message,
-    Photo,
     Sticker,
     Update,
 )
@@ -156,18 +155,18 @@ class GenAI(Module):
                         return await edit("<code>Media too Large (Limit: 32 MB)</code>")
 
                     m_t = getattr(obj, "mime_type", "image/jpeg").lower().strip()
-                    if not isinstance(obj, (Photo, Sticker)) and not (
-                        m_t.startswith(("audio", "image", "text", "video"))
-                        or m_t == "application/pdf"
-                    ):
-                        return await edit(
-                            f"<code>Unsupported '{obj.mime_type}' MIME Type</code>"
-                        )
-
                     if isinstance(obj, Sticker):
                         m_t = "image/jpeg"
                     elif m_t.startswith("text"):
                         m_t = "text/plain"
+
+                    if not (
+                        m_t.startswith(("audio", "image", "text", "video"))
+                        or m_t.endswith("/pdf")
+                    ):
+                        return await edit(
+                            f"<code>Unsupported '{obj.mime_type}' MIME Type</code>"
+                        )
 
                     doc = await event._client.download_media(
                         (
