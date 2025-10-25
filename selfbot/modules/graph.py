@@ -66,7 +66,10 @@ class Graph(Module):
                 event.chat.type not in [ChatType.PRIVATE, ChatType.BOT]
                 and (
                     event.chat.admin_privileges
-                    or event.chat.permissions.can_add_web_page_previews
+                    or (
+                        event.chat.permissions
+                        and event.chat.permissions.can_add_web_page_previews
+                    )
                 )
             ):
                 await event.edit_text(
