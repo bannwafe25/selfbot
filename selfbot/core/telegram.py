@@ -112,7 +112,9 @@ class Telegram(abc.ABC):
                         one_time_keyboard=True,
                     ),
                 )
-                await msg.edit_text(
+                await self.bot.edit_message_text(
+                    self.app.me.id,
+                    msg.id,
                     fmtstr(
                         f"Selfbot {res}tarted",
                         {
