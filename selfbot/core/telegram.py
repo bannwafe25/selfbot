@@ -109,6 +109,7 @@ class Telegram(abc.ABC):
                             ],
                         ],
                         resize_keyboard=True,
+                        one_time_keyboard=True,
                     ),
                 )
                 await msg.edit_text(
@@ -140,8 +141,8 @@ class Telegram(abc.ABC):
                         ]
                     ),
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                self.logger.error(str(e))
             else:
                 self.logger.info(f"Selfbot {res}tarted")
                 await self.idle()
