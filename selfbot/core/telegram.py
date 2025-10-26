@@ -94,6 +94,7 @@ class Telegram(abc.ABC):
             except RPCError:
                 pass
             else:
+                self.logger.info(f"Selfbot {res}tarted")
                 await self.idle()
         finally:
             await self.stop()
