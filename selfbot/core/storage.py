@@ -1,3 +1,4 @@
+import asyncio
 import time
 
 from asyncpg import Pool
@@ -53,7 +54,15 @@ class PostgreStorage(Storage):
         pass
 
     async def delete(self) -> None:
-        await self.pool.execute("DROP SCHEMA IF EXISTS storage CASCADE;")
+        await asyncio.gather(
+            self.pool.execute(
+                "DELETE FROM storage.sessions WHERE name = $1", self.name
+            ),
+            self.pool.execute("DELETE FROM storage.peers WHERE name = $1", self.name),
+            self.pool.execute(
+                "DELETE FROM storage.update_state WHERE name = $1", self.name
+            ),
+        )
 
     async def update_peers(self, peers: list | None = None) -> None:
         if not peers:
