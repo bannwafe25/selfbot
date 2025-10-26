@@ -91,7 +91,7 @@ class Telegram(abc.ABC):
                         ]
                     ),
                 )
-            except RPCError:
+            except Exception:
                 pass
             else:
                 self.logger.info(f"Selfbot {res}tarted")
