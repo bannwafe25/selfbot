@@ -53,48 +53,48 @@ class Telegram(abc.ABC):
         now = datetime.datetime.now(datetime.UTC)
         try:
             await self.start()
-        except Exception as e:
-            self.logger.error(f"{e.__class__.__name__}: {e}")
-        else:
-            if row:
-                await asyncio.gather(
-                    self.app.delete_messages(row["chat_id"], row["message_id"]),
-                    self.db.execute("TRUNCATE restart.msgs;"),
-                )
+            try:
+                if row:
+                    await asyncio.gather(
+                        self.app.delete_messages(row["chat_id"], row["message_id"]),
+                        self.db.execute("TRUNCATE restart.msgs;"),
+                    )
 
-            self.logger.info(f"Selfbot {res}tarted")
-            await self.bot.send_message(
-                self.app.me.id,
-                fmtstr(
-                    f"Selfbot {res}tarted",
-                    {
-                        "Version": f"{__version__}\n",
-                        "Handlers": len(self.handlers),
-                        "Listeners": len(self.listeners),
-                        "Modules": len(self.modules),
-                    },
-                    fmtsec(now),
-                ),
-                disable_notification=True,
-                reply_markup=ikm(
-                    [
+                await self.bot.send_message(
+                    self.app.me.id,
+                    fmtstr(
+                        f"Selfbot {res}tarted",
+                        {
+                            "Version": f"{__version__}\n",
+                            "Handlers": len(self.handlers),
+                            "Listeners": len(self.listeners),
+                            "Modules": len(self.modules),
+                        },
+                        fmtsec(now),
+                    ),
+                    disable_notification=True,
+                    reply_markup=ikm(
                         [
-                            (
-                                "Commits",
-                                "url",
-                                f"{self.config.get(
-                'remote', 'https://github.com/DeltaUniverse/selfbot'
-            ).removesuffix('.git')}/commits/{self.config.get('branch', 'staging')}",
-                            )
-                        ],
-                        [
-                            ("Ping", "switch_inline_query_current_chat", "ping"),
-                            ("Help", "switch_inline_query_current_chat", "help"),
-                        ],
-                    ]
-                ),
-            )
-            await self.idle()
+                            [
+                                (
+                                    "Commits",
+                                    "url",
+                                    f"{self.config.get(
+                    'remote', 'https://github.com/DeltaUniverse/selfbot'
+                ).removesuffix('.git')}/commits/{self.config.get('branch', 'staging')}",
+                                )
+                            ],
+                            [
+                                ("Ping", "switch_inline_query_current_chat", "ping"),
+                                ("Help", "switch_inline_query_current_chat", "help"),
+                            ],
+                        ]
+                    ),
+                )
+            except RPCError:
+                pass
+            else:
+                await self.idle()
         finally:
             await self.stop()
             self.logger.info("Selfbot Stopped")
