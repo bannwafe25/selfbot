@@ -9,7 +9,7 @@ import signal
 from pyrogram import Client
 from pyrogram import filters as flt
 from pyrogram.enums import ChatAction, ParseMode
-from pyrogram.errors import PeerIdInvalid, UserIsBlocked
+from pyrogram.errors import FloodWait, PeerIdInvalid, RPCError, UserIsBlocked
 from pyrogram.handlers import (
     CallbackQueryHandler,
     ChosenInlineResultHandler,
@@ -105,10 +105,26 @@ class Telegram(abc.ABC):
         self.git = self._git
 
         self.logger.info("Starting App...")
-        await self.app.start()
+        try:
+            await self.app.start()
+        except RPCError as e:
+            if isinstance(e, FloodWait):
+                self.logger.warning(f"{e.__class__.__name__}: {e}")
+                await asyncio.sleep(e.value)
+            else:
+                self.logger.error(f"{e.__class__.__name__}: {e}")
+                await self.app.storage.delete()
 
         self.logger.info("Starting Bot...")
-        await self.bot.start()
+        try:
+            await self.bot.start()
+        except RPCError as e:
+            if isinstance(e, FloodWait):
+                self.logger.warning(f"{e.__class__.__name__}: {e}")
+                await asyncio.sleep(e.value)
+            else:
+                self.logger.error(f"{e.__class__.__name__}: {e}")
+                await self.bot.storage.delete()
 
         await asyncio.gather(
             self.app.resolve_peer(self.bot.me.username),
