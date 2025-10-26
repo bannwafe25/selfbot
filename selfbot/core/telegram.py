@@ -39,7 +39,7 @@ from selfbot.utils import fmtsec, fmtstr
 
 
 class Telegram(abc.ABC):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: any) -> None:
         self.app = None
         self.bot = None
 

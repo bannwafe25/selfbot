@@ -19,7 +19,7 @@ from selfbot.utils import fmtstr, ikm
 
 
 class Dispatcher(abc.ABC):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: any) -> None:
         self.listeners = {}
         super().__init__(**kwargs)
 

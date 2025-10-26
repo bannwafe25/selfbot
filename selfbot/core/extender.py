@@ -6,7 +6,7 @@ from selfbot.modules import submods
 
 
 class Extender(abc.ABC):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: any) -> None:
         self.modules = {}
         super().__init__(**kwargs)
 
