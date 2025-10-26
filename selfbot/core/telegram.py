@@ -23,11 +23,19 @@ from pyrogram.raw.types import (
     UpdateNewChannelMessage,
     UpdateNewMessage,
 )
-from pyrogram.types import LinkPreviewOptions, Update
+from pyrogram.types import (
+    ChatPrivileges,
+    KeyboardButton,
+    KeyboardButtonRequestChat,
+    LinkPreviewOptions,
+    ReplyKeyboardMarkup,
+    Update,
+    WebAppInfo,
+)
 
 from selfbot import __version__
 from selfbot.core.storage import PostgreStorage
-from selfbot.utils import fmtsec, fmtstr, ikm
+from selfbot.utils import fmtsec, fmtstr
 
 
 class Telegram(abc.ABC):
@@ -65,33 +73,66 @@ class Telegram(abc.ABC):
                     fmtstr(
                         f"Selfbot {res}tarted",
                         {
-                            "Version": f"{__version__}\n",
                             "Handlers": len(self.handlers),
                             "Listeners": len(self.listeners),
                             "Modules": len(self.modules),
                         },
                         fmtsec(now),
                     ),
-                    reply_markup=ikm(
+                    disable_notification=True,
+                    reply_markup=ReplyKeyboardMarkup(
                         [
                             [
-                                (
-                                    "Commits",
-                                    "url",
-                                    f"{self.config.get(
+                                KeyboardButton(
+                                    "GitHub Commit History",
+                                    web_app=WebAppInfo(
+                                        url=f"{self.config.get(
                     'remote', 'https://github.com/DeltaUniverse/selfbot'
-                ).removesuffix('.git')}/commits/{self.config.get('branch', 'staging')}",
+                ).removesuffix('.git')}/commits/{self.config.get('branch', 'staging')}"
+                                    ),
                                 )
                             ],
                             [
-                                ("Ping", "switch_inline_query_current_chat", "ping"),
-                                ("Help", "switch_inline_query_current_chat", "help"),
+                                KeyboardButton(
+                                    "Admin Groups",
+                                    request_chat=KeyboardButtonRequestChat(
+                                        21,
+                                        chat_is_channel=False,
+                                        chat_is_created=False,
+                                        user_administrator_rights=ChatPrivileges(),
+                                    ),
+                                ),
+                                KeyboardButton(
+                                    "Admin Channels",
+                                    request_chat=KeyboardButtonRequestChat(
+                                        22,
+                                        chat_is_channel=True,
+                                        chat_is_created=False,
+                                        user_administrator_rights=ChatPrivileges(),
+                                    ),
+                                ),
                             ],
-                        ]
+                            [
+                                KeyboardButton(
+                                    "Owned Groups",
+                                    request_chat=KeyboardButtonRequestChat(
+                                        31, chat_is_channel=False, chat_is_created=True
+                                    ),
+                                ),
+                                KeyboardButton(
+                                    "Owned Channels",
+                                    request_chat=KeyboardButtonRequestChat(
+                                        32, chat_is_channel=True, chat_is_created=True
+                                    ),
+                                ),
+                            ],
+                        ],
+                        resize_keyboard=True,
+                        input_field_placeholder=f"Selfbot {__version__}",
                     ),
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                self.logger.error(str(e))
             else:
                 self.logger.info(f"Selfbot {res}tarted")
                 await self.idle()
