@@ -81,8 +81,7 @@ class Help(Module):
                                 self.mods[name]
                             ),
                         )
-                    ],
-                    cache_time=2147483647,
+                    ]
                 )
             else:
                 names = [
@@ -101,8 +100,7 @@ class Help(Module):
                                 "<b>e.g.</b> <code>help/debug</code>"
                             ),
                         )
-                    ],
-                    cache_time=2147483647,
+                    ]
                 )
 
             return
@@ -116,8 +114,7 @@ class Help(Module):
                         "<b>Selfbot Modules</b>"
                     ),
                 )
-            ],
-            cache_time=2147483647,
+            ]
         )
 
     @listener.handler(filters.regex(pattern), 4)
@@ -133,7 +130,6 @@ class Help(Module):
                     f"\n\n{len(self.ikbs)} Pages"
                 ),
                 show_alert=True,
-                cache_time=2147483647,
             )
 
         if act == "mod":

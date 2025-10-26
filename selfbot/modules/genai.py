@@ -84,7 +84,6 @@ class GenAI(Module):
                     input_message_content=InputTextMessageContent("<code>...</code>"),
                 )
             ],
-            cache_time=2147483647,
             switch_pm_text="Clear Conversation",
             switch_pm_parameter="clear",
         )
@@ -151,7 +150,7 @@ class GenAI(Module):
                     obj = getattr(
                         event.reply_to_message, event.reply_to_message.media.value
                     )
-                    if obj.file_size > 32 * 1024**2:
+                    if obj.file_size > 32 * (1024**2):
                         return await edit("<code>Media too Large (Limit: 32 MB)</code>")
 
                     m_t = getattr(obj, "mime_type", "image/jpeg").lower().strip()

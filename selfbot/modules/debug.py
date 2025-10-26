@@ -8,7 +8,6 @@ import re
 
 import pyrogram
 from pyrogram import filters
-from pyrogram.errors import MessageIdsEmpty
 from pyrogram.types import (
     CallbackQuery,
     ChosenInlineResult,
@@ -158,8 +157,7 @@ class Debug(Module):
                         else "<code>...</code>"
                     ),
                 )
-            ],
-            cache_time=2147483647 if len(event.query) == 1 else 0,
+            ]
         )
 
     @listener.handler(filters.regex(pattern), 4)
@@ -192,10 +190,8 @@ class Debug(Module):
 
             return await cmd.delete()
 
-        if not msg:
-            return await event.answer(
-                r"¯\_(ツ)_/¯", show_alert=True, cache_time=2147483647
-            )
+        if msg.empty:
+            return await event.answer(r"¯\_(ツ)_/¯", show_alert=True)
 
         await self.execute(msg, event)
 
@@ -204,11 +200,7 @@ class Debug(Module):
         msg, cmd = await asyncio.gather(
             self.client.app.get_replied_message(cid, mid),
             self.client.app.get_messages(cid, mid),
-            return_exceptions=True,
         )
-        if isinstance(msg, (Exception, MessageIdsEmpty)):
-            msg = None
-
         return msg, cmd
 
     async def execute(self, msg: Message, event: Update, btn: bool = False) -> None:

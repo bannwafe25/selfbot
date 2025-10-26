@@ -70,7 +70,7 @@ class Dispatcher(abc.ABC):
                             e.__class__.__name__,
                             {
                                 "Module": listener.mod.name,
-                                "Event": f"On {listener.event.replace('_', ' ').title()}",
+                                "Event": listener.event.replace("_", " ").title(),
                                 "File": fn,
                                 "Line": ln,
                             },
