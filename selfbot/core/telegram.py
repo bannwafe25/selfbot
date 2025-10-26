@@ -67,99 +67,79 @@ class Telegram(abc.ABC):
                         self.db.execute("TRUNCATE restart.msgs;"),
                     )
 
-                _, rkm = await asyncio.gather(
-                    self.bot.send_message(
-                        self.app.me.id,
-                        fmtstr(
-                            f"Selfbot {res}tarted",
-                            {
-                                "Version": f"{__version__}\n",
-                                "Handlers": len(self.handlers),
-                                "Listeners": len(self.listeners),
-                                "Modules": len(self.modules),
-                            },
-                            fmtsec(now),
-                        ),
-                        disable_notification=True,
-                        reply_markup=ikm(
+                msg = await self.bot.send_message(
+                    self.app.me.id,
+                    "...",
+                    disable_notification=True,
+                    reply_markup=ReplyKeyboardMarkup(
+                        [
                             [
-                                [
-                                    (
-                                        "Commits",
-                                        "url",
-                                        f"{self.config.get(
-                        'remote', 'https://github.com/DeltaUniverse/selfbot'
-                    ).removesuffix('.git')}/commits/{self.config.get('branch', 'staging')}",
-                                    )
-                                ],
-                                [
-                                    (
-                                        "Ping",
-                                        "switch_inline_query_current_chat",
-                                        "ping",
+                                KeyboardButton(
+                                    "Owned Channels",
+                                    request_chat=KeyboardButtonRequestChat(
+                                        11, chat_is_channel=True, chat_is_created=True
                                     ),
-                                    (
-                                        "Help",
-                                        "switch_inline_query_current_chat",
-                                        "help",
+                                ),
+                                KeyboardButton(
+                                    "Owned Groups",
+                                    request_chat=KeyboardButtonRequestChat(
+                                        12, chat_is_channel=False, chat_is_created=True
                                     ),
-                                ],
-                            ]
-                        ),
-                    ),
-                    self.bot.send_message(
-                        self.app.me.id,
-                        "...",
-                        disable_notification=True,
-                        reply_markup=ReplyKeyboardMarkup(
-                            [
-                                [
-                                    KeyboardButton(
-                                        "Owned Channels",
-                                        request_chat=KeyboardButtonRequestChat(
-                                            11,
-                                            chat_is_channel=True,
-                                            chat_is_created=True,
-                                        ),
-                                    ),
-                                    KeyboardButton(
-                                        "Owned Groups",
-                                        request_chat=KeyboardButtonRequestChat(
-                                            12,
-                                            chat_is_channel=False,
-                                            chat_is_created=True,
-                                        ),
-                                    ),
-                                ],
-                                [
-                                    KeyboardButton(
-                                        "Admin Channels",
-                                        request_chat=KeyboardButtonRequestChat(
-                                            21,
-                                            chat_is_channel=True,
-                                            chat_is_created=False,
-                                            user_administrator_rights=ChatPrivileges(),
-                                        ),
-                                    ),
-                                    KeyboardButton(
-                                        "Admin Groups",
-                                        request_chat=KeyboardButtonRequestChat(
-                                            22,
-                                            chat_is_channel=False,
-                                            chat_is_created=False,
-                                            user_administrator_rights=ChatPrivileges(),
-                                        ),
-                                    ),
-                                ],
+                                ),
                             ],
-                            is_persistent=True,
-                            resize_keyboard=True,
-                            one_time_keyboard=True,
-                            input_field_placeholder="List Chat Privileges",
-                        ),
+                            [
+                                KeyboardButton(
+                                    "Admin Channels",
+                                    request_chat=KeyboardButtonRequestChat(
+                                        21,
+                                        chat_is_channel=True,
+                                        chat_is_created=False,
+                                        user_administrator_rights=ChatPrivileges(),
+                                    ),
+                                ),
+                                KeyboardButton(
+                                    "Admin Groups",
+                                    request_chat=KeyboardButtonRequestChat(
+                                        22,
+                                        chat_is_channel=False,
+                                        chat_is_created=False,
+                                        user_administrator_rights=ChatPrivileges(),
+                                    ),
+                                ),
+                            ],
+                        ],
+                        resize_keyboard=True,
                     ),
                 )
-                await rkm.delete()
+                await msg.edit_text(
+                    fmtstr(
+                        f"Selfbot {res}tarted",
+                        {
+                            "Version": f"{__version__}\n",
+                            "Handlers": len(self.handlers),
+                            "Listeners": len(self.listeners),
+                            "Modules": len(self.modules),
+                        },
+                        fmtsec(now),
+                    ),
+                    reply_markup=ikm(
+                        [
+                            [
+                                (
+                                    "Commits",
+                                    "url",
+                                    f"{self.config.get(
+                    'remote', 'https://github.com/DeltaUniverse/selfbot'
+                ).removesuffix('.git')}/commits/{self.config.get('branch', 'staging')}",
+                                )
+                            ],
+                            [
+                                ("Ping", "switch_inline_query_current_chat", "ping"),
+                                ("Help", "switch_inline_query_current_chat", "help"),
+                            ],
+                        ]
+                    ),
+                )
             except Exception:
                 pass
             else:
