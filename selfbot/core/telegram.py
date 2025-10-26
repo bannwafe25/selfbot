@@ -152,6 +152,7 @@ class Telegram(abc.ABC):
                                     ),
                                 ],
                             ],
+                            is_persistent=True,
                             resize_keyboard=True,
                             one_time_keyboard=True,
                             input_field_placeholder="List Chat Privileges",
