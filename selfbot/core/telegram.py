@@ -114,36 +114,36 @@ class Telegram(abc.ABC):
             else:
                 self.logger.error(f"{e.__class__.__name__}: {e}")
                 await self.app.storage.delete()
-
-        self.logger.info("Starting Bot...")
-        try:
-            await self.bot.start()
-        except RPCError as e:
-            if isinstance(e, FloodWait):
-                self.logger.warning(f"{e.__class__.__name__}: {e}")
-                await asyncio.sleep(e.value)
+        else:
+            self.logger.info("Starting Bot...")
+            try:
+                await self.bot.start()
+            except RPCError as e:
+                if isinstance(e, FloodWait):
+                    self.logger.warning(f"{e.__class__.__name__}: {e}")
+                    await asyncio.sleep(e.value)
+                else:
+                    self.logger.error(f"{e.__class__.__name__}: {e}")
+                    await self.bot.storage.delete()
             else:
-                self.logger.error(f"{e.__class__.__name__}: {e}")
-                await self.bot.storage.delete()
+                await asyncio.gather(
+                    self.app.resolve_peer(self.bot.me.username),
+                    asyncio.to_thread(self.loads),
+                    asyncio.to_thread(self.conf),
+                )
 
-        await asyncio.gather(
-            self.app.resolve_peer(self.bot.me.username),
-            asyncio.to_thread(self.loads),
-            asyncio.to_thread(self.conf),
-        )
+                try:
+                    await self.bot.send_chat_action(self.app.me.id, ChatAction.TYPING)
+                except PeerIdInvalid:
+                    msg = await self.app.send_message(self.bot.me.id, "/start")
+                    await msg.delete()
+                except UserIsBlocked:
+                    await self.app.unblock_user(self.bot.me.id)
 
-        try:
-            await self.bot.send_chat_action(self.app.me.id, ChatAction.TYPING)
-        except PeerIdInvalid:
-            msg = await self.app.send_message(self.bot.me.id, "/start")
-            await msg.delete()
-        except UserIsBlocked:
-            await self.app.unblock_user(self.bot.me.id)
-
-        self.logger.info("Dispatch On Start...")
-        await self.dispatch("starting")
-        await self.dispatch("started")
-        self.logger.info("On Start Dispatched")
+                self.logger.info("Dispatch On Start...")
+                await self.dispatch("starting")
+                await self.dispatch("started")
+                self.logger.info("On Start Dispatched")
 
     async def idle(self) -> None:
         if self.__idle__ and not self.__idle__.is_set():
