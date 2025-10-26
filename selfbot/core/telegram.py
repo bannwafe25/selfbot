@@ -94,19 +94,19 @@ class Telegram(abc.ABC):
                             ],
                             [
                                 KeyboardButton(
-                                    "Admin Groups",
+                                    "Admin Channels",
                                     request_chat=KeyboardButtonRequestChat(
-                                        21,
-                                        chat_is_channel=False,
+                                        10,
+                                        chat_is_channel=True,
                                         chat_is_created=False,
                                         user_administrator_rights=ChatPrivileges(),
                                     ),
                                 ),
                                 KeyboardButton(
-                                    "Admin Channels",
+                                    "Admin Groups",
                                     request_chat=KeyboardButtonRequestChat(
-                                        22,
-                                        chat_is_channel=True,
+                                        11,
+                                        chat_is_channel=False,
                                         chat_is_created=False,
                                         user_administrator_rights=ChatPrivileges(),
                                     ),
@@ -114,25 +114,26 @@ class Telegram(abc.ABC):
                             ],
                             [
                                 KeyboardButton(
-                                    "Owned Groups",
+                                    "Owned Channels",
                                     request_chat=KeyboardButtonRequestChat(
-                                        31, chat_is_channel=False, chat_is_created=True
+                                        20, chat_is_channel=True, chat_is_created=True
                                     ),
                                 ),
                                 KeyboardButton(
-                                    "Owned Channels",
+                                    "Owned Groups",
                                     request_chat=KeyboardButtonRequestChat(
-                                        32, chat_is_channel=True, chat_is_created=True
+                                        21, chat_is_channel=False, chat_is_created=True
                                     ),
                                 ),
                             ],
                         ],
+                        is_persistent=True,
                         resize_keyboard=True,
                         input_field_placeholder=f"Selfbot {__version__}",
                     ),
                 )
-            except Exception as e:
-                self.logger.error(str(e))
+            except Exception:
+                pass
             else:
                 self.logger.info(f"Selfbot {res}tarted")
                 await self.idle()
