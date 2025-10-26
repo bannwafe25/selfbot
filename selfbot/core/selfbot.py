@@ -32,7 +32,7 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
     async def stop(self) -> None:
         self.logger.info("Stopping Selfbot...")
         try:
-            res = await asyncio.gather(
+            await asyncio.gather(
                 *[
                     self.dispatch("stopping"),
                     self.app.stop(),
@@ -41,10 +41,6 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
                 ],
                 return_exceptions=True,
             )
-            for i in res:
-                if isinstance(i, Exception):
-                    self.logger.error(f"{i.__class__.__name__}: {i}")
-
             try:
                 await self.db.close()
             except Exception:
