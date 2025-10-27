@@ -10,3 +10,4 @@ updates:
       - DeltaUniverse
     allow:
       - dependency-type: direct
+#
