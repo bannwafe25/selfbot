@@ -8,7 +8,7 @@ import signal
 
 from pyrogram import Client
 from pyrogram import filters as flt
-from pyrogram.enums import ChatAction, ParseMode
+from pyrogram.enums import ChatAction, ClientPlatform, ParseMode
 from pyrogram.errors import FloodWait, PeerIdInvalid, RPCError, UserIsBlocked
 from pyrogram.handlers import (
     CallbackQueryHandler,
@@ -34,7 +34,7 @@ from pyrogram.types import (
 )
 
 from selfbot import __version__
-from selfbot.core.storage import PostgreStorage
+from selfbot.core import PostgreStorage, Selfbot
 from selfbot.utils import fmtsec, fmtstr
 
 
@@ -263,11 +263,15 @@ class Telegram(abc.ABC):
             name=name,
             api_id=self.config.get("api_id"),
             api_hash=self.config.get("api_hash"),
+            app_version=__version__,
+            device_model=f"{self.__class__.__name__} {Selfbot.__name__}",
             parse_mode=ParseMode.HTML,
+            skip_updates=False,
             sleep_threshold=15,
             max_message_cache_size=0,
-            link_preview_options=LinkPreviewOptions(is_disabled=True),
             no_joined_notifications=True,
+            client_platform=ClientPlatform.WEB,
+            link_preview_options=LinkPreviewOptions(is_disabled=True),
             storage_engine=PostgreStorage(name, self.db),
         )
         if updates:
