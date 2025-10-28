@@ -38,10 +38,10 @@ CREATE TABLE IF NOT EXISTS storage.usernames (
 CREATE TABLE IF NOT EXISTS storage.update_state (
     name    TEXT    NOT NULL,
     id      BIGINT  NOT NULL,
-    pts     BIGINT,
-    qts     BIGINT,
-    date    BIGINT,
-    seq     BIGINT,
+    pts     INTEGER,
+    qts     INTEGER,
+    date    INTEGER,
+    seq     INTEGER,
     PRIMARY KEY (name, id)
 );
 
@@ -52,7 +52,7 @@ CREATE SCHEMA IF NOT EXISTS restart;
 
 CREATE TABLE IF NOT EXISTS restart.msgs(
     chat_id     BIGINT,
-    message_id  INT
+    message_id  INTEGER
 );
 
 CREATE SCHEMA IF NOT EXISTS afk;
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS afk.meta (
 
 CREATE TABLE IF NOT EXISTS afk.msgs (
     chat_id     BIGINT PRIMARY KEY,
-    message_id  INT
+    message_id  INTEGER
 );
 
 CREATE SCHEMA IF NOT EXISTS call;
