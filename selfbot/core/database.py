@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS storage.usernames (
 
 CREATE TABLE IF NOT EXISTS storage.update_state (
     name    TEXT    NOT NULL,
-    id      INTEGER NOT NULL,
+    id      BIGINT  NOT NULL,
     pts     BIGINT,
     qts     BIGINT,
     date    BIGINT,
