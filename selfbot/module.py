@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from selfbot import Selfbot
+    from selfbot.core import Selfbot
 
 
 class Module:
