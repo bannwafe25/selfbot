@@ -63,76 +63,84 @@ class Telegram(abc.ABC):
         try:
             await self.start()
             try:
+                msg = fmtstr(
+                    f"{self.__class__.__name__} {res}tarted",
+                    {
+                        "Handlers": len(self.handlers),
+                        "Listeners": len(self.listeners),
+                        "Modules": len(self.modules),
+                    },
+                    fmtsec(now),
+                )
                 if row:
                     await asyncio.gather(
-                        self.app.delete_messages(row["chat_id"], row["message_id"]),
+                        self.app.edit_message_text(
+                            row["chat_id"], row["message_id"], msg
+                        ),
                         self.db.execute("TRUNCATE restart.msgs;"),
                     )
+                else:
+                    await self.bot.send_message(
+                        self.app.me.id,
+                        msg,
+                        disable_notification=True,
+                        reply_markup=ReplyKeyboardMarkup(
+                            [
+                                [
+                                    KeyboardButton(
+                                        "GitHub Commit History",
+                                        web_app=WebAppInfo(
+                                            url=f"{self.config.get(
+                'remote', 'https://github.com/DeltaUniverse/selfbot'
+            ).removesuffix('.git')}/commits/{self.config.get('branch', 'staging')}"
+                                        ),
+                                    )
+                                ],
+                                [
+                                    KeyboardButton(
+                                        "Admin Channels",
+                                        request_chat=KeyboardButtonRequestChat(
+                                            10,
+                                            chat_is_channel=True,
+                                            chat_is_created=False,
+                                            user_administrator_rights=ChatPrivileges(),
+                                        ),
+                                    ),
+                                    KeyboardButton(
+                                        "Admin Groups",
+                                        request_chat=KeyboardButtonRequestChat(
+                                            11,
+                                            chat_is_channel=False,
+                                            chat_is_created=False,
+                                            user_administrator_rights=ChatPrivileges(),
+                                        ),
+                                    ),
+                                ],
+                                [
+                                    KeyboardButton(
+                                        "Owned Channels",
+                                        request_chat=KeyboardButtonRequestChat(
+                                            20,
+                                            chat_is_channel=True,
+                                            chat_is_created=True,
+                                        ),
+                                    ),
+                                    KeyboardButton(
+                                        "Owned Groups",
+                                        request_chat=KeyboardButtonRequestChat(
+                                            21,
+                                            chat_is_channel=False,
+                                            chat_is_created=True,
+                                        ),
+                                    ),
+                                ],
+                            ],
+                            is_persistent=True,
+                            resize_keyboard=True,
+                            input_field_placeholder=f"Selfbot {__version__}",
+                        ),
+                    )
 
-                await self.bot.send_message(
-                    self.app.me.id,
-                    fmtstr(
-                        f"{self.__class__.__name__} {res}tarted",
-                        {
-                            "Handlers": len(self.handlers),
-                            "Listeners": len(self.listeners),
-                            "Modules": len(self.modules),
-                        },
-                        fmtsec(now),
-                    ),
-                    disable_notification=True,
-                    reply_markup=ReplyKeyboardMarkup(
-                        [
-                            [
-                                KeyboardButton(
-                                    "GitHub Commit History",
-                                    web_app=WebAppInfo(
-                                        url=f"{self.config.get(
-                    'remote', 'https://github.com/DeltaUniverse/selfbot'
-                ).removesuffix('.git')}/commits/{self.config.get('branch', 'staging')}"
-                                    ),
-                                )
-                            ],
-                            [
-                                KeyboardButton(
-                                    "Admin Channels",
-                                    request_chat=KeyboardButtonRequestChat(
-                                        10,
-                                        chat_is_channel=True,
-                                        chat_is_created=False,
-                                        user_administrator_rights=ChatPrivileges(),
-                                    ),
-                                ),
-                                KeyboardButton(
-                                    "Admin Groups",
-                                    request_chat=KeyboardButtonRequestChat(
-                                        11,
-                                        chat_is_channel=False,
-                                        chat_is_created=False,
-                                        user_administrator_rights=ChatPrivileges(),
-                                    ),
-                                ),
-                            ],
-                            [
-                                KeyboardButton(
-                                    "Owned Channels",
-                                    request_chat=KeyboardButtonRequestChat(
-                                        20, chat_is_channel=True, chat_is_created=True
-                                    ),
-                                ),
-                                KeyboardButton(
-                                    "Owned Groups",
-                                    request_chat=KeyboardButtonRequestChat(
-                                        21, chat_is_channel=False, chat_is_created=True
-                                    ),
-                                ),
-                            ],
-                        ],
-                        is_persistent=True,
-                        resize_keyboard=True,
-                        input_field_placeholder=f"Selfbot {__version__}",
-                    ),
-                )
             except Exception:
                 pass
             else:
