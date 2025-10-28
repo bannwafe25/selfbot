@@ -34,7 +34,7 @@ from pyrogram.types import (
 )
 
 from selfbot import __version__
-from selfbot.core import PostgreStorage, Selfbot
+from selfbot.core import PostgreStorage
 from selfbot.utils import fmtsec, fmtstr
 
 
@@ -264,7 +264,7 @@ class Telegram(abc.ABC):
             api_id=self.config.get("api_id"),
             api_hash=self.config.get("api_hash"),
             app_version=__version__,
-            device_model=f"{self.__class__.__name__} {Selfbot.__name__}",
+            device_model=f"{self.__class__.__name__} {self.__class__.__bases__.__name__}",
             parse_mode=ParseMode.HTML,
             skip_updates=False,
             sleep_threshold=15,
