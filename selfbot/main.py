@@ -5,7 +5,7 @@ import os
 import aiorun
 from dotenv import dotenv_values
 
-from . import Selfbot
+from .core import Selfbot
 
 logging.basicConfig(
     format="%(asctime)s,%(msecs)03d [ %(levelname).1s ] %(name)s: %(message)s",
