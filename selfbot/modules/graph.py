@@ -27,7 +27,15 @@ class Graph(Module):
 
     async def on_starting(self) -> None:
         self.graph = Telegraph(access_token=None, domain="graph.org")
-        await self.graph.create_account(short_name=self.client.bot.me.username)
+
+        self.logger.info(f"Initializing {self.__class__.__name__}...")
+        try:
+            await self.graph.create_account(short_name=self.client.bot.me.username)
+        except Exception as e:
+            self.logger.error(f"{e.__class__.__name__}: {e}")
+            return self.unload(self)
+        else:
+            self.logger.info(f"{self.__class__.__name__} Initialized")
 
     @listener.handler(filters.regex(pattern) & listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:

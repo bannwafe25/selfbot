@@ -51,13 +51,13 @@ class Telegram(abc.ABC):
 
     async def run(self) -> None:
         if self.__idle__ and not self.__idle__.is_set():
-            raise RuntimeError("Selfbot Running")
+            raise RuntimeError(f"{self.__class__.__name__} Running")
 
         await self.initdb()
 
         row = await self.db.fetchrow("SELECT chat_id, message_id FROM restart.msgs;")
         res = "Res" if row else "S"
-        self.logger.info(f"{res}tarting Selfbot...")
+        self.logger.info(f"{res}tarting {self.__class__.__name__}...")
 
         now = datetime.datetime.now(datetime.UTC)
         try:
@@ -72,7 +72,7 @@ class Telegram(abc.ABC):
                 await self.bot.send_message(
                     self.app.me.id,
                     fmtstr(
-                        f"Selfbot {res}tarted",
+                        f"{self.__class__.__name__} {res}tarted",
                         {
                             "Handlers": len(self.handlers),
                             "Listeners": len(self.listeners),
@@ -136,18 +136,18 @@ class Telegram(abc.ABC):
             except Exception:
                 pass
             else:
-                self.logger.info(f"Selfbot {res}tarted")
+                self.logger.info(f"{self.__class__.__name__} {res}tarted")
                 await self.idle()
         finally:
             await self.stop()
-            self.logger.info("Selfbot Stopped")
+            self.logger.info(f"{self.__class__.__name__} Stopped")
 
     async def start(self) -> None:
         self.app = self._app
         self.bot = self._bot
         self.git = self._git
 
-        self.logger.info("Starting App...")
+        self.logger.info(f"Initializing {self.app.name.title()}...")
         try:
             await self.app.start()
         except RPCError as e:
@@ -158,7 +158,8 @@ class Telegram(abc.ABC):
                 self.logger.error(f"{e.__class__.__name__}: {e}")
                 await self.app.storage.delete()
         else:
-            self.logger.info("Starting Bot...")
+            self.logger.info(f"{self.app.name.title()} Initialized")
+            self.logger.info(f"Initializing {self.bot.name.title()}...")
             try:
                 await self.bot.start()
             except RPCError as e:
@@ -169,6 +170,7 @@ class Telegram(abc.ABC):
                     self.logger.error(f"{e.__class__.__name__}: {e}")
                     await self.bot.storage.delete()
             else:
+                self.logger.info(f"{self.bot.name.title()} Initialized")
                 await asyncio.gather(
                     self.app.resolve_peer(self.bot.me.username),
                     asyncio.to_thread(self.loads),
@@ -183,14 +185,14 @@ class Telegram(abc.ABC):
                 except UserIsBlocked:
                     await self.app.unblock_user(self.bot.me.id)
 
-                self.logger.info("Dispatch On Start...")
+                self.logger.info("Dispatch Start...")
                 await self.dispatch("starting")
                 await self.dispatch("started")
-                self.logger.info("On Start Dispatched")
+                self.logger.info("Start Dispatched")
 
     async def idle(self) -> None:
         if self.__idle__ and not self.__idle__.is_set():
-            raise RuntimeError("Selfbot Idling")
+            raise RuntimeError(f"{self.__class__.__name__} Idling")
 
         signames = (signal.SIGINT, signal.SIGTERM, signal.SIGABRT)
 
@@ -265,7 +267,7 @@ class Telegram(abc.ABC):
             api_id=self.config.get("api_id"),
             api_hash=self.config.get("api_hash"),
             app_version=__version__,
-            device_model=f"{self.__class__.__name__} {self.__class__.__bases__[0].__name__}",
+            device_model=self.__class__.__name__,
             parse_mode=ParseMode.HTML,
             skip_updates=False,
             sleep_threshold=15,

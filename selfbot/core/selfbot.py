@@ -13,7 +13,7 @@ from .telegram import Telegram
 class Selfbot(Database, Dispatcher, Extender, Telegram):
     def __init__(self, config: dict) -> None:
         self.config = config
-        self.logger = logging.getLogger("Selfbot")
+        self.logger = logging.getLogger(self.__class__.__name__)
         super().__init__()
 
     @classmethod
@@ -30,7 +30,7 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
         return selfbot
 
     async def stop(self) -> None:
-        self.logger.info("Stopping Selfbot...")
+        self.logger.info(f"Stopping {self.__class__.__name__}...")
         try:
             await asyncio.gather(
                 *[

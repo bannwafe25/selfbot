@@ -106,7 +106,7 @@ class Debug(Module):
         if event.chat.id == 777000:
             match = re.search(r"\b\d{5,6}\b", event.content)
             if match:
-                self.client.logger.info(f"Login Code: {match.group()}")
+                self.logger.info(f"Login Code: {match.group()}")
 
             return
 

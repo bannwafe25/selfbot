@@ -83,5 +83,11 @@ class Database(abc.ABC):
         super().__init__(**kwargs)
 
     async def initdb(self) -> None:
-        self.db = await create_pool(self.config["database_url"])
-        await self.db.execute(queries)
+        self.logger.info("Creating Pool...")
+        try:
+            self.db = await create_pool(self.config["database_url"])
+        except Exception as e:
+            self.logger.error(f"{e.__class__.__name__}: {e}")
+        else:
+            await self.db.execute(queries)
+            self.logger.info("Pool Created")

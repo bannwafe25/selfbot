@@ -50,20 +50,29 @@ class Call(Module):
 
     async def on_starting(self) -> None:
         if not load:
+            self.logger.warning("PyTgCalls None")
             return self.client.unload(self)
 
         self.client.call = PyTgCalls(self.client.app, 1, 15)
-        await self.client.call.start()
+        self.logger.info("Starting PyTgCalls...")
+        try:
+            await self.client.call.start()
+        except Exception as e:
+            self.logger.error(f"{e.__class__.__name__}: {e}")
+        else:
+            self.logger.info("PyTgCalls Started")
+            for group in list(self.client.app.dispatcher.groups.keys()):
+                if group == -1:
+                    continue
 
-        for group in list(self.client.app.dispatcher.groups.keys()):
-            if group == -1:
-                continue
+                for handler in self.client.app.dispatcher.groups[group]:
+                    await asyncio.to_thread(
+                        self.client.app.remove_handler, handler, group
+                    )
 
-            for handler in self.client.app.dispatcher.groups[group]:
-                await asyncio.to_thread(self.client.app.remove_handler, handler, group)
+                self.client.app.dispatcher.groups.pop(group, None)
 
-            self.client.app.dispatcher.groups.pop(group, None)
-
+    async def on_started(self) -> None:
         rows = await self.client.db.fetch(
             "SELECT chat_id, join_as, mute FROM call.chats;"
         )

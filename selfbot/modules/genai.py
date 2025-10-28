@@ -37,22 +37,37 @@ class GenAI(Module):
 
     async def on_starting(self) -> None:
         if not self.client.config.get("gemini_api_key"):
+            self.logger.warning("Gemini API_KEY None")
             return self.client.unload(self)
 
         self.lock = asyncio.Lock()
         self.data = collections.deque(maxlen=32)
-        self.goog = AsyncClient(
-            headers={
-                "Content-Type": "application/json",
-                "x-goog-api-key": self.client.config["gemini_api_key"],
-            },
-            timeout=45,
-            base_url="https://generativelanguage.googleapis.com/v1beta",
-        )
+
+        self.logger.info(f"Initializing {self.__class__.__name__}...")
+        try:
+            self.goog = AsyncClient(
+                headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": self.client.config["gemini_api_key"],
+                },
+                timeout=45,
+                base_url="https://generativelanguage.googleapis.com/v1beta",
+            )
+        except Exception as e:
+            self.logger.error(f"{e.__class__.__name__}: {e}")
+            return self.client.unload(self)
+        else:
+            self.logger.info(f"{self.__class__.__name__} Initialized")
 
     async def on_stopping(self) -> None:
         if hasattr(self, "goog") and not self.goog.is_closed:
-            await self.goog.aclose()
+            self.logger.info(f"Closing {self.__class__.__name__}...")
+            try:
+                await self.goog.aclose()
+            except Exception as e:
+                self.logger.error(f"{e.__class__.__name__}: {e}")
+            else:
+                self.logger.info(f"{self.__class__.__name__} Closed")
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:

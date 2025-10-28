@@ -1,6 +1,7 @@
-from typing import TYPE_CHECKING
+import logging
+import typing
 
-if TYPE_CHECKING:
+if typing.TYPE_CHECKING:
     from selfbot.core import Selfbot
 
 
@@ -12,6 +13,7 @@ class Module:
 
     def __init__(self, client: "Selfbot") -> None:
         self.client = client
+        self.logger = logging.getLogger(self.__class__.__name__)
 
 
 class ModuleError(Exception):
