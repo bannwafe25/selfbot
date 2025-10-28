@@ -269,7 +269,7 @@ class Telegram(abc.ABC):
             app_version=__version__,
             device_model=self.__class__.__name__,
             parse_mode=ParseMode.HTML,
-            skip_updates=False,
+            skip_updates=True,
             sleep_threshold=15,
             max_message_cache_size=0,
             no_joined_notifications=True,
