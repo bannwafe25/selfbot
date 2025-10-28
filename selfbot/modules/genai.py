@@ -162,39 +162,31 @@ class GenAI(Module):
                     MessageMediaType.VIDEO,
                     MessageMediaType.VOICE,
                 ]:
-                    obj = getattr(
-                        event.reply_to_message, event.reply_to_message.media.value
-                    )
+                    rep = event.reply_to_message
+                    obj = getattr(rep, rep.media.value)
                     if obj.file_size > 32 * (1024**2):
                         return await edit("<code>Media too Large (Limit: 32 MB)</code>")
 
-                    m_t = getattr(obj, "mime_type", "image/jpeg").lower().strip()
-                    if isinstance(obj, Sticker):
-                        m_t = "image/jpeg"
-                    elif m_t.startswith("text"):
-                        m_t = "text/plain"
-
+                    mime = getattr(obj, "mime_type", "image/jpeg").lower().strip()
                     if not (
-                        m_t.startswith(("audio", "image", "text", "video"))
-                        or m_t == "application/pdf"
+                        mime.startswith(("audio", "image", "text", "video"))
+                        or mime == "application/pdf"
                     ):
                         return await edit(
                             f"<code>Unsupported '{obj.mime_type}' MIME Type</code>"
                         )
 
-                    doc = await event._client.download_media(
-                        (
-                            event.reply_to_message
-                            if not isinstance(obj, Sticker)
-                            else obj.thumbs[0].file_id
-                        ),
-                        in_memory=True,
-                    )
+                    if isinstance(obj, Sticker) and obj.is_animated:
+                        rep, mime = obj.thumbs[0].file_id, "image/jpeg"
+                    elif mime.startswith("text"):
+                        mime = "text/plain"
+
+                    buf = await event._client.download_media(rep, in_memory=True)
                     parts.append(
                         {
                             "inline_data": {
-                                "mime_type": m_t,
-                                "data": base64.b64encode(doc.getvalue()).decode(
+                                "mime_type": mime,
+                                "data": base64.b64encode(buf.getvalue()).decode(
                                     "ascii"
                                 ),
                             }
