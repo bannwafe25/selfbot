@@ -168,6 +168,11 @@ class GenAI(Module):
                         return await edit("<code>Media too Large (Limit: 32 MB)</code>")
 
                     mime = getattr(obj, "mime_type", "image/jpeg").lower().strip()
+                    if isinstance(obj, Sticker) and obj.is_animated:
+                        rep, mime = obj.thumbs[0].file_id, "image/jpeg"
+                    elif mime.startswith("text"):
+                        mime = "text/plain"
+
                     if not (
                         mime.startswith(("audio", "image", "text", "video"))
                         or mime == "application/pdf"
@@ -176,19 +181,17 @@ class GenAI(Module):
                             f"<code>Unsupported '{obj.mime_type}' MIME Type</code>"
                         )
 
-                    if isinstance(obj, Sticker) and obj.is_animated:
-                        rep, mime = obj.thumbs[0].file_id, "image/jpeg"
-                    elif mime.startswith("text"):
-                        mime = "text/plain"
-
-                    buf = await event._client.download_media(rep, in_memory=True)
                     parts.append(
                         {
                             "inline_data": {
                                 "mime_type": mime,
-                                "data": base64.b64encode(buf.getvalue()).decode(
-                                    "ascii"
-                                ),
+                                "data": base64.b64encode(
+                                    (
+                                        await event._client.download_media(
+                                            rep, in_memory=True
+                                        )
+                                    ).getvalue()
+                                ).decode("ascii"),
                             }
                         }
                     )
