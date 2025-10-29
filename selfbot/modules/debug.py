@@ -49,7 +49,6 @@ class Debug(Module):
         "raw": pyrogram.raw,
         "types": pyrogram.types,
         "utils": pyrogram.utils,
-        "selfbot": selfbot,
         "aexec": aexec,
         "fmtexc": fmtexc,
         "fmtsec": fmtsec,

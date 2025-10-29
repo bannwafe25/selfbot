@@ -2,8 +2,8 @@
 
 A modular Telegram selfbot built with PyroTgFork (a Pyrogram fork) and PostgreSQL for persistent storage. This repository provides an event-driven framework for automating a Telegram user account (selfbot). Use responsibly — selfbots violate Telegram Terms of Service and may result in account restrictions.
 
-Version: 2025-10-27  
-Python: 3.11+ | Database: PostgreSQL | Framework: PyroTgFork
+Version: 2025.10.29
+Python: (>=3.11,<3.14) | Database: PostgreSQL | Framework: PyroTgFork
 
 ## Key Features
 
@@ -20,10 +20,10 @@ Python: 3.11+ | Database: PostgreSQL | Framework: PyroTgFork
 |--------:|------------------------------|-------------------------------------|
 | AFK     | `afk` / `afk -r [reason]`    | Toggle AFK status; use `-r` to set a reason |
 | Call    | `[action]call [options]`     | Join and manage voice chats         |
-| Debug   | `code#` or `e code`          | Execute Python code                 |
-| Delete  | `d` or `del`                 | Delete messages                     |
+| Debug   | `code #` or `e code`         | Execute Python code                 |
+| Delete  | `d` or `del` or `delete`     | Delete messages                     |
 | GenAI   | `query !?`                   | Chat with Gemini AI (GenAI module)  |
-| Graph   | `graph [text] -t [title]`    | Create Telegraph pages              |
+| Graph   | `graph -t [title]`           | Create Telegraph pages              |
 | Help    | `help[/module]`              | Show available commands             |
 | Ping    | `p` or `ping`                | Check latency                       |
 | Purge   | `purge[me] [limit]`          | Bulk delete messages                |
@@ -33,10 +33,10 @@ Python: 3.11+ | Database: PostgreSQL | Framework: PyroTgFork
 
 ### Prerequisites
 
-- Python 3.11 or newer
+- Python (>=3.11,<3.14)
 - PostgreSQL database
 - Telegram API credentials (get from https://my.telegram.org)
-- Bot token from @BotFather (if using bot account features)
+- Bot token from @BotFather
 - Optional: Gemini API key for the GenAI module
 
 ### Local installation
@@ -111,7 +111,7 @@ help/debug
 <reply to message> d
 
 # Purge messages (reply to a starting message)
-<reply to start> purge 50
+<reply to message> purge 50
 
 # Execute Python code
 print("Hello")#
@@ -138,10 +138,7 @@ What is Telegram MTProto? !?
 
 Create Telegraph pages:
 ```
-# Create page from inline text
-graph Hello, World! -t "My Page"
-
-# Create page from a replied message
+# Create a page (reply to a message)
 <reply to message> graph -t "Article Title"
 ```
 
@@ -254,5 +251,3 @@ This project is provided for educational purposes only.
 
 - Documentation: check module docstrings and the in-app `help` command
 - Issues: use GitHub Issues for bug reports and feature requests
-- Discussions: use the project's Telegram group or discussion channels if available
-- 

@@ -44,7 +44,7 @@ class GenAI(Module):
         self.lock = asyncio.Lock()
         self.data = collections.deque(maxlen=32)
 
-        self.logger.info(f"Initializing {self.__class__.__name__}...")
+        self.logger.info("Initializing...")
         try:
             self.goog = AsyncClient(
                 headers={
@@ -59,17 +59,17 @@ class GenAI(Module):
             self.client.unload(self)
             return
         else:
-            self.logger.info(f"{self.__class__.__name__} Initialized")
+            self.logger.info("Initialized")
 
     async def on_stopping(self) -> None:
         if hasattr(self, "goog") and not self.goog.is_closed:
-            self.logger.info(f"Closing {self.__class__.__name__}...")
+            self.logger.info("Closing...")
             try:
                 await self.goog.aclose()
             except Exception as e:
                 self.logger.error(f"{e.__class__.__name__}: {e}")
             else:
-                self.logger.info(f"{self.__class__.__name__} Closed")
+                self.logger.info("Closed")
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
