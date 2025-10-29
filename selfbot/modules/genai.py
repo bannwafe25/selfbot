@@ -167,7 +167,8 @@ class GenAI(Module):
                     rep = event.reply_to_message
                     obj = getattr(rep, rep.media.value)
                     if obj.file_size > 32 * (1024**2):
-                        return await edit("<code>Media too Large (Limit: 32 MB)</code>")
+                        await edit("<code>Media too Large (Limit: 32 MB)</code>")
+                        return
 
                     mime = getattr(obj, "mime_type", "image/jpeg").lower().strip()
                     if isinstance(obj, Sticker) and obj.is_animated:
@@ -179,9 +180,10 @@ class GenAI(Module):
                         mime.startswith(("audio", "image", "text", "video"))
                         or mime == "application/pdf"
                     ):
-                        return await edit(
+                        await edit(
                             f"<code>Unsupported '{obj.mime_type}' MIME Type</code>"
                         )
+                        return
 
                     parts.append(
                         {
@@ -216,9 +218,10 @@ class GenAI(Module):
             elif event.reply_to_message and event.reply_to_message.content:
                 parts.append({"text": event.reply_to_message.content})
             elif not query:
-                return await edit(
+                await edit(
                     f"<code>Give a Query or {html.escape('<Reply or Quote to Content>')}</code>"
                 )
+                return
 
         ikb, now = [("Close", b"0")], datetime.datetime.now(datetime.UTC)
         async with self.lock:
