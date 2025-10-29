@@ -33,14 +33,16 @@ class Graph(Module):
             await self.graph.create_account(short_name=self.client.bot.me.username)
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
-            return self.unload(self)
+            self.unload(self)
+            return
         else:
             self.logger.info(f"{self.__class__.__name__} Initialized")
 
     @listener.handler(filters.regex(pattern) & listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         if not event.reply_to_message.content:
-            return await event.edit_text("<code>Reply to Content</code>")
+            await event.edit_text("<code>Reply to Content</code>")
+            return
 
         await event.edit_text("<code>...</code>")
 

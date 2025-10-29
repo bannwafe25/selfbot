@@ -38,7 +38,8 @@ class GenAI(Module):
     async def on_starting(self) -> None:
         if not self.client.config.get("gemini_api_key"):
             self.logger.warning("Gemini API_KEY None")
-            return self.client.unload(self)
+            self.client.unload(self)
+            return
 
         self.lock = asyncio.Lock()
         self.data = collections.deque(maxlen=32)
@@ -55,7 +56,8 @@ class GenAI(Module):
             )
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
-            return self.client.unload(self)
+            self.client.unload(self)
+            return
         else:
             self.logger.info(f"{self.__class__.__name__} Initialized")
 
@@ -126,7 +128,6 @@ class GenAI(Module):
                 self.data.append(text)
 
     async def respond(self, event: Update) -> None:
-        text, edit = "", None
         if isinstance(event, ChosenInlineResult):
             text, edit = event.query, event.edit_message_text
         else:
@@ -138,10 +139,11 @@ class GenAI(Module):
             await edit(question, parse_mode=ParseMode.MARKDOWN)
         else:
             if isinstance(event, ChosenInlineResult):
-                return await edit(
+                await edit(
                     "<code>Give a Query with Suffix '!?'</code>",
                     reply_markup=ikm(("Close", b"0")),
                 )
+                return
 
             await edit("<code>...</code>")
 

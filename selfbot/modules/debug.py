@@ -26,6 +26,7 @@ pattern = re.compile(r"^(?:e\s+.+|.+#|#)$", flags=re.DOTALL)
 
 OUTPUT_TRUNCATE_LENGTH = 512
 
+
 class Debug(Module):
     name = "Debug"
 
@@ -87,9 +88,10 @@ class Debug(Module):
                     html.escape(event.content.markdown).removesuffix("#").rstrip()
                 ),
             )
-            return await event.reply_inline_bot_result(
+            await event.reply_inline_bot_result(
                 res.query_id, res.results[0].id, quote=True
             )
+            return
 
         cmd, msg = await asyncio.gather(
             event.edit_text(
@@ -165,7 +167,8 @@ class Debug(Module):
         btn, (msg, cmd) = False, await self.msgs(event)
         if not msg:
             if len(event.query) <= 1:
-                return await cmd.delete()
+                await cmd.delete()
+                return
 
             btn, msg = True, cmd
         elif len(event.query) > 1:
@@ -186,12 +189,14 @@ class Debug(Module):
                 None,
             )
             if task:
-                return task.cancel()
+                task.cancel()
+                return
 
             return await cmd.delete()
 
         if msg.empty:
-            return await event.answer(r"¯\_(ツ)_/¯", show_alert=True)
+            await event.answer(r"¯\_(ツ)_/¯", show_alert=True)
+            return
 
         await self.execute(msg, event)
 

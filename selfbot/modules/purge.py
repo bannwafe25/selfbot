@@ -51,9 +51,10 @@ class Purge(Module):
                 event.chat.type == ChatType.SUPERGROUP
                 and (event.chat.is_direct_messages or event.chat.is_forum)
             ):
-                return await event.edit_text(
+                await event.edit_text(
                     f"<code>Unsupported {html.escape('<ChatType>')}</code>"
                 )
+                return
             elif event.reply_to_message_id:
                 if limit:
                     mids = range(
@@ -72,7 +73,8 @@ class Purge(Module):
                 await asyncio.sleep(2.5)
 
         if delete:
-            return await event.delete()
+            await event.delete()
+            return
 
         await event.edit_text(
             fmtstr(

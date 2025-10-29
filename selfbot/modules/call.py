@@ -112,11 +112,12 @@ class Call(Module):
             pattern.match(event.content).groupdict().values(),
         )
         if not action:
-            return await event.edit_text(
+            await event.edit_text(
                 fmtstr(
                     "Joined Call IDs", list(await self.client.call.calls), fmtsec(now)
                 )
             )
+            return
 
         if not chat_id:
             chat_id = event.chat.id

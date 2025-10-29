@@ -121,7 +121,7 @@ class Help(Module):
     async def on_inline_callback(self, event: CallbackQuery) -> None:
         act, val = pattern.match(event.data).groups()
         if act == "info":
-            return await event.answer(
+            await event.answer(
                 (
                     f"Selfbot Version {__version__}\n"
                     f"\n    {len(self.client.handlers)} Handlers"
@@ -131,15 +131,17 @@ class Help(Module):
                 ),
                 show_alert=True,
             )
+            return
 
         if act == "mod":
             page = self.maps.get(val, 0)
-            return await event.edit_message_text(
+            await event.edit_message_text(
                 self.mods[val],
                 reply_markup=ikm(
                     [("« Back", f"help/page/{page}".encode()), ("Close", b"0")]
                 ),
             )
+            return
 
         await event.edit_message_text(
             "<b>Selfbot Modules</b>", reply_markup=ikm(self.build(int(val)))
