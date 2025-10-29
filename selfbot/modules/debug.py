@@ -192,7 +192,8 @@ class Debug(Module):
                 task.cancel()
                 return
 
-            return await cmd.delete()
+            await cmd.delete()
+            return
 
         if msg.empty:
             await event.answer(r"¯\_(ツ)_/¯", show_alert=True)

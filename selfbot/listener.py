@@ -1,11 +1,8 @@
-import functools
-
 from pyrogram import Client, filters
 from pyrogram.enums import MessageServiceType
 from pyrogram.types import Message
 
 
-@functools.total_ordering
 class Listener:
     def __init__(
         self, mod: type, func: callable, event: str, filters: callable, priority: int
@@ -17,13 +14,7 @@ class Listener:
         self.priority = priority
 
     def __lt__(self, other: "Listener") -> bool:
-        return NotImplemented
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Listener):
-            return NotImplemented
-
-        return self.priority == other.priority
+        return self.priority < other.priority
 
 
 def handler(filters: callable, priority: int) -> callable:

@@ -125,13 +125,14 @@ class Call(Module):
             try:
                 chat = await event._client.get_chat(chat_id, False)
             except RPCError as e:
-                return await event.edit_text(
+                await event.edit_text(
                     fmtstr(
                         e.__class__.__name__,
                         e.MESSAGE.format(value=e.value),
                         fmtsec(now),
                     )
                 )
+                return
             else:
                 chat_id = chat.id
 
@@ -143,13 +144,14 @@ class Call(Module):
                 try:
                     peer = await event._client.resolve_peer(join_as)
                 except RPCError as e:
-                    return await event.edit_text(
+                    await event.edit_text(
                         fmtstr(
                             e.__class__.__name__,
                             e.MESSAGE.format(value=e.value),
                             fmtsec(now),
                         )
                     )
+                    return
                 else:
                     join_as = get_channel_id(peer.channel_id)
                     text["data"]["Join as"] = join_as
