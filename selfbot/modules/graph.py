@@ -33,7 +33,7 @@ class Graph(Module):
             await self.graph.create_account(short_name=self.client.bot.me.username)
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
-            self.unload(self)
+            self.client.unload(self)
             return
         else:
             self.logger.info("Initialized")
