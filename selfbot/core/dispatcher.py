@@ -3,6 +3,7 @@ import asyncio
 import bisect
 import contextlib
 import os
+import typing
 
 from pyrogram.errors import (
     FloodWait,
@@ -11,6 +12,7 @@ from pyrogram.errors import (
     QueryIdInvalid,
     SlowmodeWait,
 )
+from pyrogram.filters import Filter
 from pyrogram.types import Update
 
 from selfbot.listener import Listener
@@ -19,11 +21,12 @@ from selfbot.utils import fmtstr, ikm
 
 
 class Dispatcher(abc.ABC):
-    def __init__(self, **kwargs: any) -> None:
+    def __init__(self, **kwargs) -> None:
         self.listeners = {}
+
         super().__init__(**kwargs)
 
-    async def dispatch(self, event: str, *args: any, **kwargs: any) -> None:
+    async def dispatch(self, event: str, *args, **kwargs) -> None:
         def blob(path: str, line: int) -> str | None:
             try:
                 absp = os.path.abspath(path)
@@ -81,7 +84,7 @@ class Dispatcher(abc.ABC):
 
                 self.logger.error(f"{e.__class__.__name__}: {e} at {fn}:{ln}")
 
-    def registers(self, mod: "Module") -> None:
+    def registers(self, mod: Module) -> None:
         for event, func in self._funcs(mod, "on_"):
             done = False
             try:
@@ -97,7 +100,7 @@ class Dispatcher(abc.ABC):
                 if not done:
                     self.unregisters(mod)
 
-    def unregisters(self, mod: "Module") -> None:
+    def unregisters(self, mod: Module) -> None:
         slots = []
         for event, listeners in self.listeners.items():
             for listener in listeners:
@@ -108,7 +111,13 @@ class Dispatcher(abc.ABC):
             self.unregister(listener)
 
     def register(
-        self, mod: type, func: callable, event: str, *, filters=None, priority=100
+        self,
+        mod: Module,
+        func: typing.Callable,
+        event: str,
+        *,
+        filters: Filter | None = None,
+        priority: int = 0,
     ) -> None:
         if event not in self.listeners:
             self.listeners[event] = []

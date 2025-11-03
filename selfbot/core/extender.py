@@ -6,8 +6,9 @@ from selfbot.modules import submods
 
 
 class Extender(abc.ABC):
-    def __init__(self, **kwargs: any) -> None:
+    def __init__(self, **kwargs) -> None:
         self.modules = {}
+
         super().__init__(**kwargs)
 
     def loads(self) -> None:
@@ -25,7 +26,7 @@ class Extender(abc.ABC):
         for key in list(self.modules.keys()):
             self.unload(self.modules[key])
 
-    def load(self, mod: "Module") -> None:
+    def load(self, mod: Module) -> None:
         if mod.name in self.modules:
             raise ModuleExists(mod)
 
@@ -40,7 +41,7 @@ class Extender(abc.ABC):
         finally:
             self.modules[mod.name] = obj
 
-    def unload(self, mod: "Module") -> None:
+    def unload(self, mod: Module) -> None:
         try:
             self.unregisters(mod)
         except Exception as e:
@@ -51,7 +52,7 @@ class Extender(abc.ABC):
             del self.modules[type(mod).name]
 
     @staticmethod
-    def _funcs(mod: "Module", prefix: str) -> list:
+    def _funcs(mod: Module, prefix: str) -> list:
         res = []
         for attr in dir(mod):
             if attr.startswith(prefix):

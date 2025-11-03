@@ -58,7 +58,6 @@ class Ping(Module):
         return fmtsec(now, 1)
 
     async def respond(self, event: Update) -> None:
-        edit = None
         if isinstance(event, Message):
             edit = event.edit_text
         else:

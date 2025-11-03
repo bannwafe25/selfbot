@@ -78,8 +78,9 @@ CREATE TABLE IF NOT EXISTS call.chats (
 
 
 class Database(abc.ABC):
-    def __init__(self, **kwargs: any) -> None:
+    def __init__(self, **kwargs) -> None:
         self.db = None
+
         super().__init__(**kwargs)
 
     async def initdb(self) -> None:

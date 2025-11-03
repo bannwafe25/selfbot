@@ -1,11 +1,21 @@
-from pyrogram import Client, filters
+import typing
+
+from pyrogram import filters
 from pyrogram.enums import MessageServiceType
 from pyrogram.types import Message
+
+if typing.TYPE_CHECKING:
+    from selfbot.module import Module
 
 
 class Listener:
     def __init__(
-        self, mod: type, func: callable, event: str, filters: callable, priority: int
+        self,
+        mod: "Module",
+        func: typing.Callable,
+        event: str,
+        filters: filters.Filter,
+        priority: int,
     ) -> None:
         self.mod = mod
         self.func = func
@@ -17,8 +27,8 @@ class Listener:
         return self.priority < other.priority
 
 
-def handler(filters: callable, priority: int) -> callable:
-    def wrapper(func: callable) -> callable:
+def handler(filters: filters.Filter, priority: int) -> typing.Callable:
+    def wrapper(func: typing.Callable) -> typing.Callable:
         setattr(func, "filters", filters)
         setattr(func, "priority", priority)
         return func
@@ -26,7 +36,7 @@ def handler(filters: callable, priority: int) -> callable:
     return wrapper
 
 
-async def reply(_: filter, __: Client, event: Message) -> bool:
+async def reply(_, __, event: Message) -> bool:
     return bool(
         event.reply_to_message
         and event.reply_to_message.service != MessageServiceType.FORUM_TOPIC_CREATED

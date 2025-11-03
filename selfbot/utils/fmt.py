@@ -38,7 +38,7 @@ def fmtsec(now: datetime.datetime, part: int = 3) -> str:
     return ", ".join(parts[:part]) if parts else "0 µs"
 
 
-def fmtstr(head: str, data: any = None, foot: str = None, msgs: str = None) -> str:
+def fmtstr(head: str, data: object = None, foot: str = "", msgs: str = "") -> str:
     body = ""
     if isinstance(data, dict):
         padd = max((len(str(k)) for k in data.keys()), default=0)

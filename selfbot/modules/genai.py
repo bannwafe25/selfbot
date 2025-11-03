@@ -110,7 +110,7 @@ class GenAI(Module):
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         await self.respond(event)
 
-    async def gemini(self, model: str = "gemini-2.5-flash") -> any:
+    async def gemini(self, model: str = "gemini-2.5-flash") -> str:
         text = ""
         try:
             resp = await self.goog.post(
@@ -121,12 +121,19 @@ class GenAI(Module):
         except Exception as e:
             return f"**{e.__class__.__name__}**:\n  `{e}`"
         else:
-            data = resp.json()
-            text = data["candidates"][0]["content"]
-            return text["parts"][0]["text"]
+            json = resp.json()
+            try:
+                data = json["candidates"][0]["content"]
+                return data["parts"][0]["text"]
+            except KeyError:
+                return f"**{e.__class__.__name__}**:\n  `{e}`"
+            else:
+                text = data
         finally:
             if text:
                 self.data.append(text)
+            else:
+                self.data.pop()
 
     async def respond(self, event: Update) -> None:
         if isinstance(event, ChosenInlineResult):

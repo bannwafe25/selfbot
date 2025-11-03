@@ -14,6 +14,7 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
     def __init__(self, config: dict) -> None:
         self.config = config
         self.logger = logging.getLogger(self.__class__.__name__)
+
         super().__init__()
 
     @classmethod

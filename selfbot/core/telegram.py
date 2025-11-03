@@ -40,7 +40,7 @@ from .storage import PostgreStorage
 
 
 class Telegram(abc.ABC):
-    def __init__(self, **kwargs: any) -> None:
+    def __init__(self, **kwargs) -> None:
         self.app = None
         self.bot = None
 
@@ -248,7 +248,7 @@ class Telegram(abc.ABC):
 
             if name in self.listeners and self.listeners[name]:
 
-                async def callback(_: Client, event: Update, bound=name) -> None:
+                async def callback(_, event: Update, bound=name) -> None:
                     asyncio.create_task(self.dispatch(bound, event))
 
                 dispatcher = (handler(callback, filters), group)

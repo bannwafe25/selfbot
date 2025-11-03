@@ -21,5 +21,5 @@ class ModuleError(Exception):
 
 
 class ModuleExists(ModuleError):
-    def __init__(self, mod: "Module") -> None:
+    def __init__(self, mod: Module) -> None:
         super().__init__(f"'{mod.name}' Exists")

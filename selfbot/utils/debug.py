@@ -3,7 +3,7 @@ import asyncio
 import inspect
 
 
-async def aexec(code: str, args: dict = {}) -> any:
+async def aexec(code: str, args: dict = {}) -> object:
     body = ast.parse(code, "exec").body
     if body and isinstance(body[-1], ast.Expr):
         body[-1] = ast.Return(value=body[-1].value)

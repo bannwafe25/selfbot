@@ -3,7 +3,7 @@ permissions:
   contents: read
 'on':
   schedule:
-    - cron: 0 23 * * *
+    - cron: 0 0 * * 1
   workflow_dispatch: null
 jobs:
   auto-update:

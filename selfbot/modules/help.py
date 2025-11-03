@@ -164,7 +164,7 @@ class Help(Module):
         return ikb
 
     @staticmethod
-    def _fmthelp(data: any) -> str:
+    def _fmthelp(data: object) -> str:
         if isinstance(data, dict):
             res = [
                 f"{' ' * 4}• <b>{k}</b>\n{' ' * 6}<code>{html.escape(v)}</code>"
