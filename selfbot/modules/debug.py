@@ -156,7 +156,8 @@ class Debug(Module):
                         else "<code>...</code>"
                     ),
                 )
-            ]
+            ],
+            cache_time=0,
         )
 
     @listener.handler(filters.regex(pattern), 4)

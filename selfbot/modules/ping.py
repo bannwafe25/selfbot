@@ -40,7 +40,8 @@ class Ping(Module):
                     reply_markup=ikm((">_", "user_id", event._client.me.id)),
                     input_message_content=InputTextMessageContent("<code>...</code>"),
                 )
-            ]
+            ],
+            cache_time=0,
         )
 
     @listener.handler(filters.regex(pattern), 3)
