@@ -11,7 +11,7 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr, ikm
 
-pattern = re.compile(r"^#?afk(?:\s-r\s(.+))?$")
+pattern = re.compile(r"^afk(?:\s-r\s(.+))?$")
 
 
 class AFK(Module):

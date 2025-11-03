@@ -10,7 +10,7 @@ from pyrogram.types import Message
 from selfbot import listener
 from selfbot.module import Module
 
-pattern = re.compile(r"^(?:r(estart)?)$")
+pattern = re.compile(r"^r(?:estart)?$")
 
 
 class Restart(Module):

@@ -16,7 +16,7 @@ from selfbot import __version__, listener
 from selfbot.module import Module
 from selfbot.utils import ikm
 
-pattern = re.compile(r"^help/?(mod|info|page)?/?(\d{1}|[a-zA-Z]+)?$")
+pattern = re.compile(r"^help/?(mod|info|page)?(?:/(\d{1}|[a-zA-Z]+))?$")
 
 
 class Help(Module):

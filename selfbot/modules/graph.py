@@ -10,7 +10,7 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr
 
-pattern = re.compile(r"^graph(?:\s-t\s(.+))?$", flags=re.DOTALL)
+pattern = re.compile(r"^graph(?:\s-t\s(.+))?$")
 
 
 class Graph(Module):
