@@ -213,9 +213,10 @@ class GenAI(Module):
                 elif event.reply_to_message.media == MessageMediaType.WEB_PAGE:
                     parts.append({"text": event.reply_to_message.content})
                 else:
-                    return await edit(
+                    await edit(
                         f"<code>Unsupported {html.escape(f'<{event.reply_to_message.media}>')}</code>"
                     )
+                    return
             elif event.reply_to_message and event.reply_to_message.content:
                 parts.append({"text": event.reply_to_message.content})
             elif not query:
