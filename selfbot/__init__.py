@@ -1,18 +1,16 @@
-import os
+import pathlib
 import tomllib
 
 
-def version():
-    path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "..", "pyproject.toml"
-    )
+def version() -> str:
+    path = pathlib.Path(__file__).resolve().parent.parent / "pyproject.toml"
     try:
-        with open(path, "rb") as f:
+        with path.open("rb") as f:
             data = tomllib.load(f)
 
-        return data.get("project", {}).get("version", "0.0.0")
-    except Exception:
-        return "0.0.0"
+        return data.get("project", {}).get("version", "?")
+    except (FileNotFoundError, tomllib.TOMLDecodeError):
+        return "?"
 
 
 __version__ = version()
