@@ -55,7 +55,7 @@ class Telegram(abc.ABC):
 
         await self.initdb()
 
-        row = await self.db.fetchrow("SELECT chat_id, message_id FROM restart.msgs;")
+        row = await self.db.fetchrow("SELECT chat_id, message_id FROM restart.msg;")
         res = "Res" if row else "S"
         self.logger.info(f"{res}tarting {self.__class__.__name__}...")
 
@@ -77,7 +77,7 @@ class Telegram(abc.ABC):
                         self.app.edit_message_text(
                             row["chat_id"], row["message_id"], msg
                         ),
-                        self.db.execute("TRUNCATE restart.msgs;"),
+                        self.db.execute("TRUNCATE restart.msg;"),
                     )
                 else:
                     await self.bot.send_message(

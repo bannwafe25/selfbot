@@ -79,7 +79,7 @@ class Restart(Module):
         await asyncio.gather(
             event.edit_text("<code>Restarting...</code>"),
             self.client.db.execute(
-                "INSERT INTO restart.msgs (chat_id, message_id) VALUES ($1, $2);",
+                "INSERT INTO restart.msg (chat_id, message_id) VALUES ($1, $2);",
                 event.chat.id,
                 event.id,
             ),

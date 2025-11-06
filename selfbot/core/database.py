@@ -50,7 +50,7 @@ CREATE INDEX IF NOT EXISTS idx_peers_phone_number
 
 CREATE SCHEMA IF NOT EXISTS restart;
 
-CREATE TABLE IF NOT EXISTS restart.msgs(
+CREATE TABLE IF NOT EXISTS restart.msg (
     chat_id     BIGINT,
     message_id  INTEGER
 );
