@@ -21,7 +21,7 @@ def config() -> dict:
     if not config:
         return {k.lower(): v for k, v in os.environ.items()}
 
-    os.environ.update({k.upper(): v for k, v in config.items()})
+    os.environ.update({k: v for k, v in config.items()})
     return config
 
 
