@@ -28,12 +28,12 @@ def fmtsec(now: datetime.datetime, part: int = 3) -> str:
     if s:
         parts.append(f"{s} Second{'s' if s != 1 else ''}")
 
-    ms, µs = divmod(micro, 1000)
+    ms, us = divmod(micro, 1000)
     if ms:
         parts.append(f"{ms} ms")
 
-    if µs:
-        parts.append(f"{µs} µs")
+    if us:
+        parts.append(f"{us} µs")
 
     return ", ".join(parts[:part]) if parts else "0 µs"
 
