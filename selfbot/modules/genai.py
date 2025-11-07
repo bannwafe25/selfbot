@@ -111,7 +111,6 @@ class GenAI(Module):
         await self.respond(event)
 
     async def gemini(self, model: str = "gemini-2.5-flash") -> str:
-        text = ""
         try:
             resp = await self.goog.post(
                 f"/models/{model}:generateContent",
@@ -121,19 +120,15 @@ class GenAI(Module):
         except Exception as e:
             return f"**{e.__class__.__name__}**:\n  `{e}`"
         else:
-            json = resp.json()
             try:
+                json = resp.json()
                 data = json["candidates"][0]["content"]
-                return data["parts"][0]["text"]
-            except KeyError:
+                text = data["parts"][0]["text"]
+            except Exception as e:
                 return f"**{e.__class__.__name__}**:\n  `{e}`"
             else:
-                text = data
-        finally:
-            if text:
-                self.data.append(text)
-            else:
-                self.data.pop()
+                self.data.append(data)
+                return text
 
     async def respond(self, event: Update) -> None:
         if isinstance(event, ChosenInlineResult):
