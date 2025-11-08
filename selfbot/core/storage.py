@@ -28,7 +28,6 @@ def get_input_peer(peer_id: int, access_hash: int, peer_type: str) -> InputPeer:
 class PostgreStorage(Storage):
     def __init__(self, name: str, pool: Pool) -> None:
         super().__init__(name)
-
         self.pool = pool
 
     async def open(self) -> None:
@@ -227,7 +226,6 @@ class PostgreStorage(Storage):
             self.name,
             phone_number,
         )
-
         if not row:
             raise KeyError(f"Phone number not found: {phone_number}")
 

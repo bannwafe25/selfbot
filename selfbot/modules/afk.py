@@ -16,10 +16,8 @@ pattern = re.compile(r"^afk(?:\s-r\s(.+))?$")
 
 class AFK(Module):
     name = "AFK"
-
     cmds = "afk (-r {reason})?"
     desc = {"reason": "String", "?": "Optional", "e.g.": "afk -r Reason"}
-
     status, reason, since = False, "", None
 
     async def on_starting(self) -> None:
@@ -33,7 +31,6 @@ class AFK(Module):
     @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
-
         since, (reason,) = (
             datetime.datetime.now(datetime.UTC),
             pattern.match(event.content).groups(),

@@ -27,7 +27,6 @@ pattern = re.compile(r"^(.*)?(?:\!\?)$", flags=re.DOTALL)
 
 class GenAI(Module):
     name = "GenAI"
-
     cmds = "{query} !?"
     desc = {
         "query": "String or <Reply or Quote to Content>",
@@ -43,7 +42,6 @@ class GenAI(Module):
 
         self.lock = asyncio.Lock()
         self.data = collections.deque(maxlen=32)
-
         self.logger.info("Initializing...")
         try:
             self.goog = AsyncClient(
@@ -88,7 +86,6 @@ class GenAI(Module):
             )
             async with self.lock:
                 self.data.clear()
-
             await asyncio.gather(event.delete(), resp.delete())
 
     @listener.handler(filters.regex(pattern), 3)

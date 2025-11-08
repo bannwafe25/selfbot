@@ -16,18 +16,15 @@ pattern = re.compile(r"^graph(?:\s-t\s(.+))?$")
 class Graph(Module):
     name = "Graph"
     cmds = "<Reply to Content> graph (-t {title})?"
-
     desc = {
         "title": "String",
         "?": "Optional",
         "e.g.": "<Reply to Content> graph -t Title",
     }
-
     graph = None
 
     async def on_starting(self) -> None:
         self.graph = Telegraph(access_token=None, domain="graph.org")
-
         self.logger.info("Initializing...")
         try:
             await self.graph.create_account(short_name=self.client.bot.me.username)
@@ -45,7 +42,6 @@ class Graph(Module):
             return
 
         await event.edit_text("<code>...</code>")
-
         content, (title,) = (
             event.reply_to_message.content.html.replace("\n", "<br>"),
             pattern.match(event.content).groups(),

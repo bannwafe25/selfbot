@@ -43,10 +43,8 @@ class Telegram(abc.ABC):
     def __init__(self, **kwargs) -> None:
         self.app = None
         self.bot = None
-
         self.handlers = {}
         self.__idle__ = None
-
         super().__init__(**kwargs)
 
     async def run(self) -> None:
@@ -54,11 +52,9 @@ class Telegram(abc.ABC):
             raise RuntimeError(f"{self.__class__.__name__} Running")
 
         await self.initdb()
-
         row = await self.db.fetchrow("SELECT chat_id, message_id FROM restart.msg;")
         res = "Res" if row else "S"
         self.logger.info(f"{res}tarting {self.__class__.__name__}...")
-
         now = datetime.datetime.now(datetime.UTC)
         try:
             await self.start()
@@ -140,7 +136,6 @@ class Telegram(abc.ABC):
                             input_field_placeholder=f"Selfbot {__version__}",
                         ),
                     )
-
             except Exception:
                 pass
             else:
@@ -154,7 +149,6 @@ class Telegram(abc.ABC):
         self.app = self._app
         self.bot = self._bot
         self.git = self._git
-
         self.logger.info(f"Initializing {self.app.name.title()}...")
         try:
             await self.app.start()
@@ -184,7 +178,6 @@ class Telegram(abc.ABC):
                     asyncio.to_thread(self.loads),
                     asyncio.to_thread(self.conf),
                 )
-
                 try:
                     await self.bot.send_chat_action(self.app.me.id, ChatAction.TYPING)
                 except PeerIdInvalid:

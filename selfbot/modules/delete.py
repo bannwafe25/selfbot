@@ -12,7 +12,6 @@ pattern = re.compile(r"^d(?:el(?:ete)?)?$")
 
 class Delete(Module):
     name = "Delete"
-
     cmds = "<Reply to Message> d(el(ete)?)?"
     desc = {"?": "Optional", "e.g.": "<Reply to Message> delete"}
 

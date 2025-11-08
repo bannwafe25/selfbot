@@ -7,7 +7,6 @@ if typing.TYPE_CHECKING:
 
 class Module:
     name = ""
-
     cmds = ""
     desc = None
 

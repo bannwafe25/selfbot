@@ -21,10 +21,8 @@ pattern = re.compile(r"^help/?(mod|info|page)?(?:/(\d{1}|[a-zA-Z]+))?$")
 
 class Help(Module):
     name = "Help"
-
     cmds = "help(/{name})?"
     desc = {"name": "String as Module Name", "?": "Optional", "e.g.": "help/debug"}
-
     mods, maps, ikbs = {}, {}, []
 
     async def on_started(self) -> None:
@@ -151,7 +149,6 @@ class Help(Module):
         idx = max(0, min(page, len(self.ikbs) - 1))
         ikb = self.ikbs[idx][:]
         ikb.append([("Selfbot Info", b"help/info")])
-
         nav = []
         if idx > 0:
             nav.append((f"« ({idx})", f"help/page/{idx - 1}".encode()))
