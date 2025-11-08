@@ -72,8 +72,8 @@ class Graph(Module):
         except Exception as e:
             await event.edit_text(fmtstr(e.__class__.__name__, str(e), fmtsec(now)))
         else:
-            if event.chat.type in [ChatType.PRIVATE, ChatType.BOT] or (
-                event.chat.type not in [ChatType.PRIVATE, ChatType.BOT]
+            if event.chat.type in (ChatType.PRIVATE, ChatType.BOT) or (
+                event.chat.type not in (ChatType.PRIVATE, ChatType.BOT)
                 and (
                     event.chat.admin_privileges
                     or (

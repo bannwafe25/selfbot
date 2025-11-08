@@ -46,7 +46,7 @@ def fmtstr(head: str, data: object = None, foot: str = "", msgs: str = "") -> st
             f"  <code>{html.escape(str(k)).ljust(padd)}</code> : <code>{html.escape(str(v))}</code>"
             for k, v in data.items()
         )
-    elif isinstance(data, list):
+    elif isinstance(data, (list, set, tuple)):
         body = "\n".join(
             f"  <code>{n}</code>. <code>{html.escape(str(item))}</code>"
             for n, item in enumerate(data, start=1)
@@ -73,9 +73,7 @@ def fmtexc() -> str:
     if exc._str:
         fmt += f":\n  {exc._str}"
 
-    ftb = traceback.format_list(
-        [frame for frame in exc.stack if "/site-packages/" in frame.filename]
-    )
+    ftb = traceback.format_list(f for f in exc.stack if "/site-packages/" in f.filename)
     if ftb:
         fmt += f"\n\nTraceback:\n{''.join(ftb)}"
 

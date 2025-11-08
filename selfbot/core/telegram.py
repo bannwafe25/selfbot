@@ -259,14 +259,14 @@ class Telegram(abc.ABC):
 
     def conf(self) -> None:
         self.config.clear()
-        for key in list(os.environ):
-            if key in [
+        for key in os.environ:
+            if key in (
                 "BRANCH",
                 "REMOTE",
                 "DATABASE_URL",
                 "GEMINI_API_KEY",
                 "STICKER_FILE_ID",
-            ]:
+            ):
                 self.config[key.lower()] = os.environ[key]
 
     def build(self, name: str, updates: tuple = ()) -> Client:

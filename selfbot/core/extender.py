@@ -23,7 +23,7 @@ class Extender(abc.ABC):
                     self.load(mod)
 
     def unloads(self) -> None:
-        for key in list(self.modules.keys()):
+        for key in tuple(self.modules):
             self.unload(self.modules[key])
 
     def load(self, mod: Module) -> None:

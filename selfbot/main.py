@@ -12,7 +12,7 @@ logging.basicConfig(
     datefmt="%b %-d | %-I:%M %p | %-S",
     level=logging.INFO,
 )
-for lib in ["pyrogram", "httpx"]:
+for lib in ("pyrogram", "httpx"):
     logging.getLogger(lib).setLevel(logging.ERROR)
 
 

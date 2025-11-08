@@ -62,7 +62,7 @@ class Call(Module):
             self.logger.error(f"{e.__class__.__name__}: {e}")
         else:
             self.logger.info("PyTgCalls Started")
-            for group in list(self.client.app.dispatcher.groups.keys()):
+            for group in tuple(self.client.app.dispatcher.groups):
                 if group == -1:
                     continue
 
@@ -114,7 +114,7 @@ class Call(Module):
         if not action:
             await event.edit_text(
                 fmtstr(
-                    "Joined Call IDs", list(await self.client.call.calls), fmtsec(now)
+                    "Joined Call IDs", tuple(await self.client.call.calls), fmtsec(now)
                 )
             )
             return

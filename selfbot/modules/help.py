@@ -86,7 +86,7 @@ class Help(Module):
             else:
                 names = [
                     f"  {n}. <code>{i}</code>"
-                    for n, i in enumerate(list(self.client.modules.keys()), 1)
+                    for n, i in enumerate(self.client.modules, 1)
                 ]
                 await event.answer(
                     [

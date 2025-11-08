@@ -158,7 +158,7 @@ class GenAI(Module):
             if event.quote and event.quote.text:
                 parts.append({"text": event.quote.text})
             elif event.reply_to_message and event.reply_to_message.media:
-                if event.reply_to_message.media in [
+                if event.reply_to_message.media in (
                     MessageMediaType.ANIMATION,
                     MessageMediaType.AUDIO,
                     MessageMediaType.DOCUMENT,
@@ -166,7 +166,7 @@ class GenAI(Module):
                     MessageMediaType.STICKER,
                     MessageMediaType.VIDEO,
                     MessageMediaType.VOICE,
-                ]:
+                ):
                     rep = event.reply_to_message
                     obj = getattr(rep, rep.media.value)
                     if obj.file_size > 32 * (1024**2):

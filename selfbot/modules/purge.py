@@ -47,7 +47,7 @@ class Purge(Module):
                 )
             ]
         else:
-            if event.chat.type not in [ChatType.SUPERGROUP, ChatType.CHANNEL] or (
+            if event.chat.type not in (ChatType.SUPERGROUP, ChatType.CHANNEL) or (
                 event.chat.type == ChatType.SUPERGROUP
                 and (event.chat.is_direct_messages or event.chat.is_forum)
             ):
@@ -66,7 +66,7 @@ class Purge(Module):
                 mids = range(event.id - 1, event.id - (last + 1), -1)
 
         res, now = 0, datetime.datetime.now(datetime.UTC)
-        for chunk in [mids[i : i + 100] for i in range(0, len(mids), 100)]:
+        for chunk in (mids[i : i + 100] for i in range(0, len(mids), 100)):
             res += await event._client.delete_messages(event.chat.id, chunk)
             if res % 100 == 0:
                 await asyncio.sleep(2.5)

@@ -168,10 +168,11 @@ class PostgreStorage(Storage):
         return None
 
     async def get_peer_by_id(self, peer_id: int | str) -> InputPeer:
-        try:
-            peer_id_int = int(peer_id)
-        except (ValueError, TypeError) as e:
-            raise KeyError(f"Invalid peer ID: {peer_id}") from e
+        if isinstance(peer_id, str):
+            try:
+                peer_id = int(peer_id)
+            except (ValueError, TypeError) as e:
+                raise KeyError(f"Invalid peer ID: {peer_id}") from e
 
         row = await self.pool.fetchrow(
             """
@@ -183,10 +184,10 @@ class PostgreStorage(Storage):
             WHERE name = $1 AND id = $2;
             """,
             self.name,
-            peer_id_int,
+            peer_id,
         )
         if not row:
-            raise KeyError(f"Peer ID not found: {peer_id_int}")
+            raise KeyError(f"Peer ID not found: {peer_id}")
 
         return get_input_peer(row["id"], row["access_hash"], row["type"])
 
@@ -266,7 +267,7 @@ class PostgreStorage(Storage):
                 f"SELECT {attr} FROM storage.sessions WHERE name = $1;", self.name
             )
 
-        if attr in ["is_bot", "test_mode"] and not isinstance(value, bool):
+        if attr in ("is_bot", "test_mode") and not isinstance(value, bool):
             value = bool(value)
 
         await self.pool.execute(
