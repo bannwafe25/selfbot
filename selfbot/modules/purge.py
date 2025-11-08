@@ -54,7 +54,9 @@ class Purge(Module):
                 await event.edit_text(
                     f"<code>Unsupported {html.escape('<ChatType>')}</code>"
                 )
-            elif event.reply_to_message_id:
+                return
+
+            if event.reply_to_message_id:
                 if limit:
                     mids = range(
                         event.reply_to_message_id, event.reply_to_message_id + limit
