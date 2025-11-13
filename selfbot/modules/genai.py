@@ -107,7 +107,7 @@ class GenAI(Module):
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         await self.respond(event)
 
-    async def gemini(self, model: str = "gemini-2.5-flash") -> str:
+    async def gemini(self, model: str) -> str:
         try:
             resp = await self.goog.post(
                 f"/models/{model}:generateContent",
@@ -227,7 +227,9 @@ class GenAI(Module):
         ikb, now = [("Close", b"0")], datetime.datetime.now(datetime.UTC)
         async with self.lock:
             self.data.append({"role": "user", "parts": parts})
-            res = await self.gemini()
+            res = await self.gemini(
+                self.client.config.get("gemini_model", "gemini-2.5-flash-lite")
+            )
             rtt = fmtsec(now)
             if len(res) > 2048:
                 url = (
@@ -235,9 +237,9 @@ class GenAI(Module):
                 ).text.strip()
                 if isinstance(event, ChosenInlineResult):
                     res = f"{res[:1024]}..."
-                    ikb.insert(0, ("Full", "url", f"{url}.markdown"))
+                    ikb.insert(0, ("Full", "url", f"{url}.md"))
                 else:
-                    res = f"{res[:1024]}[...]({url}.markdown)"
+                    res = f"{res[:1024]}[...]({url}.md)"
 
             await edit(
                 f"{question}{res}\n\n> **{rtt}**",

@@ -258,11 +258,12 @@ class Telegram(abc.ABC):
                 "REMOTE",
                 "DATABASE_URL",
                 "GEMINI_API_KEY",
+                "GEMINI_MODEL",
                 "STICKER_FILE_ID",
             ):
                 self.config[key.lower()] = os.environ[key]
 
-    def build(self, name: str, updates: tuple = ()) -> Client:
+    def build(self, name: str, updates: tuple = (), **kwargs) -> Client:
         client = Client(
             name=name,
             api_id=self.config.get("api_id"),
@@ -277,6 +278,7 @@ class Telegram(abc.ABC):
             client_platform=ClientPlatform.WEB,
             link_preview_options=LinkPreviewOptions(is_disabled=True),
             storage_engine=PostgreStorage(name, self.db),
+            **kwargs,
         )
         if updates:
             client.dispatcher.update_parsers = {
@@ -302,4 +304,5 @@ class Telegram(abc.ABC):
                 UpdateInlineBotCallbackQuery,
                 UpdateNewMessage,
             ),
+            bot_token=self.config.get("bot_token"),
         )
