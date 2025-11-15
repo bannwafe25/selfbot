@@ -13,32 +13,31 @@ class Extender(abc.ABC):
     def loads(self) -> None:
         for submod in submods:
             for attr in dir(submod):
-                mod = getattr(submod, attr)
+                obj = getattr(submod, attr)
                 if (
-                    inspect.isclass(mod)
-                    and issubclass(mod, Module)
-                    and mod is not Module
+                    inspect.isclass(obj)
+                    and issubclass(obj, Module)
+                    and obj is not Module
                 ):
-                    self.load(mod)
+                    self.load(obj)
 
     def unloads(self) -> None:
         for key in tuple(self.modules):
             self.unload(self.modules[key])
 
-    def load(self, mod: Module) -> None:
-        if mod.name in self.modules:
-            raise ModuleExists(mod)
+    def load(self, obj: type) -> None:
+        if obj.__name__ in self.modules:
+            raise ModuleExists(obj)
 
-        obj = mod(self)
+        mod = obj(self)
         try:
-            self.registers(obj)
+            self.registers(mod)
         except Exception as e:
-            self.unregisters(obj)
+            self.unregisters(mod)
             self.logger.error(f"{e.__class__.__name__}: {e}")
         else:
-            self.logger.info(f"{mod.name} Loaded")
-        finally:
-            self.modules[mod.name] = obj
+            self.modules[mod.__class__.__name__] = mod
+            self.logger.info(f"{mod.__class__.__name__} Loaded")
 
     def unload(self, mod: Module) -> None:
         try:
@@ -46,9 +45,9 @@ class Extender(abc.ABC):
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
         else:
-            self.logger.info(f"{mod.name} Unloaded")
+            self.logger.info(f"{mod.__class__.__name__} Unloaded")
         finally:
-            del self.modules[type(mod).name]
+            del self.modules[mod.__class__.__name__]
 
     @staticmethod
     def _funcs(mod: Module, prefix: str) -> list:

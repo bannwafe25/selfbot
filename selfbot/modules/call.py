@@ -24,43 +24,40 @@ from selfbot.utils import fmtsec, fmtstr
 
 pattern = re.compile(
     r"^"
-    r"(?P<action>(?:start|end|join|leave)?)call"
-    r"(?:\s+(?P<chat_id>@?[a-zA-Z][a-zA-Z0-9_]{3,31}|-100[1-9]\d{9}))?"
-    r"(?:\s+-as\s(?P<join_as>@?[a-zA-Z][a-zA-Z0-9_][a-zA-Z0-9]{2,30}))?"
-    r"(?:\s+(?P<mute>-m))?"
-    r"(?:\s+-t\s(?P<title>.+))?"
+    r"call(?:\s-(?P<action>(?:start|end|join|leave)))?"
+    r"(?:\s(?P<chat_id>@?[a-zA-Z][a-zA-Z0-9_]{3,31}|-100[1-9]\d{9}))?"
+    r"(?:\s-as\s(?P<join_as>@?[a-zA-Z][a-zA-Z0-9_][a-zA-Z0-9]{2,30}))?"
+    r"(?:\s(?P<mute>-mute))?"
+    r"(?:\s-t\s(?P<title>.+))?"
     r"$"
 )
 
 
 class Call(Module):
-    name = "Call"
-    cmds = "{action}?call {chat}? (-as {peer})? (-m)? (-t {title})?"
+    name = "Group Call"
+    cmds = "call (-{action} {chat})? (-as {peer})? (-mute)? (-t {title})?"
     desc = {
-        "action": "(join|leave|start|end)",
         "call": "Joined Call IDs (Standalone)",
+        "action": "(join|leave|start|end)",
         "chat": "Chat ID or Username (Default: Current Chat)",
         "peer": "Username (Default: Self)",
-        "-m": "Mute",
         "title": "String",
         "?": "Optional",
-        "e.g.": "startcall @durov -t Title",
+        "e.g.": "call -start @durov -t Title",
     }
 
-    async def on_starting(self) -> None:
+    async def on_loading(self) -> None:
         if not load:
-            self.logger.warning("PyTgCalls None")
             self.client.unload(self)
             return
 
         self.client.call = PyTgCalls(self.client.app, 1, 15)
-        self.logger.info("Starting PyTgCalls...")
         try:
             await self.client.call.start()
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
+            self.client.unload(self)
         else:
-            self.logger.info("PyTgCalls Started")
             for group in tuple(self.client.app.dispatcher.groups):
                 if group == -1:
                     continue

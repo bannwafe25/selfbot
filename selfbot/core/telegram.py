@@ -3,7 +3,6 @@ import asyncio
 import contextlib
 import datetime
 import functools
-import os
 import signal
 
 from pyrogram import Client
@@ -54,93 +53,86 @@ class Telegram(abc.ABC):
         await self.initdb()
         row = await self.db.fetchrow("SELECT chat_id, message_id FROM restart.msg;")
         res = "Res" if row else "S"
-        self.logger.info(f"{res}tarting {self.__class__.__name__}...")
         now = datetime.datetime.now(datetime.UTC)
+        self.logger.info(f"{res}tarting {self.__class__.__name__}...")
         try:
             await self.start()
-            try:
-                msg = fmtstr(
-                    f"{self.__class__.__name__} {res}tarted",
-                    {
-                        "Handlers": len(self.handlers),
-                        "Listeners": len(self.listeners),
-                        "Modules": len(self.modules),
-                    },
-                    fmtsec(now),
+            msg = fmtstr(
+                f"{self.__class__.__name__} {res}tarted",
+                {
+                    "Handlers": len(self.handlers),
+                    "Listeners": len(self.listeners),
+                    "Modules": len(self.modules),
+                },
+                fmtsec(now),
+            )
+            if row:
+                await asyncio.gather(
+                    self.app.edit_message_text(row["chat_id"], row["message_id"], msg),
+                    self.db.execute("TRUNCATE restart.msg;"),
                 )
-                if row:
-                    await asyncio.gather(
-                        self.app.edit_message_text(
-                            row["chat_id"], row["message_id"], msg
-                        ),
-                        self.db.execute("TRUNCATE restart.msg;"),
-                    )
-                else:
-                    await self.bot.send_message(
-                        self.app.me.id,
-                        msg,
-                        disable_notification=True,
-                        reply_markup=ReplyKeyboardMarkup(
-                            [
-                                [
-                                    KeyboardButton(
-                                        "GitHub Commit History",
-                                        web_app=WebAppInfo(
-                                            url=f"{self.config.get(
-                'remote', 'https://github.com/DeltaUniverse/selfbot'
-            ).removesuffix('.git')}/commits/{self.config.get('branch', 'staging')}"
-                                        ),
-                                    )
-                                ],
-                                [
-                                    KeyboardButton(
-                                        "Admin Channels",
-                                        request_chat=KeyboardButtonRequestChat(
-                                            10,
-                                            chat_is_channel=True,
-                                            chat_is_created=False,
-                                            user_administrator_rights=ChatPrivileges(),
-                                        ),
-                                    ),
-                                    KeyboardButton(
-                                        "Admin Groups",
-                                        request_chat=KeyboardButtonRequestChat(
-                                            11,
-                                            chat_is_channel=False,
-                                            chat_is_created=False,
-                                            user_administrator_rights=ChatPrivileges(),
-                                        ),
-                                    ),
-                                ],
-                                [
-                                    KeyboardButton(
-                                        "Owned Channels",
-                                        request_chat=KeyboardButtonRequestChat(
-                                            20,
-                                            chat_is_channel=True,
-                                            chat_is_created=True,
-                                        ),
-                                    ),
-                                    KeyboardButton(
-                                        "Owned Groups",
-                                        request_chat=KeyboardButtonRequestChat(
-                                            21,
-                                            chat_is_channel=False,
-                                            chat_is_created=True,
-                                        ),
-                                    ),
-                                ],
-                            ],
-                            is_persistent=True,
-                            resize_keyboard=True,
-                            input_field_placeholder=f"Selfbot {__version__}",
-                        ),
-                    )
-            except Exception:
-                pass
             else:
-                self.logger.info(f"{self.__class__.__name__} {res}tarted")
-                await self.idle()
+                await self.bot.send_message(
+                    self.app.me.id,
+                    msg,
+                    disable_notification=True,
+                    reply_markup=ReplyKeyboardMarkup(
+                        [
+                            [
+                                KeyboardButton(
+                                    "GitHub Commit History",
+                                    web_app=WebAppInfo(
+                                        url=f"{self.config.get(
+            'REMOTE', 'https://github.com/DeltaUniverse/selfbot'
+        ).removesuffix('.git')}/commits/{self.config.get('BRANCH', 'staging')}"
+                                    ),
+                                )
+                            ],
+                            [
+                                KeyboardButton(
+                                    "Admin Channels",
+                                    request_chat=KeyboardButtonRequestChat(
+                                        10,
+                                        chat_is_channel=True,
+                                        chat_is_created=False,
+                                        user_administrator_rights=ChatPrivileges(),
+                                    ),
+                                ),
+                                KeyboardButton(
+                                    "Admin Groups",
+                                    request_chat=KeyboardButtonRequestChat(
+                                        11,
+                                        chat_is_channel=False,
+                                        chat_is_created=False,
+                                        user_administrator_rights=ChatPrivileges(),
+                                    ),
+                                ),
+                            ],
+                            [
+                                KeyboardButton(
+                                    "Owned Channels",
+                                    request_chat=KeyboardButtonRequestChat(
+                                        20, chat_is_channel=True, chat_is_created=True
+                                    ),
+                                ),
+                                KeyboardButton(
+                                    "Owned Groups",
+                                    request_chat=KeyboardButtonRequestChat(
+                                        21, chat_is_channel=False, chat_is_created=True
+                                    ),
+                                ),
+                            ],
+                        ],
+                        is_persistent=True,
+                        resize_keyboard=True,
+                        input_field_placeholder=f"Selfbot {__version__}",
+                    ),
+                )
+        except Exception:
+            pass
+        else:
+            self.logger.info(f"{self.__class__.__name__} {res}tarted")
+            await self.idle()
         finally:
             await self.stop()
             self.logger.info(f"{self.__class__.__name__} Stopped")
@@ -148,8 +140,10 @@ class Telegram(abc.ABC):
     async def start(self) -> None:
         self.app = self._app
         self.bot = self._bot
+        for key in ("API_ID", "API_HASH", "BOT_TOKEN"):
+            self.config.pop(key, None)
+
         self.git = self._git
-        self.logger.info(f"Initializing {self.app.name.title()}...")
         try:
             await self.app.start()
         except RPCError as e:
@@ -160,8 +154,6 @@ class Telegram(abc.ABC):
                 self.logger.error(f"{e.__class__.__name__}: {e}")
                 await self.app.storage.delete()
         else:
-            self.logger.info(f"{self.app.name.title()} Initialized")
-            self.logger.info(f"Initializing {self.bot.name.title()}...")
             try:
                 await self.bot.start()
             except RPCError as e:
@@ -172,11 +164,9 @@ class Telegram(abc.ABC):
                     self.logger.error(f"{e.__class__.__name__}: {e}")
                     await self.bot.storage.delete()
             else:
-                self.logger.info(f"{self.bot.name.title()} Initialized")
                 await asyncio.gather(
                     self.app.resolve_peer(self.bot.me.username),
                     asyncio.to_thread(self.loads),
-                    asyncio.to_thread(self.conf),
                 )
                 try:
                     await self.bot.send_chat_action(self.app.me.id, ChatAction.TYPING)
@@ -186,10 +176,8 @@ class Telegram(abc.ABC):
                 except UserIsBlocked:
                     await self.app.unblock_user(self.bot.me.id)
 
-                self.logger.info("Dispatch Start...")
-                await self.dispatch("starting")
+                await self.dispatch("loading")
                 await self.dispatch("started")
-                self.logger.info("Start Dispatched")
 
     async def idle(self) -> None:
         if self.__idle__ and not self.__idle__.is_set():
@@ -250,30 +238,19 @@ class Telegram(abc.ABC):
                 finally:
                     self.handlers[name] = dispatcher
 
-    def conf(self) -> None:
-        self.config.clear()
-        for key in os.environ:
-            if key in (
-                "BRANCH",
-                "REMOTE",
-                "DATABASE_URL",
-                "GEMINI_API_KEY",
-                "GEMINI_MODEL",
-                "STICKER_FILE_ID",
-            ):
-                self.config[key.lower()] = os.environ[key]
-
     def build(self, name: str, updates: tuple = (), **kwargs) -> Client:
         client = Client(
             name=name,
-            api_id=self.config.get("api_id"),
-            api_hash=self.config.get("api_hash"),
+            api_id=self.config.get("API_ID"),
+            api_hash=self.config.get("API_HASH"),
             app_version=__version__,
             device_model=self.__class__.__name__,
             parse_mode=ParseMode.HTML,
             skip_updates=True,
             sleep_threshold=15,
+            max_concurrent_transmissions=5,
             max_message_cache_size=0,
+            max_business_user_connection_cache_size=0,
             no_joined_notifications=True,
             client_platform=ClientPlatform.WEB,
             link_preview_options=LinkPreviewOptions(is_disabled=True),
@@ -304,5 +281,5 @@ class Telegram(abc.ABC):
                 UpdateInlineBotCallbackQuery,
                 UpdateNewMessage,
             ),
-            bot_token=self.config.get("bot_token"),
+            bot_token=self.config.get("BOT_TOKEN"),
         )

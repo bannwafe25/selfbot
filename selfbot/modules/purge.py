@@ -11,26 +11,27 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr
 
-pattern = re.compile(r"^purge(me)?(?:\s([1-9]\d{0,2}))?(?:\s(-d))?$")
+pattern = re.compile(r"^purge(me)?(?:\s-l\s([1-9]\d{0,2}))?$")
 
 
 class Purge(Module):
-    name = "Purge"
-    cmds = "<Reply to Message>? purge(me)? {limit}? (-d)?"
+    name = "Purge Message"
+    cmds = "<Reply to Message>? purge(me)? (-l {limit})?"
     desc = {
         "Reply to Message": "as Start ID (Default: 1)",
         "limit": "[1-999] (Default: 100)",
-        "-d": "Delete Current Message",
         "?": "Optional",
-        "e.g.": "purgeme 99 -d",
+        "e.g.": "purgeme -l 99",
     }
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
-        (me, digit, delete), limit = pattern.match(event.content).groups(), 0
-        if digit:
-            limit = int(digit)
+        (me, limit) = pattern.match(event.content).groups()
+        if limit:
+            limit = int(limit)
+        else:
+            limit = 0
 
         mids = []
         if me:
@@ -71,13 +72,14 @@ class Purge(Module):
             if res % 100 == 0:
                 await asyncio.sleep(2.5)
 
-        await event.edit_text(
-            fmtstr(
-                f"Purge{'me' if me else ''}",
-                f"{res} Message{'' if res == 1 else 's'}",
-                fmtsec(now),
-            )
+        await asyncio.gather(
+            event.edit_text(
+                fmtstr(
+                    f"Purge{'me' if me else ''}",
+                    f"{res} Message{'' if res == 1 else 's'}",
+                    fmtsec(now),
+                )
+            ),
+            asyncio.sleep(2.5),
         )
-        if delete:
-            await asyncio.sleep(2.5)
-            await event.delete()
+        await event.delete()

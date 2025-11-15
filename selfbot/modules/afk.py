@@ -15,12 +15,17 @@ pattern = re.compile(r"^afk(?:\s-r\s(.+))?$")
 
 
 class AFK(Module):
-    name = "AFK"
+    name = "Away From Keyboard"
     cmds = "afk (-r {reason})?"
-    desc = {"reason": "String", "?": "Optional", "e.g.": "afk -r Reason"}
+    desc = {
+        "afk": "Toggle",
+        "reason": "String",
+        "?": "Optional",
+        "e.g.": "afk -r Reason",
+    }
     status, reason, since = False, "", None
 
-    async def on_starting(self) -> None:
+    async def on_loading(self) -> None:
         row = await self.client.db.fetchrow("SELECT reason, since FROM afk.meta;")
         if row:
             self.status = True
@@ -58,7 +63,7 @@ class AFK(Module):
 
         await event.edit_text(
             fmtstr(
-                "Away from Keyboard",
+                "Away From Keyboard",
                 {"Status": self.status, "Reason": reason},
                 fmtsec(since),
             )
@@ -74,7 +79,7 @@ class AFK(Module):
             new, old = await asyncio.gather(
                 event.reply_text(
                     fmtstr(
-                        "Away from Keyboard",
+                        "Away From Keyboard",
                         {
                             "Since": wib.strftime("%B %-d, %-I:%M %p"),
                             "Timezone": "UTC+7\n",
@@ -109,7 +114,7 @@ class AFK(Module):
             event._client.invoke(ReadMentions(peer=peer)),
             self.client.bot.send_sticker(
                 event._client.me.id,
-                self.client.config["sticker_file_id"],
+                self.client.config["STICKER_FILE_ID"],
                 disable_notification=True,
                 reply_markup=ikm(
                     (

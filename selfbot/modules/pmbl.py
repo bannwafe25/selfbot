@@ -3,33 +3,28 @@ import datetime
 import re
 
 from pyrogram import filters
-from pyrogram.types import (
-    InlineQuery,
-    InlineQueryResultCachedSticker,
-    InputTextMessageContent,
-    Message,
-)
+from pyrogram.types import InlineQuery, Message
 
 from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr, ikm
 
-pattern = re.compile(r"pmbl(?:\s(msg|url)\s(.+))?$")
+pattern = re.compile(r"^pmbl(?:\s-(msg|url)\s(.+))?$")
 
 
 class PMBL(Module):
-    name = "PMBL"
-    cmds = "pmbl ({key} {value})?"
+    name = "PM Block"
+    cmds = "pmbl (-{key} {value})?"
     desc = {
         "pmbl": "Toggle (Standalone)",
         "key": "(msg|url)",
         "value": "Message or URL",
         "?": "Optional",
-        "e.g.": "pmbl msg No PMs!",
+        "e.g.": "pmbl -msg No PMs!",
     }
     status, msg, url = False, "Sorry, No PMs!", "t.me/resolveUsername"
 
-    async def on_starting(self) -> None:
+    async def on_loading(self) -> None:
         row = await self.client.db.fetchrow("SELECT status, msg, url FROM pmbl.meta;")
         if not row:
             await self.client.db.execute(
@@ -86,14 +81,8 @@ class PMBL(Module):
 
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_query(self, event: InlineQuery) -> None:
-        await event.answer(
-            [
-                InlineQueryResultCachedSticker(
-                    sticker_file_id=self.client.config["sticker_file_id"],
-                    reply_markup=ikm(("Feedback", "url", self.url)),
-                    input_message_content=InputTextMessageContent(
-                        f"<blockquote><b>{self.msg}</b></blockquote>"
-                    ),
-                )
-            ]
+        await self.answer(
+            event,
+            ikm(("Feedback", "url", self.url)),
+            f"<blockquote><b>{self.msg}</b></blockquote>",
         )

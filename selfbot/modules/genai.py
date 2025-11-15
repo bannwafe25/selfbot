@@ -8,15 +8,7 @@ import re
 from httpx import AsyncClient
 from pyrogram import filters
 from pyrogram.enums import MessageMediaType, ParseMode
-from pyrogram.types import (
-    ChosenInlineResult,
-    InlineQuery,
-    InlineQueryResultCachedSticker,
-    InputTextMessageContent,
-    Message,
-    Sticker,
-    Update,
-)
+from pyrogram.types import ChosenInlineResult, InlineQuery, Message, Sticker, Update
 
 from selfbot import listener
 from selfbot.module import Module
@@ -26,7 +18,7 @@ pattern = re.compile(r"^(.*)?(?:\!\?)$", flags=re.DOTALL)
 
 
 class GenAI(Module):
-    name = "GenAI"
+    name = "Google Gemini"
     cmds = "{query} !?"
     desc = {
         "query": "String or <Reply or Quote to Content>",
@@ -34,20 +26,12 @@ class GenAI(Module):
         "e.g.": "Who are You? !?",
     }
 
-    async def on_starting(self) -> None:
-        if not self.client.config.get("gemini_api_key"):
-            self.logger.warning("Gemini API_KEY None")
-            self.client.unload(self)
-            return
-
-        self.lock = asyncio.Lock()
-        self.data = collections.deque(maxlen=32)
-        self.logger.info("Initializing...")
+    async def on_loading(self) -> None:
         try:
             self.goog = AsyncClient(
                 headers={
                     "Content-Type": "application/json",
-                    "x-goog-api-key": self.client.config["gemini_api_key"],
+                    "x-goog-api-key": self.client.config["GEMINI_API_KEY"],
                 },
                 timeout=45,
                 base_url="https://generativelanguage.googleapis.com/v1beta",
@@ -55,19 +39,16 @@ class GenAI(Module):
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
             self.client.unload(self)
-            return
         else:
-            self.logger.info("Initialized")
+            self.data = collections.deque(maxlen=32)
+            self.lock = asyncio.Lock()
 
-    async def on_stopping(self) -> None:
+    async def on_started(self) -> None:
+        self.client.config.pop("GEMINI_API_KEY", None)
+
+    async def on_closing(self) -> None:
         if hasattr(self, "goog") and not self.goog.is_closed:
-            self.logger.info("Closing...")
-            try:
-                await self.goog.aclose()
-            except Exception as e:
-                self.logger.error(f"{e.__class__.__name__}: {e}")
-            else:
-                self.logger.info("Closed")
+            await self.goog.aclose()
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -80,7 +61,7 @@ class GenAI(Module):
             and event.content.split()[1].strip() == "clear"
         ):
             resp = await event.reply_sticker(
-                self.client.config["sticker_file_id"],
+                self.client.config["STICKER_FILE_ID"],
                 quote=True,
                 reply_markup=ikm(("...", "switch_inline_query", "")),
             )
@@ -90,17 +71,8 @@ class GenAI(Module):
 
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_query(self, event: InlineQuery) -> None:
-        await event.answer(
-            [
-                InlineQueryResultCachedSticker(
-                    sticker_file_id=self.client.config["sticker_file_id"],
-                    reply_markup=ikm((">_", "user_id", event._client.me.id)),
-                    input_message_content=InputTextMessageContent("<code>...</code>"),
-                )
-            ],
-            cache_time=0,
-            switch_pm_text="Clear Conversation",
-            switch_pm_parameter="clear",
+        await self.answer(
+            event, switch_pm_text="Clear Conversation", switch_pm_parameter="clear"
         )
 
     @listener.handler(filters.regex(pattern), 4)
@@ -151,7 +123,7 @@ class GenAI(Module):
         if query:
             parts.append({"text": query})
 
-        if not isinstance(event, ChosenInlineResult):
+        if isinstance(event, Message):
             if event.quote and event.quote.text:
                 parts.append({"text": event.quote.text})
             elif event.reply_to_message and event.reply_to_message.media:
@@ -228,7 +200,7 @@ class GenAI(Module):
         async with self.lock:
             self.data.append({"role": "user", "parts": parts})
             res = await self.gemini(
-                self.client.config.get("gemini_model", "gemini-2.5-flash-lite")
+                self.client.config.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
             )
             rtt = fmtsec(now)
             if len(res) > 2048:

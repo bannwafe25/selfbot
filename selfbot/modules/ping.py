@@ -8,8 +8,6 @@ from pyrogram.types import (
     CallbackQuery,
     ChosenInlineResult,
     InlineQuery,
-    InlineQueryResultCachedSticker,
-    InputTextMessageContent,
     Message,
     Update,
 )
@@ -22,7 +20,7 @@ pattern = re.compile(r"^p(?:ing)?$")
 
 
 class Ping(Module):
-    name = "Ping"
+    name = "Selfbot Ping"
     cmds = "p(ing)?"
     desc = {"?": "Optional", "e.g.": "ping"}
 
@@ -32,16 +30,7 @@ class Ping(Module):
 
     @listener.handler(filters.regex(pattern), 2)
     async def on_inline_query(self, event: InlineQuery) -> None:
-        await event.answer(
-            [
-                InlineQueryResultCachedSticker(
-                    sticker_file_id=self.client.config["sticker_file_id"],
-                    reply_markup=ikm((">_", "user_id", event._client.me.id)),
-                    input_message_content=InputTextMessageContent("<code>...</code>"),
-                )
-            ],
-            cache_time=0,
-        )
+        await self.answer(event)
 
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:

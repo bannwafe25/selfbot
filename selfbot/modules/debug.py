@@ -12,8 +12,6 @@ from pyrogram.types import (
     CallbackQuery,
     ChosenInlineResult,
     InlineQuery,
-    InlineQueryResultCachedSticker,
-    InputTextMessageContent,
     Message,
     Update,
 )
@@ -26,7 +24,7 @@ pattern = re.compile(r"^(?:e\s+.+|.+#|#)$", flags=re.DOTALL)
 
 
 class Debug(Module):
-    name = "Debug"
+    name = "Code Execute"
     cmds = "e? {code} #?"
     desc = {
         "e": "Prefix for No Inline (Suffix '#' No Needed)",
@@ -55,7 +53,7 @@ class Debug(Module):
         "shell": shell,
     }
 
-    async def on_starting(self) -> None:
+    async def on_loading(self) -> None:
         self.args.update(
             {
                 "cls": self,
@@ -96,17 +94,8 @@ class Debug(Module):
         )
         await self.execute(cmd, msg)
 
-    @listener.handler(
-        filters.private & (filters.self_destruct | filters.user(777000)), 2
-    )
+    @listener.handler(filters.private & listener.fltusr & filters.self_destruct, 2)
     async def on_message_in(self, event: Message) -> None:
-        if event.chat.id == 777000:
-            match = re.search(r"\b\d{5,6}\b", event.content)
-            if match:
-                self.logger.info(f"Login Code: {match.group()}")
-
-            return
-
         func = getattr(self.client.bot, f"send_{event.media.value}")
         args, attr = inspect.signature(func).parameters, getattr(
             event, event.media.value
@@ -143,19 +132,13 @@ class Debug(Module):
 
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_query(self, event: InlineQuery) -> None:
-        await event.answer(
-            [
-                InlineQueryResultCachedSticker(
-                    sticker_file_id=self.client.config["sticker_file_id"],
-                    reply_markup=ikm((">_", "user_id", event._client.me.id)),
-                    input_message_content=InputTextMessageContent(
-                        event.query.removesuffix("#").rstrip()
-                        if len(event.query) > 1
-                        else "<code>...</code>"
-                    ),
-                )
-            ],
-            cache_time=0,
+        await self.answer(
+            event,
+            message_text=(
+                event.query.removesuffix("#").rstrip()
+                if len(event.query) > 1
+                else "<code>...</code>"
+            ),
         )
 
     @listener.handler(filters.regex(pattern), 4)

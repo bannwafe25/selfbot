@@ -14,7 +14,7 @@ pattern = re.compile(r"^r(?:estart)?$")
 
 
 class Restart(Module):
-    name = "Restart"
+    name = "Restart System"
     cmds = "r(estart)?"
     desc = {"?": "Optional", "e.g": "restart"}
 
@@ -38,8 +38,8 @@ class Restart(Module):
         def check() -> bool:
             repo = git.Repo(".") if os.path.isdir(".git") else git.Repo.init(".")
             remote, branch = self.client.config.get(
-                "remote", "https://github.com/DeltaUniverse/selfbot"
-            ).removesuffix(".git"), self.client.config.get("branch", "staging")
+                "REMOTE", "https://github.com/DeltaUniverse/selfbot"
+            ).removesuffix(".git"), self.client.config.get("BRANCH", "staging")
             fetch(repo, remote)
             repo.git.reset("--hard", f"origin/{branch}")
             old, new = repo.head.commit.hexsha, repo.commit(f"origin/{branch}").hexsha

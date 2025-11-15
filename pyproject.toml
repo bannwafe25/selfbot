@@ -1,6 +1,6 @@
 [project]
 name = "selfbot"
-version = "2025.11.9"
+version = "2025.11.16"
 description = "Telegram Selfbot with PyroTgFork [Pyrogram Fork]"
 readme = "README.md"
 keywords = [
