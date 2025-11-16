@@ -16,10 +16,10 @@ pattern = re.compile(r"^purge(me)?(?:\s-l\s([1-9]\d{0,2}))?$")
 
 class Purge(Module):
     name = "Purge Message"
-    cmds = "<Reply to Message>? purge(me)? (-l {limit})?"
+    cmds = "<Reply>? purge(me)? (-l {limit})?"
     desc = {
-        "Reply to Message": "as Start ID (Default: 1)",
-        "limit": "[1-999] (Default: 100)",
+        "Reply": "Min ID",
+        "limit": "[1-999]",
         "?": "Optional",
         "e.g.": "purgeme -l 99",
     }

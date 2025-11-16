@@ -16,11 +16,11 @@ class PMBL(Module):
     name = "PM Block"
     cmds = "pmbl (-{key} {value})?"
     desc = {
-        "pmbl": "Toggle (Standalone)",
+        "pmbl": "Toggle",
         "key": "(msg|url)",
-        "value": "Message or URL",
+        "value": "String",
         "?": "Optional",
-        "e.g.": "pmbl -msg No PMs!",
+        "e.g.": "pmbl -msg Hello, World!",
     }
     status, msg, url = False, "Sorry, No PMs!", "t.me/resolveUsername"
 
@@ -69,15 +69,13 @@ class PMBL(Module):
 
     @listener.handler(filters.private & ~listener.fltusr, 2)
     async def on_message_in(self, event: Message) -> None:
-        if not self.status:
-            return
-
         _, res = await asyncio.gather(
             event._client.read_chat_history(event.chat.id, event.id),
             event._client.get_inline_bot_results(self.client.bot.me.id, "pmbl"),
         )
         await event.reply_inline_bot_result(res.query_id, res.results[0].id)
-        await asyncio.gather(event.from_user.archive(), event.from_user.block())
+        if self.status:
+            await asyncio.gather(event.from_user.archive(), event.from_user.block())
 
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_query(self, event: InlineQuery) -> None:

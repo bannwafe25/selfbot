@@ -37,13 +37,13 @@ class Call(Module):
     name = "Group Call"
     cmds = "call (-{action} {chat})? (-as {peer})? (-mute)? (-t {title})?"
     desc = {
-        "call": "Joined Call IDs (Standalone)",
+        "call": "Joined Call IDs",
         "action": "(join|leave|start|end)",
-        "chat": "Chat ID or Username (Default: Current Chat)",
-        "peer": "Username (Default: Self)",
+        "chat": "Chat ID or Username",
+        "peer": "Username",
         "title": "String",
         "?": "Optional",
-        "e.g.": "call -start @durov -t Title",
+        "e.g.": "call -join @durov -mute",
     }
 
     async def on_loading(self) -> None:

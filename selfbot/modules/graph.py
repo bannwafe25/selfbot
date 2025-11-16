@@ -15,11 +15,12 @@ pattern = re.compile(r"^graph(?:\s-t\s(.+))?$")
 
 class Graph(Module):
     name = "Telegraph"
-    cmds = "<Reply to Content> graph (-t {title})?"
+    cmds = "<Reply> graph (-t {title})?"
     desc = {
+        "Reply": "Content",
         "title": "String",
         "?": "Optional",
-        "e.g.": "<Reply to Content> graph -t Title",
+        "e.g.": "<Reply> graph -t Hello, World!",
     }
     graph = None
 

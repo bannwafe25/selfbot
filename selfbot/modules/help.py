@@ -15,7 +15,7 @@ pattern = re.compile(r"^help/?(mod|info|page)?(?:/(\d{1}|[a-zA-Z]+))?$")
 class Help(Module):
     name = "Selfbot Help"
     cmds = "help(/{name})?"
-    desc = {"name": "String as Module Name", "?": "Optional", "e.g.": "help/debug"}
+    desc = {"name": "String", "?": "Optional", "e.g.": "help/debug"}
     mods, maps, ikbs = {}, {}, []
 
     async def on_started(self) -> None:

@@ -21,7 +21,7 @@ class AFK(Module):
         "afk": "Toggle",
         "reason": "String",
         "?": "Optional",
-        "e.g.": "afk -r Reason",
+        "e.g.": "afk -r Hello, World!",
     }
     status, reason, since = False, "", None
 

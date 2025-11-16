@@ -21,9 +21,9 @@ class GenAI(Module):
     name = "Google Gemini"
     cmds = "{query} !?"
     desc = {
-        "query": "String or <Reply or Quote to Content>",
-        "!?": "as Suffix",
-        "e.g.": "Who are You? !?",
+        "query": "String or <Reply or Quote>",
+        "!?": "Suffix",
+        "e.g.": "Hello, World! !?",
     }
 
     async def on_loading(self) -> None:
@@ -139,7 +139,7 @@ class GenAI(Module):
                     rep = event.reply_to_message
                     obj = getattr(rep, rep.media.value)
                     if obj.file_size > 32 * (1024**2):
-                        await edit("<code>Media too Large (Limit: 32 MB)</code>")
+                        await edit("<code>Exceeded Size (Limit: 32 MB)</code>")
                         return
 
                     mime = getattr(obj, "mime_type", "image/jpeg").lower().strip()
@@ -192,7 +192,7 @@ class GenAI(Module):
                 parts.append({"text": event.reply_to_message.content})
             elif not query:
                 await edit(
-                    f"<code>Give a Query or {html.escape('<Reply or Quote to Content>')}</code>"
+                    f"<code>Give a Query or {html.escape('<Reply or Quote>')}</code>"
                 )
                 return
 

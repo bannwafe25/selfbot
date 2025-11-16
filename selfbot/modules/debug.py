@@ -27,9 +27,9 @@ class Debug(Module):
     name = "Code Execute"
     cmds = "e? {code} #?"
     desc = {
-        "e": "Prefix for No Inline (Suffix '#' No Needed)",
-        "code": "String as Python Code",
-        "#": "Suffix for Inline (Prefix 'e' No Needed)",
+        "e": "Prefix (No Inline)",
+        "code": "String",
+        "#": "Suffix (Inline)",
         "?": "Optional",
         "e.g.": 'print("Hello, World!")#',
     }
@@ -75,11 +75,11 @@ class Debug(Module):
             return
 
         if event.content.endswith("#"):
-            res, _ = await asyncio.gather(
-                event._client.get_inline_bot_results(self.client.bot.me.id, "#"),
+            _, res = await asyncio.gather(
                 event.edit_text(
                     html.escape(event.content.markdown).removesuffix("#").rstrip()
                 ),
+                event._client.get_inline_bot_results(self.client.bot.me.id, "#"),
             )
             await event.reply_inline_bot_result(
                 res.query_id, res.results[0].id, quote=True
