@@ -14,15 +14,17 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, ikm
 
-pattern = re.compile(r"^(.*)?(?:\!\?)$", flags=re.DOTALL)
+pattern = re.compile(r"^(?:(.+)\s)?\!\?(?:\s-i)?$", flags=re.DOTALL)
 
 
 class GenAI(Module):
     name = "Google Gemini"
-    cmds = "{query} !?"
+    cmds = "{query} !? (-i)?"
     desc = {
         "query": "String or <Reply or Quote>",
-        "!?": "Suffix",
+        "!?": "Infix",
+        "-i": "Ignore Replied Content",
+        "?": "Optional",
         "e.g.": "Hello, World! !?",
     }
 
@@ -188,7 +190,11 @@ class GenAI(Module):
                         f"<code>Unsupported {html.escape(f'<{event.reply_to_message.media}>')}</code>"
                     )
                     return
-            elif event.reply_to_message and event.reply_to_message.content:
+            elif (
+                event.reply_to_message
+                and event.reply_to_message.content
+                and not event.content.endswith("-i")
+            ):
                 parts.append({"text": event.reply_to_message.content})
             elif not query:
                 await edit(
