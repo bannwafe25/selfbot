@@ -18,7 +18,7 @@ from pyrogram.types import (
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import aexec, fmtbyte, fmtexc, fmtsec, fmtstr, ids, ikm, shell
+from selfbot.utils import aexec, fmtbyte, fmtexc, fmtsec, fmtstr, ids, ikm, prog, shell
 
 pattern = re.compile(r"^(?:e\s+.+|.+#|#)$", flags=re.DOTALL)
 
@@ -52,6 +52,7 @@ class Debug(Module):
         "fmtstr": fmtstr,
         "ids": ids,
         "ikm": ikm,
+        "prog": prog,
         "shell": shell,
     }
 

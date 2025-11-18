@@ -11,7 +11,7 @@ def fmtbyte(byte: int) -> str:
             value = f"{(byte / factor):.2f}".rstrip("0").rstrip(".")
             return f"{value} {unit}"
 
-    return "0 B"
+    return "-"
 
 
 def fmtexc() -> str:
@@ -27,7 +27,7 @@ def fmtexc() -> str:
     return fmt
 
 
-def fmtsec(sec: object, part: int = 3) -> str:
+def fmtsec(sec: object, part: int = 3, human: bool = False) -> str:
     if isinstance(sec, datetime.timedelta):
         delta = sec
     elif isinstance(sec, datetime.datetime):
@@ -60,7 +60,7 @@ def fmtsec(sec: object, part: int = 3) -> str:
         if len(parts) >= part:
             break
 
-    if len(parts) < part:
+    if len(parts) < part and not human:
         ms, us = divmod(micro, 1000)
         if ms:
             parts.append(f"{ms}ms")
@@ -68,7 +68,7 @@ def fmtsec(sec: object, part: int = 3) -> str:
         if us and len(parts) < part:
             parts.append(f"{us}µs")
 
-    return ", ".join(parts) if parts else "0 µs"
+    return ", ".join(parts) if parts else "-"
 
 
 def fmtstr(head: str, data: object = None, foot: str = "", msgs: str = "") -> str:
