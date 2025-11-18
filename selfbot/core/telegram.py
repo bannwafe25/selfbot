@@ -248,7 +248,7 @@ class Telegram(abc.ABC):
             parse_mode=ParseMode.HTML,
             skip_updates=True,
             sleep_threshold=15,
-            max_concurrent_transmissions=5,
+            max_concurrent_transmissions=1,
             max_message_cache_size=0,
             max_business_user_connection_cache_size=0,
             no_joined_notifications=True,

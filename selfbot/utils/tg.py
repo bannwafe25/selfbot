@@ -49,7 +49,7 @@ def ikm(rows: list | tuple) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(ikb)
 
 
-async def prog(current: int, total: int, event: Update) -> None:
+async def prog(current: int, total: int, event: Update, title: str = "") -> None:
     time = event._client.loop.time()
     if not hasattr(event, "_start"):
         event._start, event._last = time, time
@@ -68,11 +68,11 @@ async def prog(current: int, total: int, event: Update) -> None:
         percent = f"{(current / total * 100):.2f}".rstrip("0").rstrip(".")
         await edit(
             fmtstr(
-                "Progress",
+                f"{title} Progress".lstrip(),
                 {
                     "Current": fmtbyte(current),
                     "Total": f"{fmtbyte(total)}\n",
-                    "Speed": f"{fmtbyte(speed)}/s",
+                    "Speed": f"{fmtbyte(speed)}/s\n",
                     "Elapsed": fmtsec(delta, human=True),
                     "Estimated": fmtsec(
                         (total - current) / speed if speed > 0 else 0, human=True

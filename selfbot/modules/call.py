@@ -23,13 +23,11 @@ from selfbot.module import Module
 from selfbot.utils import fmtsec, fmtstr
 
 pattern = re.compile(
-    r"^"
-    r"call(?:\s-(?P<action>(?:start|end|join|leave)))?"
-    r"(?:\s(?P<chat_id>@?[a-zA-Z][a-zA-Z0-9_]{3,31}|-100[1-9]\d{9}))?"
-    r"(?:\s-as\s(?P<join_as>@?[a-zA-Z][a-zA-Z0-9_][a-zA-Z0-9]{2,30}))?"
-    r"(?:\s(?P<mute>-mute))?"
-    r"(?:\s-t\s(?P<title>.+))?"
-    r"$"
+    r"^call(?:\s-(start|end|join|leave))?"
+    r"(?:\s(@?[a-zA-Z][a-zA-Z0-9_]{3,31}|-100[1-9]\d{9}))?"
+    r"(?:\s-as\s(@?[a-zA-Z][a-zA-Z0-9_][a-zA-Z0-9]{2,30}))?"
+    r"(?:\s(-mute))?"
+    r"(?:\s-t\s(.+))?$"
 )
 
 
@@ -104,7 +102,7 @@ class Call(Module):
         await event.edit_text("<code>...</code>")
         now, (action, chat_id, join_as, mute, title) = (
             datetime.datetime.now(datetime.UTC),
-            pattern.match(event.content).groupdict().values(),
+            pattern.match(event.content).groups(),
         )
         if not action:
             await event.edit_text(
