@@ -68,7 +68,7 @@ async def prog(current: int, total: int, event: Update, title: str = "") -> None
         percent = f"{(current / total * 100):.2f}".rstrip("0").rstrip(".")
         await edit(
             fmtstr(
-                f"{title} Progress".lstrip(),
+                f"{title.title()} Progress".lstrip(),
                 {
                     "Current": fmtbyte(current),
                     "Total": f"{fmtbyte(total)}\n",

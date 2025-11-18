@@ -11,18 +11,17 @@ from selfbot.module import Module
 from selfbot.utils import fmtbyte, fmtsec, fmtstr, prog
 
 pattern = re.compile(
-    r"^ul"
-    r"(?:\s-to\s(@?[a-zA-Z][a-zA-Z0-9_]{2,31}[a-zA-Z0-9]|-100[1-9]\d{9}|[1-9]\d{1,9}))?"
-    r"\s(.+)$"
+    r"^ul\s(.+?)"
+    r"(?:\s-to\s(@?[a-zA-Z][a-zA-Z0-9_]{1,31}[a-zA-Z0-9]|-100[1-9]\d{9}|[1-9]\d{1,9}))?$"
 )
 
 
 class Upload(Module):
     name = "Upload Document"
-    cmds = "ul (-to {chat})? {path}"
+    cmds = "ul {path} (-to {chat})?"
     desc = {
-        "chat": "Chat ID or Username",
         "path": "String",
+        "chat": "Chat ID or Username",
         "?": "Optional",
         "e.g.": "ul /root/temp.bin",
     }
@@ -41,7 +40,7 @@ class Upload(Module):
                 document,
                 reply_parameters=rep_msg,
                 progress=prog,
-                progress_args=(event, "Upload"),
+                progress_args=(event, "upload"),
             ),
             name=f"{event.chat.id}/{event.id}",
         )

@@ -15,10 +15,8 @@ from selfbot.utils import fmtbyte, fmtsec, fmtstr, prog
 
 pattern = re.compile(
     r"^dl\s?(?:(?:https?://)?t\.me/(c/)?"
-    r"([a-zA-Z][a-zA-Z0-9_]{3,30}[a-zA-Z0-9]|[1-9]\d{9})/"
-    r"(s/)?"
-    r"([1-9]\d{0,9})(?:\?single)?)?"
-    r"(?:\s-n\s(.+))?$"
+    r"([a-zA-Z][a-zA-Z0-9_]{3,30}[a-zA-Z0-9]|[1-9]\d{9})/(s/)?"
+    r"([1-9]\d{0,9})(?:\?single)?)?(?:\s-n\s(.+))?$"
 )
 
 
@@ -88,7 +86,7 @@ class Download(Module):
     ) -> None:
         fut = asyncio.create_task(
             update.download(
-                file_name=file_name, progress=prog, progress_args=(event, "Download")
+                file_name=file_name, progress=prog, progress_args=(event, "download")
             ),
             name=f"{event.chat.id}/{event.id}",
         )

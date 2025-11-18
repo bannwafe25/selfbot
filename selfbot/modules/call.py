@@ -24,10 +24,9 @@ from selfbot.utils import fmtsec, fmtstr
 
 pattern = re.compile(
     r"^call(?:\s-(start|end|join|leave))?"
-    r"(?:\s(@?[a-zA-Z][a-zA-Z0-9_]{3,31}|-100[1-9]\d{9}))?"
-    r"(?:\s-as\s(@?[a-zA-Z][a-zA-Z0-9_][a-zA-Z0-9]{2,30}))?"
-    r"(?:\s(-mute))?"
-    r"(?:\s-t\s(.+))?$"
+    r"(?:\s(@?[a-zA-Z][a-zA-Z0-9_]{1,31}[a-zA-Z0-9]|-100[1-9]\d{9}|[1-9]\d{1,9}))?"
+    r"(?:\s-as\s(@?[a-zA-Z][a-zA-Z0-9_]{1,31}[a-zA-Z0-9]|-100[1-9]\d{9}))?"
+    r"(?:\s(-mute))?(?:\s-t\s(.+))?$"
 )
 
 
@@ -38,7 +37,7 @@ class Call(Module):
         "call": "Joined Call IDs",
         "action": "(join|leave|start|end)",
         "chat": "Chat ID or Username",
-        "peer": "Username",
+        "peer": "Chat ID or Username",
         "title": "String",
         "?": "Optional",
         "e.g.": "call -join @durov -mute",

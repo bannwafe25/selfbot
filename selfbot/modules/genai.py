@@ -14,7 +14,7 @@ from selfbot import listener
 from selfbot.module import Module
 from selfbot.utils import fmtsec, ikm
 
-pattern = re.compile(r"^(?:(.+)\s)?\!\?(?:\s-i)?$", flags=re.DOTALL)
+pattern = re.compile(r"^(?:(.+?)\s)?\!\?(?:\s-i)?$", flags=re.DOTALL)
 
 
 class GenAI(Module):
@@ -36,7 +36,7 @@ class GenAI(Module):
                     "x-goog-api-key": self.client.config["GEMINI_API_KEY"],
                 },
                 timeout=45,
-                base_url="https://generativelanguage.googleapis.com/v1beta",
+                base_url="https://generativelanguage.googleapis.com",
             )
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
@@ -84,7 +84,7 @@ class GenAI(Module):
     async def gemini(self, model: str) -> str:
         try:
             resp = await self.goog.post(
-                f"/models/{model}:generateContent",
+                f"/v1beta/models/{model}:generateContent",
                 json={"contents": list(self.data), "tools": [{"google_search": {}}]},
             )
             resp.raise_for_status()
