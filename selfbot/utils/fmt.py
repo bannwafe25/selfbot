@@ -27,8 +27,21 @@ def fmtexc() -> str:
     return fmt
 
 
-def fmtsec(date: datetime.datetime, part: int = 3) -> str:
-    delta = datetime.datetime.now(datetime.UTC) - date
+def fmtsec(sec: object, part: int = 3) -> str:
+    if isinstance(sec, datetime.timedelta):
+        delta = sec
+    elif isinstance(sec, datetime.datetime):
+        if sec.tzinfo is None:
+            sec = sec.replace(tzinfo=datetime.UTC)
+        else:
+            sec = sec.astimezone(datetime.UTC)
+
+        delta = datetime.datetime.now(datetime.UTC) - sec
+    elif isinstance(sec, (float, int)):
+        delta = datetime.timedelta(seconds=sec)
+    else:
+        raise TypeError
+
     total = int(delta.total_seconds())
     micro = delta.microseconds
     units = (
