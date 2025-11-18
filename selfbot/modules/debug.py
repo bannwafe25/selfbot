@@ -75,6 +75,15 @@ class Debug(Module):
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         if event.content.strip() == "#":
+            if event.reply_to_message:
+                for task in asyncio.all_tasks():
+                    if (
+                        task.get_name()
+                        == f"{event.chat.id}/{event.reply_to_message_id}"
+                    ):
+                        task.cancel()
+                        await event.delete()
+
             return
 
         if event.content.endswith("#"):
