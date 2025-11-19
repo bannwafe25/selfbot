@@ -20,7 +20,7 @@ pattern = re.compile(r"^p(?:ing)?$")
 
 
 class Ping(Module):
-    name = "Selfbot Ping"
+    name = "Selfbot Latency"
     cmds = "p(ing)?"
     desc = {"?": "Optional", "e.g.": "ping"}
 
@@ -62,6 +62,6 @@ class Ping(Module):
             self.ping(self.client.app), self.ping(self.client.bot)
         )
         await edit(
-            fmtstr("Pong!", {"App": app, "Bot": bot}, fmtsec(now)),
+            fmtstr("Selfbot Latency", {"App": app, "Bot": bot}, fmtsec(now)),
             reply_markup=ikm([[("Ping!", b"ping")], [("Close", b"0")]]),
         )

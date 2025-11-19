@@ -58,7 +58,7 @@ class Restart(Module):
         if await asyncio.to_thread(check):
             await event.edit_text("<code>Updating...</code>")
 
-            def update():
+            def update() -> None:
                 try:
                     from pip._internal.cli.main import main as pip
 

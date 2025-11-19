@@ -2,7 +2,7 @@ import abc
 import inspect
 
 from selfbot.module import Module, ModuleExists
-from selfbot.modules import submods
+from selfbot.modules import modules
 
 
 class Extender(abc.ABC):
@@ -11,9 +11,9 @@ class Extender(abc.ABC):
         super().__init__(**kwargs)
 
     def loads(self) -> None:
-        for submod in submods:
-            for attr in dir(submod):
-                obj = getattr(submod, attr)
+        for module in modules:
+            for attr in dir(module):
+                obj = getattr(module, attr)
                 if (
                     inspect.isclass(obj)
                     and issubclass(obj, Module)

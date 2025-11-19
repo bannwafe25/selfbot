@@ -63,8 +63,7 @@ class Purge(Module):
                 else:
                     mids = range(event.reply_to_message_id, event.id)
             else:
-                last = limit or 100
-                mids = range(event.id - 1, event.id - (last + 1), -1)
+                mids = range(event.id - 1, event.id - ((limit or 100) + 1), -1)
 
         res, now = 0, datetime.datetime.now(datetime.UTC)
         for chunk in (mids[i : i + 100] for i in range(0, len(mids), 100)):
