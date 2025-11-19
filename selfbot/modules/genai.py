@@ -8,7 +8,14 @@ import re
 from httpx import AsyncClient
 from pyrogram import filters
 from pyrogram.enums import MessageMediaType, ParseMode
-from pyrogram.types import ChosenInlineResult, InlineQuery, Message, Sticker, Update
+from pyrogram.types import (
+    ChosenInlineResult,
+    InlineQuery,
+    Message,
+    MessageEntity,
+    Sticker,
+    Update,
+)
 
 from selfbot import listener
 from selfbot.module import Module
@@ -219,8 +226,12 @@ class GenAI(Module):
                 else:
                     res = f"{res[:1024]}[...]({url}.md)"
 
-            await edit(
-                f"{question}{res}\n\n> **{rtt}**",
-                parse_mode=ParseMode.MARKDOWN,
-                reply_markup=ikm(ikb),
+            raw_text = await event._client.parser.parse(
+                f"{question}{res}\n\n> **{rtt}**", ParseMode.MARKDOWN
             )
+            entities = []
+            if raw_text.get("entities"):
+                for entity in raw_text["entities"]:
+                    entities.append(MessageEntity._parse(event._client, entity, {}))
+
+            await edit(raw_text["message"], entities=entities, reply_markup=ikm(ikb))
