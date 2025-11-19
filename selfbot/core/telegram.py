@@ -57,9 +57,6 @@ class Telegram(abc.ABC):
         self.logger.info(f"{res}tarting {self.__class__.__name__}...")
         try:
             await self.start()
-            url = f"{self.config.get(
-                'REMOTE', 'https://github.com/DeltaUniverse/selfbot'
-            ).removesuffix('.git')}/commits/{self.config.get('BRANCH', 'staging')}"
             msg = fmtstr(
                 f"{self.__class__.__name__} {res}tarted",
                 {
@@ -71,18 +68,7 @@ class Telegram(abc.ABC):
             )
             if row:
                 await asyncio.gather(
-                    self.app.edit_message_text(
-                        row["chat_id"],
-                        row["message_id"],
-                        msg,
-                        link_preview_options=LinkPreviewOptions(
-                            is_disabled=False,
-                            url=url,
-                            prefer_small_media=True,
-                            prefer_large_media=False,
-                            show_above_text=True,
-                        ),
-                    ),
+                    self.app.edit_message_text(row["chat_id"], row["message_id"], msg),
                     self.db.execute("TRUNCATE restart.msg;"),
                 )
             else:
@@ -94,7 +80,12 @@ class Telegram(abc.ABC):
                         [
                             [
                                 KeyboardButton(
-                                    "GitHub Commit History", web_app=WebAppInfo(url=url)
+                                    "GitHub Commit History",
+                                    web_app=WebAppInfo(
+                                        url=f"{self.config.get(
+            'REMOTE', 'https://github.com/DeltaUniverse/selfbot'
+        ).removesuffix('.git')}/commits/{self.config.get('BRANCH', 'staging')}"
+                                    ),
                                 )
                             ],
                             [

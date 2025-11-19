@@ -8,7 +8,6 @@ from pyrogram.types import (
     CallbackQuery,
     ChosenInlineResult,
     InlineQuery,
-    LinkPreviewOptions,
     Message,
     Update,
 )
@@ -64,14 +63,5 @@ class Ping(Module):
         )
         await edit(
             fmtstr("Pong!", {"App": app, "Bot": bot}, fmtsec(now)),
-            link_preview_options=LinkPreviewOptions(
-                is_disabled=False,
-                url=self.client.config.get(
-                    "REMOTE", "https://github.com/DeltaUniverse/selfbot"
-                ).removesuffix(".git"),
-                prefer_small_media=True,
-                prefer_large_media=False,
-                show_above_text=True,
-            ),
             reply_markup=ikm([[("Ping!", b"ping")], [("Close", b"0")]]),
         )
