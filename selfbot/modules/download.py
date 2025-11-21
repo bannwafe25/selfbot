@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import html
-import pathlib
 import re
 
 from pyrogram import filters
@@ -110,15 +109,10 @@ class Download(Module):
             obj = getattr(update, update.media.value)
             await event.edit_text(
                 fmtstr(
-                    "Download Finished",
+                    "Media Downloaded",
                     {
-                        **(
-                            {"File Name": obj.file_name}
-                            if hasattr(obj, "file_name")
-                            else {}
-                        ),
-                        "File Size": fmtbyte(obj.file_size),
-                        "File Path": f"{pathlib.Path(res).parent}/\n",
+                        "File Path": res,
+                        "File Size": f"{fmtbyte(obj.file_size)}\n",
                         **(
                             {"MIME Type": f"{obj.mime_type}\n"}
                             if hasattr(obj, "mime_type")
