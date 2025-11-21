@@ -29,7 +29,7 @@ class Upload(Module):
     @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
-        rep_msg, (chat_id, document) = None, pattern.match(event.content).groups()
+        rep_msg, (document, chat_id) = None, pattern.match(event.content).groups()
         if not chat_id:
             chat_id = event.chat.id
             rep_msg = ReplyParameters(message_id=event.id)
