@@ -72,12 +72,23 @@ class Download(Module):
                 return
             else:
                 if story:
-                    update = await event._client.get_stories(chat_id, int(update_id))
+                    func = event._client.get_stories
                 else:
+                    func = event._client.get_messages
                     if private:
                         chat_id = get_channel_id(int(chat_id))
 
-                    update = await event._client.get_messages(chat_id, int(update_id))
+                try:
+                    update = await func(chat_id, int(update_id))
+                except RPCError as e:
+                    await event.edit_text(
+                        fmtstr(
+                            e.__class__.__name__,
+                            e.MESSAGE.format(value=e.value),
+                            fmtsec(now),
+                        )
+                    )
+                    return
 
         await self.download(event, update, file_name or "")
 
@@ -92,8 +103,8 @@ class Download(Module):
         )
         now = datetime.datetime.now(datetime.UTC)
         try:
-            res = await asyncio.wait_for(fut, timeout=900)
-        except (asyncio.CancelledError, TimeoutError, Exception) as e:
+            res = await fut
+        except (asyncio.CancelledError, Exception) as e:
             await event.edit_text(
                 fmtstr(
                     e.__class__.__name__,

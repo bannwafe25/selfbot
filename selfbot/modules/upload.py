@@ -46,8 +46,8 @@ class Upload(Module):
         )
         now = datetime.datetime.now(datetime.UTC)
         try:
-            res = await asyncio.wait_for(fut, timeout=900)
-        except (asyncio.CancelledError, TimeoutError, Exception) as e:
+            res = await fut
+        except (asyncio.CancelledError, RPCError) as e:
             await event.edit_text(
                 fmtstr(
                     e.__class__.__name__,
@@ -64,6 +64,7 @@ class Upload(Module):
                 fmtstr(
                     "Document Uploaded",
                     {
+                        "Chat ID": f"{res.chat.id}\n",
                         "File Name": res.document.file_name,
                         "File Size": f"{fmtbyte(res.document.file_size)}\n",
                         "MIME Type": res.document.mime_type,
