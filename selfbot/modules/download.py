@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import html
+import pathlib
 import re
 
 from pyrogram import filters
@@ -117,7 +118,7 @@ class Download(Module):
                             else {}
                         ),
                         "File Size": fmtbyte(obj.file_size),
-                        "File Path": f"{res}\n",
+                        "File Path": f"{pathlib.Path(res).parent}/\n",
                         **(
                             {"MIME Type": f"{obj.mime_type}\n"}
                             if hasattr(obj, "mime_type")
