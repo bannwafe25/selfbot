@@ -11,8 +11,8 @@ from selfbot.module import Module
 from selfbot.utils import fmtbyte, fmtsec, fmtstr, prog
 
 pattern = re.compile(
-    r"^ul\s(.+?)"
-    r"(?:\s-to\s(@?[a-zA-Z][a-zA-Z0-9_]{1,31}[a-zA-Z0-9]|-100[1-9]\d{9}|[1-9]\d{1,9}))?$"
+    r"^ul\s(.+?)(?:\s-to\s"
+    r"(me|@?[a-zA-Z][a-zA-Z0-9_]{2,31}[a-zA-Z0-9]|-100[1-9]\d{9}|[1-9]\d{1,9}))?$"
 )
 
 
