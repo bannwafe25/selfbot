@@ -80,4 +80,4 @@ class Restart(Module):
                 event.id,
             ),
         )
-        os.execv(sys.executable, (sys.executable, "-m", "selfbot"))
+        os.execv(sys.executable, (sys.executable, *sys.argv))

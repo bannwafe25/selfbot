@@ -49,3 +49,7 @@ def run() -> None:
 
     aiorun.logger.disabled = True
     aiorun.run(Selfbot.launch(config()))
+
+
+if __name__ == "__main__":
+    run()
