@@ -92,7 +92,7 @@ class Dispatcher(abc.ABC):
                     func,
                     event,
                     filters=getattr(func, "filters", None),
-                    priority=getattr(func, "priority", 100),
+                    priority=getattr(func, "priority", 99),
                 )
                 done = True
             finally:
@@ -116,7 +116,7 @@ class Dispatcher(abc.ABC):
         event: str,
         *,
         filters: Filter | None = None,
-        priority: int = 0,
+        priority: int = 99,
     ) -> None:
         if event not in self.listeners:
             self.listeners[event] = []
