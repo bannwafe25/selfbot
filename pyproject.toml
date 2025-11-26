@@ -9,7 +9,7 @@ keywords = [
     "mtproto",
     "pyrogram"
 ]
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.14"
 license = "MIT"
 dependencies = [
     "aiorun (>=2025.1.1,<2026.0.0)",

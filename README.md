@@ -3,7 +3,7 @@
 A modular Telegram selfbot built with PyroTgFork (a Pyrogram fork) and PostgreSQL for persistent storage. This repository provides an event-driven framework for automating a Telegram user account (selfbot). Use responsibly — selfbots violate Telegram Terms of Service and may result in account restrictions.
 
 Version: 2025.10.29
-Python: (>=3.11,<3.14) | Database: PostgreSQL | Framework: PyroTgFork
+Python: (>=3.12,<3.14) | Database: PostgreSQL | Framework: PyroTgFork
 
 ## Key Features
 
@@ -33,7 +33,7 @@ Python: (>=3.11,<3.14) | Database: PostgreSQL | Framework: PyroTgFork
 
 ### Prerequisites
 
-- Python (>=3.11,<3.14)
+- Python (>=3.12,<3.14)
 - PostgreSQL database
 - Telegram API credentials (get from https://my.telegram.org)
 - Bot token from @BotFather
