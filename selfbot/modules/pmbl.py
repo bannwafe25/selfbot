@@ -7,7 +7,7 @@ from pyrogram.types import InlineQuery, Message
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtsec, fmtstr, ikm
+from selfbot.utils import fmtmsg, fmtsec, ikm
 
 pattern = re.compile(r"^pmbl(?:\s-(msg|url)\s(.+))?$")
 
@@ -55,7 +55,7 @@ class PMBL(Module):
         await asyncio.gather(
             self.client.db.execute(f"UPDATE pmbl.meta SET {key} = $1;", value),
             event.edit_text(
-                fmtstr(
+                fmtmsg(
                     "PM Block",
                     {
                         "Status": self.status,

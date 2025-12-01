@@ -11,7 +11,7 @@ from pyrogram.utils import get_channel_id
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtbyte, fmtsec, fmtstr, prog
+from selfbot.utils import fmtbyte, fmtmsg, fmtsec, prog
 
 pattern = re.compile(
     r"^dl\s?(?:(?:https?://)?t\.me/(c/)?"
@@ -82,7 +82,7 @@ class Download(Module):
                     update = await func(chat_id, int(update_id))
                 except RPCError as e:
                     await event.edit_text(
-                        fmtstr(
+                        fmtmsg(
                             e.__class__.__name__,
                             e.MESSAGE.format(value=e.value),
                             fmtsec(now),
@@ -106,7 +106,7 @@ class Download(Module):
             res = await fut
         except (asyncio.CancelledError, Exception) as e:
             await event.edit_text(
-                fmtstr(
+                fmtmsg(
                     e.__class__.__name__,
                     (
                         e.MESSAGE.format(value=e.value)
@@ -119,7 +119,7 @@ class Download(Module):
         else:
             obj = getattr(update, update.media.value)
             await event.edit_text(
-                fmtstr(
+                fmtmsg(
                     "Media Downloaded",
                     {
                         "File Path": res,

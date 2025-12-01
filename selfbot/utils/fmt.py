@@ -4,6 +4,18 @@ import sys
 import traceback
 
 
+def fmtbar(
+    current: int,
+    total: int,
+    fill: str = chr(9635),
+    empty: str = chr(9633),
+    bars: int = 8,
+) -> str:
+    fillbar = round(current / total * bars)
+    percent = f"{(current / total * 100):.2f}".rstrip("0").rstrip(".")
+    return f"[ {fill * fillbar + empty * (bars - fillbar)} ] {percent}%"
+
+
 def fmtbyte(byte: int) -> str:
     units = (("TB", 1024**4), ("GB", 1024**3), ("MB", 1024**2), ("KB", 1024), ("B", 1))
     for unit, factor in units:
@@ -25,6 +37,35 @@ def fmtexc() -> str:
         fmt += f"\n\nTraceback:\n{''.join(ftb)}"
 
     return fmt
+
+
+def fmtmsg(head: str, data: object = None, foot: str = "", msgs: str = "") -> str:
+    body = ""
+    if isinstance(data, dict):
+        padd = max((len(str(k)) for k in data.keys()), default=0)
+        body = "\n".join(
+            f"  <code>{html.escape(str(k)).ljust(padd)}</code> : <code>{html.escape(str(v))}</code>"
+            for k, v in data.items()
+        )
+    elif isinstance(data, (list, set, tuple)):
+        body = "\n".join(
+            f"  <code>{n}</code>. <code>{html.escape(str(item))}</code>"
+            for n, item in enumerate(data, start=1)
+        )
+    elif data:
+        body = f"  <code>{html.escape(str(data))}</code>"
+
+    text = [f"<b>{head}</b>"]
+    if body:
+        text.append(body)
+
+    if msgs:
+        text.append(f"<blockquote expandable>{html.escape(str(msgs))}</blockquote>")
+
+    if foot:
+        text.append(f"<b><blockquote>{html.escape(str(foot))}</blockquote></b>")
+
+    return "\n\n".join(text)
 
 
 def fmtsec(sec: object, part: int = 3, human: bool = False) -> str:
@@ -69,32 +110,3 @@ def fmtsec(sec: object, part: int = 3, human: bool = False) -> str:
             parts.append(f"{us}µs")
 
     return ", ".join(parts) if parts else "-"
-
-
-def fmtstr(head: str, data: object = None, foot: str = "", msgs: str = "") -> str:
-    body = ""
-    if isinstance(data, dict):
-        padd = max((len(str(k)) for k in data.keys()), default=0)
-        body = "\n".join(
-            f"  <code>{html.escape(str(k)).ljust(padd)}</code> : <code>{html.escape(str(v))}</code>"
-            for k, v in data.items()
-        )
-    elif isinstance(data, (list, set, tuple)):
-        body = "\n".join(
-            f"  <code>{n}</code>. <code>{html.escape(str(item))}</code>"
-            for n, item in enumerate(data, start=1)
-        )
-    elif data:
-        body = f"  <code>{html.escape(str(data))}</code>"
-
-    text = [f"<b>{head}</b>"]
-    if body:
-        text.append(body)
-
-    if msgs:
-        text.append(f"<blockquote expandable>{html.escape(str(msgs))}</blockquote>")
-
-    if foot:
-        text.append(f"<b><blockquote>{html.escape(str(foot))}</blockquote></b>")
-
-    return "\n\n".join(text)

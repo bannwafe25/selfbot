@@ -9,7 +9,7 @@ from pyrogram.types import Message
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtsec, fmtstr, ikm
+from selfbot.utils import fmtmsg, fmtsec, ikm
 
 pattern = re.compile(r"^afk(?:\s-r\s(.+))?$")
 
@@ -62,7 +62,7 @@ class AFK(Module):
             self.status, self.reason, self.since = True, reason, since
 
         await event.edit_text(
-            fmtstr(
+            fmtmsg(
                 "Away From Keyboard",
                 {"Status": self.status, "Reason": reason},
                 fmtsec(since),
@@ -78,7 +78,7 @@ class AFK(Module):
             wib = self.since.astimezone(datetime.timezone(datetime.timedelta(hours=7)))
             new, old = await asyncio.gather(
                 event.reply_text(
-                    fmtstr(
+                    fmtmsg(
                         "Away From Keyboard",
                         {
                             "Since": wib.strftime("%B %-d, %-I:%M %p"),

@@ -14,7 +14,7 @@ from pyrogram.types import (
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtsec, fmtstr, ikm
+from selfbot.utils import fmtmsg, fmtsec, ikm
 
 pattern = re.compile(r"^p(?:ing)?$")
 
@@ -62,6 +62,6 @@ class Ping(Module):
             self.ping(self.client.app), self.ping(self.client.bot)
         )
         await edit(
-            fmtstr("Selfbot Latency", {"App": app, "Bot": bot}, fmtsec(now)),
+            fmtmsg("Selfbot Latency", {"App": app, "Bot": bot}, fmtsec(now)),
             reply_markup=ikm([[("Ping!", b"ping")], [("Close", b"0")]]),
         )

@@ -8,7 +8,7 @@ from pyrogram.types import Message, ReplyParameters
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtbyte, fmtsec, fmtstr, prog
+from selfbot.utils import fmtbyte, fmtmsg, fmtsec, prog
 
 pattern = re.compile(
     r"^ul\s(.+?)(?:\s-to\s"
@@ -49,7 +49,7 @@ class Upload(Module):
             res = await fut
         except (asyncio.CancelledError, RPCError) as e:
             await event.edit_text(
-                fmtstr(
+                fmtmsg(
                     e.__class__.__name__,
                     (
                         e.MESSAGE.format(value=e.value)
@@ -61,7 +61,7 @@ class Upload(Module):
             )
         else:
             await event.edit_text(
-                fmtstr(
+                fmtmsg(
                     "Document Uploaded",
                     {
                         "Chat ID": f"{res.chat.id}\n",

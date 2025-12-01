@@ -20,7 +20,7 @@ else:
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtsec, fmtstr
+from selfbot.utils import fmtmsg, fmtsec
 
 pattern = re.compile(
     r"^call(?:\s-(start|end|join|leave))?"
@@ -105,7 +105,7 @@ class Call(Module):
         )
         if not action:
             await event.edit_text(
-                fmtstr(
+                fmtmsg(
                     "Joined Call IDs", tuple(await self.client.call.calls), fmtsec(now)
                 )
             )
@@ -118,7 +118,7 @@ class Call(Module):
                 chat = await event._client.get_chat(chat_id, False)
             except RPCError as e:
                 await event.edit_text(
-                    fmtstr(
+                    fmtmsg(
                         e.__class__.__name__,
                         e.MESSAGE.format(value=e.value),
                         fmtsec(now),
@@ -137,7 +137,7 @@ class Call(Module):
                     peer = await event._client.resolve_peer(join_as)
                 except RPCError as e:
                     await event.edit_text(
-                        fmtstr(
+                        fmtmsg(
                             e.__class__.__name__,
                             e.MESSAGE.format(value=e.value),
                             fmtsec(now),
@@ -167,7 +167,7 @@ class Call(Module):
             await func(**args)
         except RPCError as e:
             await event.edit_text(
-                fmtstr(
+                fmtmsg(
                     e.__class__.__name__, e.MESSAGE.format(value=e.value), fmtsec(now)
                 )
             )
@@ -203,4 +203,4 @@ class Call(Module):
                     "DELETE FROM call.chats WHERE chat_id = $1;", chat_id
                 )
 
-            await event.edit_text(fmtstr(**text, foot=fmtsec(now)))
+            await event.edit_text(fmtmsg(**text, foot=fmtsec(now)))
