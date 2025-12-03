@@ -72,12 +72,7 @@ def fmtsec(sec: object, part: int = 3, human: bool = False) -> str:
     if isinstance(sec, datetime.timedelta):
         delta = sec
     elif isinstance(sec, datetime.datetime):
-        if sec.tzinfo is None:
-            sec = sec.replace(tzinfo=datetime.UTC)
-        else:
-            sec = sec.astimezone(datetime.UTC)
-
-        delta = datetime.datetime.now(datetime.UTC) - sec
+        delta = datetime.datetime.now(datetime.UTC) - sec.astimezone(datetime.UTC)
     elif isinstance(sec, (float, int)):
         delta = datetime.timedelta(seconds=sec)
     else:
