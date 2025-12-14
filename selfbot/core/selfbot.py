@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import pathlib
 
 from httpx import AsyncClient
 
@@ -43,14 +42,3 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
             await self.db.close()
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
-
-    @property
-    def _git(self) -> str:
-        cwd = pathlib.Path.cwd().resolve()
-        while cwd != cwd.parent:
-            if (cwd / ".git").is_dir():
-                return str(cwd)
-
-            cwd = cwd.parent
-
-        return str(pathlib.Path.cwd())

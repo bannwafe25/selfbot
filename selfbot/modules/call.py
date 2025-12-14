@@ -7,7 +7,11 @@ from pyrogram.errors import ChannelPrivate, PeerIdInvalid, RPCError
 from pyrogram.types import Message
 from pyrogram.utils import get_channel_id
 
-load: bool
+from selfbot import listener
+from selfbot.module import Module
+from selfbot.utils import fmtmsg, fmtsec
+
+load = True
 try:
     from pytgcalls import PyTgCalls
     from pytgcalls.pytgcalls_session import PyTgCallsSession
@@ -15,12 +19,7 @@ try:
 except Exception:
     load = False
 else:
-    load = True
     PyTgCallsSession.notice_displayed = True
-
-from selfbot import listener
-from selfbot.module import Module
-from selfbot.utils import fmtmsg, fmtsec
 
 pattern = re.compile(
     r"^call(?:\s-(start|end|join|leave))?"

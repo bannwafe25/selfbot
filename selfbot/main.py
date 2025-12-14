@@ -27,11 +27,9 @@ def config() -> dict:
                 "API_ID",
                 "API_HASH",
                 "BOT_TOKEN",
-                "BRANCH",
                 "DATABASE_URL",
                 "GEMINI_API_KEY",
                 "GEMINI_MODEL",
-                "REMOTE",
                 "STICKER_FILE_ID",
             )
         }

@@ -29,7 +29,6 @@ from pyrogram.types import (
     LinkPreviewOptions,
     ReplyKeyboardMarkup,
     Update,
-    WebAppInfo,
 )
 
 from selfbot import __version__
@@ -78,16 +77,6 @@ class Telegram(abc.ABC):
                     disable_notification=True,
                     reply_markup=ReplyKeyboardMarkup(
                         [
-                            [
-                                KeyboardButton(
-                                    "GitHub Commit History",
-                                    web_app=WebAppInfo(
-                                        url=f"{self.config.get(
-            'REMOTE', 'https://github.com/DeltaUniverse/selfbot'
-        ).removesuffix('.git')}/commits/{self.config.get('BRANCH', 'staging')}"
-                                    ),
-                                )
-                            ],
                             [
                                 KeyboardButton(
                                     "Admin Channels",
@@ -143,7 +132,6 @@ class Telegram(abc.ABC):
         for key in ("API_ID", "API_HASH", "BOT_TOKEN"):
             self.config.pop(key, None)
 
-        self.git = self._git
         try:
             await self.app.start()
         except RPCError as e:

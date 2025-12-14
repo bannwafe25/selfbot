@@ -117,8 +117,9 @@ class Debug(Module):
     @listener.handler(filters.private & filters.self_destruct, 2)
     async def on_message_in(self, event: Message) -> None:
         func = getattr(self.client.bot, f"send_{event.media.value}")
-        kwargs, attr = inspect.signature(func).parameters, getattr(
-            event, event.media.value
+        kwargs, attr = (
+            inspect.signature(func).parameters,
+            getattr(event, event.media.value),
         )
         await func(
             **{
