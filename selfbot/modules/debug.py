@@ -74,6 +74,7 @@ class Debug(Module):
             "app": self.client.app,
             "bot": self.client.bot,
             "http": self.client.http,
+            "loop": self.client.loop,
         }
 
     async def on_started(self) -> None:

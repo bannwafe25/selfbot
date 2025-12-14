@@ -16,15 +16,14 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
         super().__init__()
 
     @classmethod
-    async def launch(cls, config: dict) -> "Selfbot":
+    async def launch(cls, config: dict, loop: asyncio.AbstractEventLoop) -> "Selfbot":
         selfbot = cls(config)
         try:
             selfbot.http = AsyncClient(timeout=900)
+            selfbot.loop = loop
             await selfbot.run()
         finally:
-            loop = asyncio.get_running_loop()
-            if loop and not loop.is_closed():
-                loop.call_soon(loop.stop)
+            await selfbot.stop()
 
         return selfbot
 
@@ -42,3 +41,5 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
             await self.db.close()
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
+        else:
+            self.logger.info(f"{self.__class__.__name__} Stopped")

@@ -122,9 +122,6 @@ class Telegram(abc.ABC):
         else:
             self.logger.info(f"{self.__class__.__name__} {res}tarted")
             await self.idle()
-        finally:
-            await self.stop()
-            self.logger.info(f"{self.__class__.__name__} Stopped")
 
     async def start(self) -> None:
         self.app = self._app
@@ -178,7 +175,7 @@ class Telegram(abc.ABC):
                 self.__idle__.set()
 
         for signame in signames:
-            asyncio.get_running_loop().add_signal_handler(
+            self.loop.add_signal_handler(
                 signame, functools.partial(sighandler, signame)
             )
 
@@ -188,7 +185,7 @@ class Telegram(abc.ABC):
         finally:
             for signame in signames:
                 with contextlib.suppress(Exception):
-                    asyncio.get_running_loop().remove_signal_handler(signame)
+                    self.loop.remove_signal_handler(signame)
 
     def updates(self) -> None:
         fltapp = flt.user(self.app.me.id)

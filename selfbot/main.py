@@ -2,8 +2,16 @@ import asyncio
 import logging
 import os
 
-import aiorun
 from dotenv import dotenv_values
+
+try:
+    import uvloop
+except ImportError:
+    loop = asyncio.new_event_loop()
+else:
+    loop = uvloop.new_event_loop()
+finally:
+    asyncio.set_event_loop(loop)
 
 from .core import Selfbot
 
@@ -39,14 +47,12 @@ def config() -> dict:
 
 def run() -> None:
     try:
-        import uvloop
-    except ImportError:
-        pass
-    else:
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
-    aiorun.logger.disabled = True
-    aiorun.run(Selfbot.launch(config()))
+        loop.run_until_complete(Selfbot.launch(config(), loop))
+    except RuntimeError as e:
+        logging.critical(f"{e.__class__.__name__}: {e}")
+    finally:
+        if loop and not loop.is_closed():
+            loop.close()
 
 
 if __name__ == "__main__":
