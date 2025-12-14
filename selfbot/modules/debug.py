@@ -44,45 +44,41 @@ class Debug(Module):
         "?": "Optional",
         "e.g.": 'print("Hello, World!")#',
     }
-    args = {
-        "asyncio": asyncio,
-        "dt": datetime,
-        "inspect": inspect,
-        "io": io,
-        "re": re,
-        "pyrogram": pyrogram,
-        "filters": filters,
-        "enums": pyrogram.enums,
-        "raw": pyrogram.raw,
-        "types": pyrogram.types,
-        "utils": pyrogram.utils,
-        "aexec": aexec,
-        "fmtbar": fmtbar,
-        "fmtbyte": fmtbyte,
-        "fmtexc": fmtexc,
-        "fmtmsg": fmtmsg,
-        "fmtsec": fmtsec,
-        "ids": ids,
-        "ikm": ikm,
-        "prog": prog,
-        "shell": shell,
-    }
 
     async def on_loading(self) -> None:
-        self.args.update(
-            {
-                "self": self,
-                "client": self.client,
-                "db": self.client.db,
-                "app": self.client.app,
-                "bot": self.client.bot,
-                "http": self.client.http,
-            }
-        )
+        self.kwargs = {
+            "asyncio": asyncio,
+            "dt": datetime,
+            "inspect": inspect,
+            "io": io,
+            "re": re,
+            "pyrogram": pyrogram,
+            "filters": filters,
+            "enums": pyrogram.enums,
+            "raw": pyrogram.raw,
+            "types": pyrogram.types,
+            "utils": pyrogram.utils,
+            "aexec": aexec,
+            "fmtbar": fmtbar,
+            "fmtbyte": fmtbyte,
+            "fmtexc": fmtexc,
+            "fmtmsg": fmtmsg,
+            "fmtsec": fmtsec,
+            "ids": ids,
+            "ikm": ikm,
+            "prog": prog,
+            "shell": shell,
+            "self": self,
+            "client": self.client,
+            "db": self.client.db,
+            "app": self.client.app,
+            "bot": self.client.bot,
+            "http": self.client.http,
+        }
 
     async def on_started(self) -> None:
         if hasattr(self.client, "call"):
-            self.args["call"] = self.client.call
+            self.kwargs["call"] = self.client.call
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -121,7 +117,7 @@ class Debug(Module):
     @listener.handler(filters.private & filters.self_destruct, 2)
     async def on_message_in(self, event: Message) -> None:
         func = getattr(self.client.bot, f"send_{event.media.value}")
-        args, attr = inspect.signature(func).parameters, getattr(
+        kwargs, attr = inspect.signature(func).parameters, getattr(
             event, event.media.value
         )
         await func(
@@ -136,13 +132,13 @@ class Debug(Module):
                         attr.thumbs[0].file_id, in_memory=True
                     )
                 }
-                if attr.thumbs and "thumb" in args
+                if attr.thumbs and "thumb" in kwargs
                 else {}
             ),
             **{
                 k: v
                 for k, v in attr.__dict__.items()
-                if k in args and k not in ("ttl_seconds", "protect_content")
+                if k in kwargs and k not in ("ttl_seconds", "protect_content")
             },
             disable_notification=True,
             reply_markup=ikm(
@@ -227,10 +223,10 @@ class Debug(Module):
             code = msg.content.markdown
             ikb[0].insert(0, ("Run", "1"))
 
-        self.args.update(
+        self.kwargs.update(
             {
                 "msg": msg,
-                "rep": msg.reply_to_message,
+                "rep": msg.external_reply or msg.reply_to_message,
                 "chat": msg.chat,
                 "user": (msg.reply_to_message or msg).from_user,
                 "event": event,
@@ -242,7 +238,7 @@ class Debug(Module):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             fut = asyncio.create_task(
-                aexec(code, self.args),
+                aexec(code, self.kwargs),
                 name=(
                     f"{event.chat.id}/{event.id}"
                     if isinstance(event, Message)

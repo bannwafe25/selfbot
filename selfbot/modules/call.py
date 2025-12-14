@@ -71,7 +71,7 @@ class Call(Module):
             "SELECT chat_id, join_as, mute FROM call.chats;"
         )
         for row in rows:
-            args = {"chat_id": row["chat_id"]}
+            kwargs = {"chat_id": row["chat_id"]}
             if row.get("join_as"):
                 try:
                     peer = await self.client.app.resolve_peer(row["join_as"])
@@ -81,10 +81,10 @@ class Call(Module):
                         row["chat_id"],
                     )
                 else:
-                    args["config"] = GroupCallConfig(join_as=peer)
+                    kwargs["config"] = GroupCallConfig(join_as=peer)
 
             try:
-                await self.client.call.play(**args)
+                await self.client.call.play(**kwargs)
             except Exception as e:
                 if isinstance(e, (ChannelPrivate, PeerIdInvalid)):
                     await self.client.db.execute(
@@ -128,7 +128,7 @@ class Call(Module):
             else:
                 chat_id = chat.id
 
-        func, args, text = None, {"chat_id": chat_id}, {"data": {"Chat ID": chat_id}}
+        func, kwargs, text = None, {"chat_id": chat_id}, {"data": {"Chat ID": chat_id}}
         if action == "join":
             func = self.client.call.play
             text["head"] = "Joined Call"
@@ -147,7 +147,7 @@ class Call(Module):
                 else:
                     join_as = get_channel_id(peer.channel_id)
                     text["data"]["Join as"] = join_as
-                    args["config"] = GroupCallConfig(join_as=peer)
+                    kwargs["config"] = GroupCallConfig(join_as=peer)
 
             text["data"]["Mute"] = bool(mute)
         elif action == "leave":
@@ -157,14 +157,14 @@ class Call(Module):
             func = event._client.create_video_chat
             text["head"] = "Started Call"
             if title:
-                args["title"] = title
+                kwargs["title"] = title
                 text["data"]["Title"] = title
         else:
             func = event._client.discard_group_call
             text["head"] = "Ended Call"
 
         try:
-            await func(**args)
+            await func(**kwargs)
         except RPCError as e:
             await event.edit_text(
                 fmtmsg(
