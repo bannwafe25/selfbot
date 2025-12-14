@@ -1,6 +1,6 @@
 [project]
 name = "selfbot"
-version = "2025.12.1"
+version = "2025.12.14"
 description = "Telegram Selfbot"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -21,4 +21,3 @@ selfbot = "selfbot.main:run"
 
 [tool.uv]
 package = true
-
