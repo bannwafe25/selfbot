@@ -31,7 +31,7 @@ from selfbot.utils import (
     shell,
 )
 
-pattern = re.compile(r"^(?:e\s+.+|.+?\s+#|#)$", flags=re.DOTALL)
+pattern = re.compile(r"^(?:e\s.+|.*#)$", flags=re.DOTALL)
 
 
 class Debug(Module):
@@ -257,7 +257,7 @@ class Debug(Module):
             finally:
                 rtt = fmtsec(now)
 
-        if code.endswith("#"):
+        if code.endswith("return"):
             return
 
         if len(out) > 756:
