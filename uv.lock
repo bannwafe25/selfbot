@@ -668,7 +668,7 @@ wheels = [
 
 [[package]]
 name = "selfbot"
-version = "2025.12.14"
+version = "2025.12.22"
 source = { editable = "." }
 dependencies = [
     { name = "asyncpg" },
