@@ -126,9 +126,6 @@ class Telegram(abc.ABC):
     async def start(self) -> None:
         self.app = self._app
         self.bot = self._bot
-        for key in ("API_ID", "API_HASH", "BOT_TOKEN"):
-            self.config.pop(key, None)
-
         try:
             await self.app.start()
         except RPCError as e:
@@ -226,10 +223,10 @@ class Telegram(abc.ABC):
     def build(self, name: str, updates: tuple = (), **kwargs) -> Client:
         client = Client(
             name=name,
-            api_id=self.config.get("API_ID"),
-            api_hash=self.config.get("API_HASH"),
-            app_version=__version__,
-            device_model=self.__class__.__name__,
+            api_id=2496,
+            api_hash="8da85b0d5bfe62527e5b244c209159c3",
+            app_version="2.2 K",
+            device_model="Chrome 143",
             parse_mode=ParseMode.HTML,
             skip_updates=True,
             sleep_threshold=15,
@@ -237,7 +234,7 @@ class Telegram(abc.ABC):
             max_message_cache_size=0,
             max_business_user_connection_cache_size=0,
             no_joined_notifications=True,
-            client_platform=ClientPlatform.WEB,
+            client_platform=ClientPlatform.ANDROID,
             link_preview_options=LinkPreviewOptions(is_disabled=True),
             storage_engine=PostgreStorage(name, self.db),
             **kwargs,
@@ -266,5 +263,4 @@ class Telegram(abc.ABC):
                 UpdateInlineBotCallbackQuery,
                 UpdateNewMessage,
             ),
-            bot_token=self.config.get("BOT_TOKEN"),
         )
