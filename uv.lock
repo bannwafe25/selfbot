@@ -1,6 +1,6 @@
 version = 1
 revision = 3
-requires-python = ">=3.12"
+requires-python = ">=3.12, <3.15"
 
 [[package]]
 name = "aiohappyeyeballs"
@@ -683,14 +683,14 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "asyncpg", specifier = ">=0.31.0" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "py-tgcalls", specifier = ">=2.2.8" },
-    { name = "pyrotgfork", specifier = ">=2.2.17" },
+    { name = "asyncpg", specifier = "==0.31.0" },
+    { name = "httpx", specifier = "==0.28.1" },
+    { name = "py-tgcalls", specifier = "==2.2.8" },
+    { name = "pyrotgfork", specifier = "==2.2.17" },
     { name = "pytgcrypto", git = "https://github.com/TelegramPlayground/pyrogram-tgcrypto" },
-    { name = "python-dotenv", specifier = ">=1.2.1" },
-    { name = "telegraph", extras = ["aio"], specifier = ">=2.2.0" },
-    { name = "uvloop", specifier = ">=0.22.1" },
+    { name = "python-dotenv", specifier = "==1.2.1" },
+    { name = "telegraph", extras = ["aio"], specifier = "==2.2.0" },
+    { name = "uvloop", specifier = "==0.22.1" },
 ]
 
 [[package]]
