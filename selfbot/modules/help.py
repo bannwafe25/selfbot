@@ -40,7 +40,9 @@ class Help(Module):
     async def on_message_out(self, event: Message) -> None:
         _, res = await asyncio.gather(
             event.edit_text("<code>...</code>"),
-            event._client.get_inline_bot_results(self.client.bot.me.id, event.content),
+            event._client.get_inline_bot_results(
+                self.client.bot.me.id, event.content, chat_id=event.chat.id
+            ),
         )
         await asyncio.gather(
             event.reply_inline_bot_result(

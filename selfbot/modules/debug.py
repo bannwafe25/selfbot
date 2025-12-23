@@ -100,7 +100,9 @@ class Debug(Module):
                 event.edit_text(
                     html.escape(event.content.markdown).removesuffix("#").rstrip()
                 ),
-                event._client.get_inline_bot_results(self.client.bot.me.id, "#"),
+                event._client.get_inline_bot_results(
+                    self.client.bot.me.id, "#", chat_id=event.chat.id
+                ),
             )
             await event.reply_inline_bot_result(
                 res.query_id, res.results[0].id, quote=True
