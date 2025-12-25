@@ -227,6 +227,7 @@ class Telegram(abc.ABC):
             api_hash="8da85b0d5bfe62527e5b244c209159c3",
             app_version="2.2 K",
             device_model="Chrome 143",
+            workdir="./selfbot/",
             parse_mode=ParseMode.HTML,
             skip_updates=True,
             sleep_threshold=15,
