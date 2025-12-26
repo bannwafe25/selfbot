@@ -235,7 +235,7 @@ class Telegram(abc.ABC):
             max_message_cache_size=0,
             max_business_user_connection_cache_size=0,
             no_joined_notifications=True,
-            client_platform=ClientPlatform.ANDROID,
+            client_platform=ClientPlatform.WEB,
             link_preview_options=LinkPreviewOptions(is_disabled=True),
             storage_engine=PostgreStorage(name, self.db),
             **kwargs,
