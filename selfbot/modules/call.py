@@ -22,7 +22,7 @@ else:
     PyTgCallsSession.notice_displayed = True
 
 pattern = re.compile(
-    r"^call(?:\s-(start|end|join|leave))?"
+    r"^call(?:\s-(start|end|join|leave))"
     r"(?:\s(@?[a-zA-Z][a-zA-Z0-9_]{2,31}[a-zA-Z0-9]|-100[1-9]\d{9}|[1-9]\d{1,9}))?"
     r"(?:\s-as\s(@?[a-zA-Z][a-zA-Z0-9_]{1,31}[a-zA-Z0-9]))?"
     r"(?:\s(-mute))?(?:\s-t\s(.+))?$"
@@ -31,9 +31,8 @@ pattern = re.compile(
 
 class Call(Module):
     name = "Group Call"
-    cmds = "call (-{action} {chat})? (-as {peer})? (-mute)? (-t {title})?"
+    cmds = "call -{action} {chat}? (-as {peer})? (-mute)? (-t {title})?"
     desc = {
-        "call": "Joined Call IDs",
         "action": "(join|leave|start|end)",
         "chat": "Chat ID or Username",
         "peer": "Username",
@@ -102,14 +101,6 @@ class Call(Module):
             datetime.datetime.now(datetime.UTC),
             pattern.match(event.content).groups(),
         )
-        if not action:
-            await event.edit_text(
-                fmtmsg(
-                    "Joined Call IDs", tuple(await self.client.call.calls), fmtsec(now)
-                )
-            )
-            return
-
         if not chat_id:
             chat_id = event.chat.id
         else:

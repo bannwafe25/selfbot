@@ -36,11 +36,11 @@ pattern = re.compile(r"^(?:e\s.+|.*#)$", flags=re.DOTALL)
 
 class Debug(Module):
     name = "Code Execute"
-    cmds = "e? {code} #?"
+    cmds = "{prefix}? {code} {suffix}?"
     desc = {
-        "e": "Prefix (No Inline)",
+        "prefix": "e",
         "code": "String",
-        "#": "Suffix (Inline)",
+        "suffix": "# (Inline)",
         "?": "Optional",
         "e.g.": 'print("Hello, World!")#',
     }

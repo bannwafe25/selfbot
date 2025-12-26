@@ -19,11 +19,11 @@ pattern = re.compile(r"^(?:(.+?)\s)?\!\?(?:\s-i)?$", flags=re.DOTALL)
 
 class GenAI(Module):
     name = "Google Gemini"
-    cmds = "{query} !? (-i)?"
+    cmds = "{query} {infix} {suffix}?"
     desc = {
         "query": "String or <Reply or Quote>",
-        "!?": "Infix",
-        "-i": "Ignore Replied Content",
+        "infix": "!?",
+        "suffix": "-i (Ignore)",
         "?": "Optional",
         "e.g.": "Hello, World! !?",
     }
