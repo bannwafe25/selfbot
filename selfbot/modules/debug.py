@@ -209,7 +209,11 @@ class Debug(Module):
         msg, cmd = await asyncio.gather(
             self.client.app.get_replied_message(cid, mid),
             self.client.app.get_messages(cid, mid),
+            return_exceptions=True,
         )
+        if isinstance(msg, Exception):
+            msg = None
+
         return msg, cmd
 
     async def execute(self, msg: Message, event: Update, btn: bool = False) -> None:
