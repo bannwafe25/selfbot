@@ -124,8 +124,18 @@ class Telegram(abc.ABC):
             await self.idle()
 
     async def start(self) -> None:
-        self.app = self._app
-        self.bot = self._bot
+        self.app = self.build(
+            "app", updates=(UpdateNewChannelMessage, UpdateNewMessage)
+        )
+        self.bot = self.build(
+            "bot",
+            updates=(
+                UpdateBotInlineQuery,
+                UpdateBotInlineSend,
+                UpdateInlineBotCallbackQuery,
+                UpdateNewMessage,
+            ),
+        )
         try:
             await self.app.start()
         except RPCError as e:
@@ -249,19 +259,3 @@ class Telegram(abc.ABC):
 
         setattr(client, "workers", len(client.dispatcher.update_parsers))
         return client
-
-    @property
-    def _app(self) -> Client:
-        return self.build("app", updates=(UpdateNewChannelMessage, UpdateNewMessage))
-
-    @property
-    def _bot(self) -> Client:
-        return self.build(
-            "bot",
-            updates=(
-                UpdateBotInlineQuery,
-                UpdateBotInlineSend,
-                UpdateInlineBotCallbackQuery,
-                UpdateNewMessage,
-            ),
-        )
