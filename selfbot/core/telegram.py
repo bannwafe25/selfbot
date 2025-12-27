@@ -230,7 +230,7 @@ class Telegram(abc.ABC):
                 finally:
                     self.handlers[name] = dispatcher
 
-    def build(self, name: str, updates: tuple = (), **kwargs) -> Client:
+    def build(self, name: str, updates: tuple = ()) -> Client:
         client = Client(
             name=name,
             api_id=2496,
@@ -248,7 +248,6 @@ class Telegram(abc.ABC):
             client_platform=ClientPlatform.WEB,
             link_preview_options=LinkPreviewOptions(is_disabled=True),
             storage_engine=PostgreStorage(name, self.db),
-            **kwargs,
         )
         if updates:
             client.dispatcher.update_parsers = {
@@ -256,6 +255,6 @@ class Telegram(abc.ABC):
                 for k, v in client.dispatcher.update_parsers.items()
                 if k in updates
             }
+            client.workers = len(client.dispatcher.update_parsers)
 
-        setattr(client, "workers", len(client.dispatcher.update_parsers))
         return client
