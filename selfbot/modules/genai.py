@@ -35,7 +35,7 @@ class GenAI(Module):
                     "Content-Type": "application/json",
                     "x-goog-api-key": self.client.config["GEMINI_API_KEY"],
                 },
-                timeout=45,
+                http2=True,
                 base_url="https://generativelanguage.googleapis.com",
             )
         except Exception as e:
