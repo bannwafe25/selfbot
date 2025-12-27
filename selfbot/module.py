@@ -70,12 +70,6 @@ class Module:
                 if listener.mod is self:
                     self.client.unregister(listener)
 
-    async def message(self, event: Message) -> object:
-        res, msg = await asyncio.gather(
-            asyncio.create_task(self.listen()), event.copy(self.client.bot.me.id)
-        )
-        return res
-
 
 class ModuleError(Exception):
     pass
