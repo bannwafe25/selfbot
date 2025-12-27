@@ -49,7 +49,7 @@ class Module:
             **kwargs,
         )
 
-    async def listen(self) -> object:
+    async def listen(self, timeout: int = 15) -> Message:
         fut = asyncio.Future()
 
         async def result(event: Message) -> None:
@@ -60,7 +60,7 @@ class Module:
 
         self.client.register(self, result, "message_bot", priority=-1)
         try:
-            res = await asyncio.wait_for(fut, timeout=5)
+            res = await asyncio.wait_for(fut, timeout=timeout)
         except Exception:
             return None
         else:
