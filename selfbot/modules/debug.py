@@ -86,7 +86,7 @@ class Debug(Module):
         if event.content.strip() == "#":
             for task in asyncio.all_tasks():
                 name = task.get_name()
-                if name.starswith("selfbot/"):
+                if name.startswith("selfbot/"):
                     if event.reply_to_message:
                         if (
                             name
