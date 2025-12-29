@@ -84,6 +84,7 @@ class Debug(Module):
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         if event.content.strip() == "#":
+            now, res = datetime.datetime.now(datetime.UTC), 0
             for task in asyncio.all_tasks():
                 name = task.get_name()
                 if name.startswith("selfbot/"):
@@ -93,11 +94,19 @@ class Debug(Module):
                             == f"selfbot/{event.chat.id}/{event.reply_to_message_id}"
                         ):
                             task.cancel()
-                            break
+                            await event.delete()
+                            return
                     else:
                         task.cancel()
+                        res += 1
 
-            await event.delete()
+            if res > 0:
+                await event.edit_text(
+                    fmtmsg(
+                        "Cancel", f"{res} Task{'' if res == 1 else 's'}", fmtsec(now)
+                    )
+                )
+
             return
 
         if event.content.endswith("#"):
