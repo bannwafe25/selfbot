@@ -49,7 +49,9 @@ def ikm(rows: list | tuple) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(ikb)
 
 
-async def prog(current: int, total: int, event: Update, title: str = "") -> None:
+async def prog(
+    current: int, total: int, event: Update, title: str = "Progress"
+) -> None:
     time = event._client.loop.time()
     if not hasattr(event, "_start"):
         event._start, event._last = time, time
@@ -65,7 +67,7 @@ async def prog(current: int, total: int, event: Update, title: str = "") -> None
 
         await edit(
             fmtmsg(
-                f"{title.title()} Progress".lstrip(),
+                title.lstrip(),
                 {
                     "Current": fmtbyte(current),
                     "Total": f"{fmtbyte(total)}\n",
@@ -76,6 +78,7 @@ async def prog(current: int, total: int, event: Update, title: str = "") -> None
                     ),
                 },
                 fmtbar(current, total),
-            )
+            ),
+            reply_markup=ikm(("Cancel", b"0")),
         )
         event._last = time

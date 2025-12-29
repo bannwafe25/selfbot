@@ -40,7 +40,7 @@ class Upload(Module):
                 document,
                 reply_parameters=rep_msg,
                 progress=prog,
-                progress_args=(event, "upload"),
+                progress_args=(event, "Uploading..."),
             ),
             name=f"{event.chat.id}/{event.id}",
         )

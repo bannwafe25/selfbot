@@ -99,7 +99,9 @@ class Download(Module):
     ) -> None:
         fut = asyncio.create_task(
             update.download(
-                file_name=file_name, progress=prog, progress_args=(event, "download")
+                file_name=file_name,
+                progress=prog,
+                progress_args=(event, "Downloading..."),
             ),
             name=f"{event.chat.id}/{event.id}",
         )
