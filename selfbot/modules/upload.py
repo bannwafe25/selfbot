@@ -42,7 +42,7 @@ class Upload(Module):
                 progress=prog,
                 progress_args=(event, "Uploading..."),
             ),
-            name=f"{event.chat.id}/{event.id}",
+            name=f"selfbot/{event.chat.id}/{event.id}",
         )
         now = datetime.datetime.now(datetime.UTC)
         try:

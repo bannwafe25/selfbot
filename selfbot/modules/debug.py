@@ -84,15 +84,20 @@ class Debug(Module):
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         if event.content.strip() == "#":
-            if event.reply_to_message:
-                for task in asyncio.all_tasks():
-                    if (
-                        task.get_name()
-                        == f"{event.chat.id}/{event.reply_to_message_id}"
-                    ):
+            for task in asyncio.all_tasks():
+                name = task.get_name()
+                if name.starswith("selfbot/"):
+                    if event.reply_to_message:
+                        if (
+                            name
+                            == f"selfbot/{event.chat.id}/{event.reply_to_message_id}"
+                        ):
+                            task.cancel()
+                            break
+                    else:
                         task.cancel()
-                        await event.delete()
 
+            await event.delete()
             return
 
         if event.content.endswith("#"):
@@ -187,7 +192,7 @@ class Debug(Module):
                 (
                     t
                     for t in asyncio.all_tasks()
-                    if t.get_name() == event.inline_message_id
+                    if t.get_name() == f"selfbot/{event.inline_message_id}"
                 ),
                 None,
             )
@@ -248,15 +253,15 @@ class Debug(Module):
             fut = asyncio.create_task(
                 aexec(code, self.kwargs),
                 name=(
-                    f"{event.chat.id}/{event.id}"
+                    f"selfbot/{event.chat.id}/{event.id}"
                     if isinstance(event, Message)
-                    else event.inline_message_id
+                    else f"selfbot/{event.inline_message_id}"
                 ),
             )
             now = datetime.datetime.now(datetime.UTC)
             try:
-                res = await asyncio.wait_for(fut, timeout=900)
-            except (asyncio.CancelledError, TimeoutError, Exception):
+                res = await fut
+            except (asyncio.CancelledError, Exception):
                 out = fmtexc()
             else:
                 out = (buf.getvalue() or str(res)).rstrip()

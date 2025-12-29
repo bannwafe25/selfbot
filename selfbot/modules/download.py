@@ -103,7 +103,7 @@ class Download(Module):
                 progress=prog,
                 progress_args=(event, "Downloading..."),
             ),
-            name=f"{event.chat.id}/{event.id}",
+            name=f"selfbot/{event.chat.id}/{event.id}",
         )
         now = datetime.datetime.now(datetime.UTC)
         try:
