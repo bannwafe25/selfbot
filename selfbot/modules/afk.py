@@ -85,7 +85,7 @@ class AFK(Module):
                             "Timezone": "UTC+7\n",
                             "Reason": self.reason,
                         },
-                        fmtsec(self.since),
+                        fmtsec(self.since, human=True),
                     )
                 ),
                 self.client.db.fetchval(
