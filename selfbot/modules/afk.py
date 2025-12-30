@@ -61,12 +61,13 @@ class AFK(Module):
             )
             self.status, self.reason, self.since = True, reason, since
 
-        await event.edit_text(
+        await self.respond(
+            event,
             fmtmsg(
                 "Away From Keyboard",
                 {"Status": self.status, "Reason": reason},
                 fmtsec(since),
-            )
+            ),
         )
 
     @listener.handler(~filters.private, 2)

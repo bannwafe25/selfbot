@@ -68,14 +68,11 @@ class Purge(Module):
             if len(mids) > 100 and res % 100 == 0:
                 await asyncio.sleep(2.5)
 
-        await asyncio.gather(
-            event.edit_text(
-                fmtmsg(
-                    f"Purge{'me' if me else ''}",
-                    f"{res} Message{'' if res == 1 else 's'}",
-                    fmtsec(now),
-                )
+        await self.respond(
+            event,
+            fmtmsg(
+                f"Purge{'me' if me else ''}",
+                f"{res} Message{'' if res == 1 else 's'}",
+                fmtsec(now),
             ),
-            asyncio.sleep(2.5),
         )
-        await event.delete()

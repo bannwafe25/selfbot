@@ -107,12 +107,13 @@ class Call(Module):
             try:
                 chat = await event._client.get_chat(chat_id, False)
             except RPCError as e:
-                await event.edit_text(
+                await self.respond(
+                    event,
                     fmtmsg(
                         e.__class__.__name__,
                         e.MESSAGE.format(value=e.value),
                         fmtsec(now),
-                    )
+                    ),
                 )
                 return
             else:
@@ -126,12 +127,13 @@ class Call(Module):
                 try:
                     peer = await event._client.resolve_peer(join_as)
                 except RPCError as e:
-                    await event.edit_text(
+                    await self.respond(
+                        event,
                         fmtmsg(
                             e.__class__.__name__,
                             e.MESSAGE.format(value=e.value),
                             fmtsec(now),
-                        )
+                        ),
                     )
                     return
                 else:
@@ -155,11 +157,12 @@ class Call(Module):
 
         try:
             await func(**kwargs)
-        except RPCError as e:
-            await event.edit_text(
+        except Exception as e:
+            await self.respond(
+                event,
                 fmtmsg(
                     e.__class__.__name__, e.MESSAGE.format(value=e.value), fmtsec(now)
-                )
+                ),
             )
         else:
             if action == "join":
@@ -193,4 +196,4 @@ class Call(Module):
                     "DELETE FROM call.chats WHERE chat_id = $1;", chat_id
                 )
 
-            await event.edit_text(fmtmsg(**text, foot=fmtsec(now)))
+            await self.respond(event, fmtmsg(**text, foot=fmtsec(now)))

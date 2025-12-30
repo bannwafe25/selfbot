@@ -35,7 +35,7 @@ class Graph(Module):
     @listener.handler(filters.regex(pattern) & listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         if not event.reply_to_message.content:
-            await event.edit_text("<code>Reply to Content</code>")
+            await self.respond(event, "<code>Reply to Content</code>")
             return
 
         await event.edit_text("<code>...</code>")
@@ -70,7 +70,7 @@ class Graph(Module):
             )
             url = res["url"]
         except Exception as e:
-            await event.edit_text(fmtmsg(e.__class__.__name__, str(e), fmtsec(now)))
+            await self.respond(event, fmtmsg(e.__class__.__name__, str(e), fmtsec(now)))
         else:
             if event.chat.type in (ChatType.PRIVATE, ChatType.BOT) or (
                 event.chat.type not in (ChatType.PRIVATE, ChatType.BOT)

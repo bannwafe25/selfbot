@@ -26,7 +26,7 @@ class Ping(Module):
 
     @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
-        await self.respond(event)
+        await self.execute(event)
 
     @listener.handler(filters.regex(pattern), 2)
     async def on_inline_query(self, event: InlineQuery) -> None:
@@ -34,18 +34,18 @@ class Ping(Module):
 
     @listener.handler(filters.regex(pattern), 3)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
-        await self.respond(event)
+        await self.execute(event)
 
     @listener.handler(filters.regex(pattern), 4)
     async def on_inline_callback(self, event: CallbackQuery) -> None:
-        await self.respond(event)
+        await self.execute(event)
 
     async def ping(self, client: Client) -> str:
         now = datetime.datetime.now(datetime.UTC)
         await client.invoke(Latency(ping_id=0))
         return fmtsec(now, 1)
 
-    async def respond(self, event: Update) -> None:
+    async def execute(self, event: Update) -> None:
         if isinstance(event, Message):
             edit = event.edit_text
         else:

@@ -54,7 +54,7 @@ class GenAI(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
-        await self.respond(event)
+        await self.execute(event)
 
     @listener.handler(filters.command("start"), 2)
     async def on_message_bot(self, event: Message) -> None:
@@ -79,7 +79,7 @@ class GenAI(Module):
 
     @listener.handler(filters.regex(pattern), 4)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
-        await self.respond(event)
+        await self.execute(event)
 
     async def gemini(self, model: str) -> str:
         try:
@@ -101,7 +101,7 @@ class GenAI(Module):
                 self.data.append(data)
                 return text
 
-    async def respond(self, event: Update) -> None:
+    async def execute(self, event: Update) -> None:
         if isinstance(event, ChosenInlineResult):
             text, edit = event.query, event.edit_message_text
         else:
@@ -178,8 +178,9 @@ class GenAI(Module):
                 elif event.reply_to_message.media == MessageMediaType.WEB_PAGE:
                     parts.append({"text": event.reply_to_message.content})
                 else:
-                    await edit(
-                        f"<code>Unsupported {html.escape(f'<{event.reply_to_message.media}>')}</code>"
+                    await self.respond(
+                        event,
+                        f"<code>Unsupported {html.escape(f'<{event.reply_to_message.media}>')}</code>",
                     )
                     return
             elif (
@@ -189,8 +190,9 @@ class GenAI(Module):
             ):
                 parts.append({"text": event.reply_to_message.content})
             elif not query:
-                await edit(
-                    f"<code>Give a Query or {html.escape('<Reply or Quote>')}</code>"
+                await self.respond(
+                    event,
+                    f"<code>Give a Query or {html.escape('<Reply or Quote>')}</code>",
                 )
                 return
 

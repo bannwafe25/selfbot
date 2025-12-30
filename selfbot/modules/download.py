@@ -39,8 +39,8 @@ class Download(Module):
         )
         if event.reply_to_message:
             if not event.reply_to_message.media:
-                await event.edit_text(
-                    f"<code>{html.escape('<MessageMediaType>')} None</code>"
+                await self.respond(
+                    event, f"<code>{html.escape('<MessageMediaType>')} None</code>"
                 )
                 return
             elif event.reply_to_message.media not in (
@@ -54,8 +54,9 @@ class Download(Module):
                 MessageMediaType.VIDEO_NOTE,
                 MessageMediaType.VOICE,
             ):
-                await event.edit_text(
-                    f"<code>Unsupported {html.escape(f'<{event.reply_to_message.media}>')}</code>"
+                await self.respond(
+                    event,
+                    f"<code>Unsupported {html.escape(f'<{event.reply_to_message.media}>')}</code>",
                 )
                 return
             elif event.reply_to_message.media == MessageMediaType.STORY:
@@ -67,8 +68,9 @@ class Download(Module):
                 update = event.reply_to_message
         else:
             if not chat_id:
-                await event.edit_text(
-                    f"<code>{html.escape('<Reply>')} or Give a Message or Story URL </code>"
+                await self.respond(
+                    event,
+                    f"<code>{html.escape('<Reply>')} or Give a Message or Story URL </code>",
                 )
                 return
             else:
@@ -83,12 +85,13 @@ class Download(Module):
                 try:
                     update = await func(chat_id, int(update_id))
                 except RPCError as e:
-                    await event.edit_text(
+                    await self.respond(
+                        event,
                         fmtmsg(
                             e.__class__.__name__,
                             e.MESSAGE.format(value=e.value),
                             fmtsec(now),
-                        )
+                        ),
                     )
                     return
 
@@ -109,7 +112,8 @@ class Download(Module):
         try:
             res = await fut
         except (asyncio.CancelledError, Exception) as e:
-            await event.edit_text(
+            await self.respond(
+                event,
                 fmtmsg(
                     e.__class__.__name__,
                     (
@@ -118,7 +122,7 @@ class Download(Module):
                         else str(e)
                     ),
                     fmtsec(now),
-                )
+                ),
             )
         else:
             obj = getattr(update, update.media.value)

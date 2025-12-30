@@ -48,7 +48,8 @@ class Upload(Module):
         try:
             res = await fut
         except (asyncio.CancelledError, RPCError) as e:
-            await event.edit_text(
+            await self.respond(
+                event,
                 fmtmsg(
                     e.__class__.__name__,
                     (
@@ -57,7 +58,7 @@ class Upload(Module):
                         else str(e)
                     ),
                     fmtsec(now),
-                )
+                ),
             )
         else:
             await event.edit_text(

@@ -101,10 +101,11 @@ class Debug(Module):
                         res += 1
 
             if res > 0:
-                await event.edit_text(
+                await self.respond(
+                    event,
                     fmtmsg(
                         "Cancel", f"{res} Task{'' if res == 1 else 's'}", fmtsec(now)
-                    )
+                    ),
                 )
 
             return
