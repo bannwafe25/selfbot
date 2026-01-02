@@ -232,7 +232,6 @@ class Debug(Module):
         return msg, cmd
 
     async def execute(self, msg: Message, event: Update, btn: bool = False) -> None:
-        edit = None
         if isinstance(event, Message):
             edit = event.edit_text
         else:
