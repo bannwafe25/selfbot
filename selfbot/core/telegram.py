@@ -69,7 +69,9 @@ class Telegram(abc.ABC):
                 await asyncio.gather(
                     self.app.edit_message_text(row["chat_id"], row["message_id"], msg),
                     self.db.execute("TRUNCATE restart.msg;"),
+                    asyncio.sleep(2.5),
                 )
+                await self.app.delete_messages(row["chat_id"], row["message_id"])
             else:
                 await self.bot.send_message(
                     self.app.me.id,
