@@ -158,12 +158,7 @@ class Call(Module):
         try:
             await func(**kwargs)
         except Exception as e:
-            await self.respond(
-                event,
-                fmtmsg(
-                    e.__class__.__name__, e.MESSAGE.format(value=e.value), fmtsec(now)
-                ),
-            )
+            await self.respond(event, fmtmsg(e.__class__.__name__, str(e), fmtsec(now)))
         else:
             if action == "join":
                 if mute:
