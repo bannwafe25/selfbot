@@ -32,6 +32,8 @@ class Module:
         event: InlineQuery,
         reply_markup: InlineKeyboardMarkup = None,
         message_text: str = "",
+        *args,
+        **kwargs,
     ) -> None:
         if not reply_markup:
             reply_markup = ikm((">_", "user_id", event._client.me.id))
@@ -46,7 +48,9 @@ class Module:
                     reply_markup=reply_markup,
                     input_message_content=InputTextMessageContent(message_text),
                 )
-            ]
+            ],
+            *args,
+            **kwargs,
         )
 
     async def listen(self, revoke: bool = False, timeout: int = 15) -> Message:
