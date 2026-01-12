@@ -12,7 +12,6 @@ from pyrogram.types import ChosenInlineResult, InlineQuery, Message, Sticker, Up
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtsec, ikm
 
 pattern = re.compile(r"^(?:(.+?)\s)?\!\?(?:\s-i)?$", flags=re.DOTALL)
 
@@ -65,7 +64,7 @@ class GenAI(Module):
             resp = await event.reply_sticker(
                 self.client.config["STICKER_FILE_ID"],
                 reply_parameters=ReplyParameters(message_id=event.id),
-                reply_markup=ikm(("...", "switch_inline_query", "")),
+                reply_markup=self.ikm(("...", "switch_inline_query", "")),
             )
             async with self.lock:
                 self.data.clear()
@@ -116,7 +115,7 @@ class GenAI(Module):
                 await self.respond(
                     event,
                     "<code>Give a Query with Suffix '!?'</code>",
-                    reply_markup=ikm(("Close", b"0")),
+                    reply_markup=self.ikm(("Close", b"0")),
                     revoke=2.5,
                 )
                 return
@@ -212,7 +211,7 @@ class GenAI(Module):
             res = await self.gemini(
                 self.client.config.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
             )
-            rtt = fmtsec(now)
+            rtt = self.fmtsec(now)
             if len(res) > 2048:
                 raw, url = await asyncio.gather(
                     event._client.parser.parse(res, ParseMode.MARKDOWN),
@@ -229,5 +228,5 @@ class GenAI(Module):
                 event,
                 f"{question}{res}\n\n> **{rtt}**",
                 parse_mode=ParseMode.MARKDOWN,
-                reply_markup=ikm(ikb),
+                reply_markup=self.ikm(ikb),
             )

@@ -9,7 +9,6 @@ from pyrogram.types import Message
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtmsg, fmtsec, ikm
 
 pattern = re.compile(r"^afk(?:\s-r\s(.+))?$")
 
@@ -63,10 +62,10 @@ class AFK(Module):
 
         await self.respond(
             event,
-            fmtmsg(
+            self.fmtmsg(
                 "Away From Keyboard",
                 {"Status": self.status, "Reason": reason},
-                fmtsec(since),
+                self.fmtsec(since),
             ),
             revoke=2.5,
         )
@@ -81,14 +80,14 @@ class AFK(Module):
             new, old = await asyncio.gather(
                 self.respond(
                     event,
-                    fmtmsg(
+                    self.fmtmsg(
                         "Away From Keyboard",
                         {
                             "Since": wib.strftime("%B %-d, %-I:%M %p"),
                             "Timezone": "UTC+7\n",
                             "Reason": self.reason,
                         },
-                        fmtsec(self.since, human=True),
+                        self.fmtsec(self.since, human=True),
                     ),
                 ),
                 self.client.db.fetchval(
@@ -119,7 +118,7 @@ class AFK(Module):
                 event._client.me.id,
                 self.client.config["STICKER_FILE_ID"],
                 disable_notification=True,
-                reply_markup=ikm(
+                reply_markup=self.ikm(
                     (
                         "Mention",
                         "url",

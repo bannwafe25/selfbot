@@ -7,7 +7,6 @@ from pyrogram.types import CallbackQuery, InlineQuery, Message, ReplyParameters
 
 from selfbot import __version__, listener
 from selfbot.module import Module
-from selfbot.utils import ikm
 
 pattern = re.compile(r"^help/?(mod|info|page)?(?:/(\d{1}|[a-zA-Z]+))?$")
 
@@ -26,7 +25,7 @@ class Help(Module):
             self.mods[name] = (
                 f"<b>{mod.name}</b>\n\n{' ' * 2}<b>Pattern</b>"
                 f"\n{' ' * 4}<code>{html.escape(mod.cmds)}</code>"
-                f"\n\n{self._fmthelp(mod.desc)}"
+                f"\n\n{self.fmthelp(mod.desc)}"
             )
             page.append((mod.__class__.__name__, f"help/mod/{name}".encode()))
             if len(page) == 4:
@@ -60,7 +59,9 @@ class Help(Module):
             if name in self.mods:
                 await self.answer(
                     event,
-                    ikm([("« Back", f"help/page/{self.maps[name]}"), ("Close", b"0")]),
+                    self.ikm(
+                        [("« Back", f"help/page/{self.maps[name]}"), ("Close", b"0")]
+                    ),
                     self.mods[name],
                 )
             else:
@@ -70,7 +71,7 @@ class Help(Module):
                 ]
                 await self.answer(
                     event,
-                    ikm(("Close", b"0")),
+                    self.ikm(("Close", b"0")),
                     (
                         f"<code>No Module with Name '{name}'</code>\n\n"
                         f"<b>Available Modules:</b>\n{'\n'.join(names)}\n\n"
@@ -81,7 +82,7 @@ class Help(Module):
 
             return
 
-        await self.answer(event, ikm(self.build()), "<b>Selfbot Modules</b>")
+        await self.answer(event, self.ikm(self.build()), "<b>Selfbot Modules</b>")
 
     @listener.handler(filters.regex(pattern), 4)
     async def on_inline_callback(self, event: CallbackQuery) -> None:
@@ -104,14 +105,14 @@ class Help(Module):
             await self.respond(
                 event,
                 self.mods[val],
-                reply_markup=ikm(
+                reply_markup=self.ikm(
                     [("« Back", f"help/page/{page}".encode()), ("Close", b"0")]
                 ),
             )
             return
 
         await self.respond(
-            event, "<b>Selfbot Modules</b>", reply_markup=ikm(self.build(int(val)))
+            event, "<b>Selfbot Modules</b>", reply_markup=self.ikm(self.build(int(val)))
         )
 
     def build(self, page: int = 0) -> list:
@@ -128,16 +129,3 @@ class Help(Module):
 
         ikb.append(nav)
         return ikb
-
-    @staticmethod
-    def _fmthelp(data: object) -> str:
-        if isinstance(data, dict):
-            res = [
-                f"{' ' * 4}• <b>{k}</b>\n{' ' * 6}<code>{html.escape(v)}</code>"
-                for k, v in data.items()
-            ]
-            return "\n".join(res)
-        elif isinstance(data, list):
-            return "\n".join([f"{' ' * 4}• <b>{i}</b>" for i in data])
-
-        return f"{' ' * 4}<b>{data}</b>"

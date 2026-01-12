@@ -1,15 +1,9 @@
-from .debug import aexec, shell
-from .fmt import fmtbar, fmtbyte, fmtexc, fmtmsg, fmtsec
-from .tg import ids, ikm
+from .debug import Debug
+from .fmt import Format
+from .tg import Telegram
 
-__all__ = [
-    "aexec",
-    "fmtbar",
-    "fmtbyte",
-    "fmtexc",
-    "fmtmsg",
-    "fmtsec",
-    "ids",
-    "ikm",
-    "shell",
-]
+__all__ = ["Utils"]
+
+
+class Utils(Debug, Format, Telegram):
+    pass

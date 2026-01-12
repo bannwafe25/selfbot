@@ -11,7 +11,6 @@ from pyrogram.utils import get_channel_id
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtbyte, fmtmsg, fmtsec
 
 pattern = re.compile(
     r"^dl\s?(?:(?:https?://)?t\.me/(c/)?"
@@ -91,10 +90,10 @@ class Download(Module):
                 except RPCError as e:
                     await self.respond(
                         event,
-                        fmtmsg(
+                        self.fmtmsg(
                             e.__class__.__name__,
                             e.MESSAGE.format(value=e.value),
-                            fmtsec(now),
+                            self.fmtsec(now),
                         ),
                         revoke=2.5,
                     )
@@ -119,14 +118,14 @@ class Download(Module):
         except (asyncio.CancelledError, Exception) as e:
             await self.respond(
                 event,
-                fmtmsg(
+                self.fmtmsg(
                     e.__class__.__name__,
                     (
                         e.MESSAGE.format(value=e.value)
                         if isinstance(e, RPCError)
                         else str(e)
                     ),
-                    fmtsec(now),
+                    self.fmtsec(now),
                 ),
                 revoke=2.5,
             )
@@ -134,11 +133,11 @@ class Download(Module):
             obj = getattr(update, update.media.value)
             await self.respond(
                 event,
-                fmtmsg(
+                self.fmtmsg(
                     "Media Downloaded",
                     {
                         "File Path": res,
-                        "File Size": f"{fmtbyte(obj.file_size)}\n",
+                        "File Size": f"{self.fmtbyte(obj.file_size)}\n",
                         **(
                             {"MIME Type": f"{obj.mime_type}\n"}
                             if hasattr(obj, "mime_type")
@@ -147,11 +146,11 @@ class Download(Module):
                         **({"Width": obj.width} if hasattr(obj, "width") else {}),
                         **({"Height": obj.height} if hasattr(obj, "height") else {}),
                         **(
-                            {"Duration": fmtsec(obj.duration, human=True)}
+                            {"Duration": self.fmtsec(obj.duration, human=True)}
                             if hasattr(obj, "duration")
                             else {}
                         ),
                     },
-                    fmtsec(now),
+                    self.fmtsec(now),
                 ),
             )

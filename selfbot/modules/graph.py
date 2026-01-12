@@ -8,7 +8,6 @@ from telegraph.aio import Telegraph
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtmsg, fmtsec
 
 pattern = re.compile(r"^graph(?:\s-t\s(.+))?$")
 
@@ -71,7 +70,9 @@ class Graph(Module):
             url = res["url"]
         except Exception as e:
             await self.respond(
-                event, fmtmsg(e.__class__.__name__, str(e), fmtsec(now)), revoke=2.5
+                event,
+                self.fmtmsg(e.__class__.__name__, str(e), self.fmtsec(now)),
+                revoke=2.5,
             )
         else:
             if event.chat.type in (ChatType.PRIVATE, ChatType.BOT) or (
@@ -86,7 +87,7 @@ class Graph(Module):
             ):
                 await self.respond(
                     event,
-                    f"<b><blockquote>{fmtsec(now)}</blockquote></b>",
+                    f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>",
                     link_preview_options=LinkPreviewOptions(
                         is_disabled=False,
                         url=url,
@@ -98,9 +99,9 @@ class Graph(Module):
             else:
                 await self.respond(
                     event,
-                    fmtmsg(
+                    self.fmtmsg(
                         "Graph Page",
                         {"Link": url, "Title": title or "Untitled"},
-                        fmtsec(now),
+                        self.fmtsec(now),
                     ),
                 )

@@ -14,7 +14,6 @@ from pyrogram.types import (
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtmsg, fmtsec, ikm
 
 pattern = re.compile(r"^p(?:ing)?$")
 
@@ -43,14 +42,14 @@ class Ping(Module):
     async def ping(self, client: Client) -> str:
         now = datetime.datetime.now(datetime.UTC)
         await client.invoke(Latency(ping_id=0))
-        return fmtsec(now, 1)
+        return self.fmtsec(now, 1)
 
     async def execute(self, event: Update) -> None:
         if isinstance(event, Message):
             await self.respond(event, "<code>...</code>")
         else:
             await event.edit_message_reply_markup(
-                ikm(("...", "user_id", event._client.me.id))
+                self.ikm(("...", "user_id", event._client.me.id))
             )
 
         now, (app, bot) = (
@@ -61,6 +60,6 @@ class Ping(Module):
         )
         await self.respond(
             event,
-            fmtmsg("Selfbot Latency", {"App": app, "Bot": bot}, fmtsec(now)),
-            reply_markup=ikm([[("Ping!", b"ping")], [("Close", b"0")]]),
+            self.fmtmsg("Selfbot Latency", {"App": app, "Bot": bot}, self.fmtsec(now)),
+            reply_markup=self.ikm([[("Ping!", b"ping")], [("Close", b"0")]]),
         )

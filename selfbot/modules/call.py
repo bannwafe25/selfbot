@@ -9,7 +9,6 @@ from pyrogram.utils import get_channel_id
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtmsg, fmtsec
 
 load = True
 try:
@@ -109,10 +108,10 @@ class Call(Module):
             except RPCError as e:
                 await self.respond(
                     event,
-                    fmtmsg(
+                    self.fmtmsg(
                         e.__class__.__name__,
                         e.MESSAGE.format(value=e.value),
-                        fmtsec(now),
+                        self.fmtsec(now),
                     ),
                     revoke=2.5,
                 )
@@ -130,10 +129,10 @@ class Call(Module):
                 except RPCError as e:
                     await self.respond(
                         event,
-                        fmtmsg(
+                        self.fmtmsg(
                             e.__class__.__name__,
                             e.MESSAGE.format(value=e.value),
-                            fmtsec(now),
+                            self.fmtsec(now),
                         ),
                         revoke=2.5,
                     )
@@ -161,7 +160,9 @@ class Call(Module):
             await func(**kwargs)
         except Exception as e:
             await self.respond(
-                event, fmtmsg(e.__class__.__name__, str(e), fmtsec(now)), revoke=2.5
+                event,
+                self.fmtmsg(e.__class__.__name__, str(e), self.fmtsec(now)),
+                revoke=2.5,
             )
         else:
             if action == "join":
@@ -195,4 +196,6 @@ class Call(Module):
                     "DELETE FROM call.chats WHERE chat_id = $1;", chat_id
                 )
 
-            await self.respond(event, fmtmsg(**text, foot=fmtsec(now)), revoke=2.5)
+            await self.respond(
+                event, self.fmtmsg(**text, foot=self.fmtsec(now)), revoke=2.5
+            )

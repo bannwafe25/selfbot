@@ -1,7 +1,6 @@
 import abc
 import asyncio
 import contextlib
-import datetime
 import functools
 import signal
 
@@ -32,7 +31,6 @@ from pyrogram.types import (
 )
 
 from selfbot import __version__
-from selfbot.utils import fmtmsg, fmtsec
 
 from .storage import PostgreStorage
 
@@ -51,31 +49,18 @@ class Telegram(abc.ABC):
 
         await self.initdb()
         row = await self.db.fetchrow("SELECT chat_id, message_id FROM restart.msg;")
-        res = "Res" if row else "S"
-        now = datetime.datetime.now(datetime.UTC)
-        self.logger.info(f"{res}tarting {self.__class__.__name__}...")
+        self.logger.info(f"Starting {self.__class__.__name__}...")
         try:
             await self.start()
-            msg = fmtmsg(
-                f"{self.__class__.__name__} {res}tarted",
-                {
-                    "Handlers": len(self.handlers),
-                    "Listeners": len(self.listeners),
-                    "Modules": len(self.modules),
-                },
-                fmtsec(now),
-            )
             if row:
                 await asyncio.gather(
-                    self.app.edit_message_text(row["chat_id"], row["message_id"], msg),
                     self.db.execute("TRUNCATE restart.msg;"),
-                    asyncio.sleep(2.5),
+                    self.app.delete_messages(row["chat_id"], row["message_id"]),
                 )
-                await self.app.delete_messages(row["chat_id"], row["message_id"])
             else:
-                await self.bot.send_message(
+                await self.bot.send_sticker(
                     self.app.me.id,
-                    msg,
+                    self.config["STICKER_FILE_ID"],
                     disable_notification=True,
                     reply_markup=ReplyKeyboardMarkup(
                         [
@@ -122,7 +107,7 @@ class Telegram(abc.ABC):
         except Exception:
             pass
         else:
-            self.logger.info(f"{self.__class__.__name__} {res}tarted")
+            self.logger.info(f"{self.__class__.__name__} Started")
             await self.idle()
 
     async def start(self) -> None:

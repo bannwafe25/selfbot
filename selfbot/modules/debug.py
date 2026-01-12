@@ -19,17 +19,6 @@ from pyrogram.types import (
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import (
-    aexec,
-    fmtbar,
-    fmtbyte,
-    fmtexc,
-    fmtmsg,
-    fmtsec,
-    ids,
-    ikm,
-    shell,
-)
 
 pattern = re.compile(r"^(?:e\s.+|.*#)$", flags=re.DOTALL)
 
@@ -58,15 +47,6 @@ class Debug(Module):
             "raw": pyrogram.raw,
             "types": pyrogram.types,
             "utils": pyrogram.utils,
-            "aexec": aexec,
-            "fmtbar": fmtbar,
-            "fmtbyte": fmtbyte,
-            "fmtexc": fmtexc,
-            "fmtmsg": fmtmsg,
-            "fmtsec": fmtsec,
-            "ids": ids,
-            "ikm": ikm,
-            "shell": shell,
             "self": self,
             "client": self.client,
             "db": self.client.db,
@@ -102,8 +82,10 @@ class Debug(Module):
             if res > 0:
                 await self.respond(
                     event,
-                    fmtmsg(
-                        "Cancel", f"{res} Task{'' if res == 1 else 's'}", fmtsec(now)
+                    self.fmtmsg(
+                        "Cancel",
+                        f"{res} Task{'' if res == 1 else 's'}",
+                        self.fmtsec(now),
                     ),
                     revoke=2.5,
                 )
@@ -163,7 +145,7 @@ class Debug(Module):
                 if k in kwargs and k not in ("ttl_seconds", "protect_content")
             },
             disable_notification=True,
-            reply_markup=ikm(
+            reply_markup=self.ikm(
                 (
                     "Message",
                     "url",
@@ -223,7 +205,7 @@ class Debug(Module):
         await self.execute(msg, event)
 
     async def msgs(self, event: Update) -> tuple:
-        cid, mid = ids(event.inline_message_id)
+        cid, mid = self.ids(event.inline_message_id)
         msg, cmd = await asyncio.gather(
             self.client.app.get_replied_message(cid, mid),
             self.client.app.get_messages(cid, mid),
@@ -253,12 +235,14 @@ class Debug(Module):
             }
         )
         if not isinstance(event, Message):
-            await event.edit_message_reply_markup(reply_markup=ikm(("Cancel", b"0")))
+            await event.edit_message_reply_markup(
+                reply_markup=self.ikm(("Cancel", b"0"))
+            )
 
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             fut = asyncio.create_task(
-                aexec(code, self.kwargs),
+                self.aexec(code, self.kwargs),
                 name=(
                     f"selfbot/{event.chat.id}/{event.id}"
                     if isinstance(event, Message)
@@ -269,11 +253,11 @@ class Debug(Module):
             try:
                 res = await fut
             except (asyncio.CancelledError, Exception):
-                out = fmtexc()
+                out = self.fmtexc()
             else:
                 out = (buf.getvalue() or str(res)).rstrip()
             finally:
-                rtt = fmtsec(now)
+                rtt = self.fmtsec(now)
 
         if code.endswith("return"):
             return
@@ -291,5 +275,5 @@ class Debug(Module):
         await self.respond(
             event,
             f"<code>{html.escape(out)}</code>\n\n<b><blockquote>{rtt}</blockquote></b>",
-            reply_markup=ikm(ikb),
+            reply_markup=self.ikm(ikb),
         )

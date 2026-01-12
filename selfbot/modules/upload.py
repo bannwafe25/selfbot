@@ -8,7 +8,6 @@ from pyrogram.types import Message, ReplyParameters
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtbyte, fmtmsg, fmtsec
 
 pattern = re.compile(
     r"^ul\s(.+?)(?:\s-to\s"
@@ -50,28 +49,28 @@ class Upload(Module):
         except (asyncio.CancelledError, RPCError) as e:
             await self.respond(
                 event,
-                fmtmsg(
+                self.fmtmsg(
                     e.__class__.__name__,
                     (
                         e.MESSAGE.format(value=e.value)
                         if isinstance(e, RPCError)
                         else str(e)
                     ),
-                    fmtsec(now),
+                    self.fmtsec(now),
                 ),
                 revoke=2.5,
             )
         else:
             await self.respond(
                 event,
-                fmtmsg(
+                self.fmtmsg(
                     "Document Uploaded",
                     {
                         "Chat ID": f"{res.chat.id}\n",
                         "File Name": res.document.file_name,
-                        "File Size": f"{fmtbyte(res.document.file_size)}\n",
+                        "File Size": f"{self.fmtbyte(res.document.file_size)}\n",
                         "MIME Type": res.document.mime_type,
                     },
-                    fmtsec(now),
+                    self.fmtsec(now),
                 ),
             )

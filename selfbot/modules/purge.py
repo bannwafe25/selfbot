@@ -9,7 +9,6 @@ from pyrogram.types import Message
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtmsg, fmtsec
 
 pattern = re.compile(r"^purge(me)?(?:\s-l\s([1-9]\d{0,2}))?$")
 
@@ -72,10 +71,10 @@ class Purge(Module):
 
         await self.respond(
             event,
-            fmtmsg(
+            self.fmtmsg(
                 f"Purge{'me' if me else ''}",
                 f"{res} Message{'' if res == 1 else 's'}",
-                fmtsec(now),
+                self.fmtsec(now),
             ),
             revoke=2.5,
         )

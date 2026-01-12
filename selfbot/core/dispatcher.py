@@ -16,7 +16,6 @@ from pyrogram.types import Update
 
 from selfbot.listener import Listener
 from selfbot.module import Module
-from selfbot.utils import fmtmsg
 
 
 class Dispatcher(abc.ABC):
@@ -51,15 +50,13 @@ class Dispatcher(abc.ABC):
                 with contextlib.suppress(Exception):
                     await self.bot.send_message(
                         self.app.me.id,
-                        fmtmsg(
-                            e.__class__.__name__,
-                            {
-                                "Module": listener.mod.__class__.__name__,
-                                "Event": f"{listener.event.replace('_', ' ').title()}\n",
-                                "File": fn,
-                                "Line": ln,
-                            },
-                            str(e),
+                        (
+                            f"<b>{e.__class__.__name__}</b>\n\n"
+                            f"  <code>Module</code>: <code>{listener.mod.__class__.__name__}</code>\n"
+                            f"  <code>Event </code>: <code>{listener.event}</code>\n\n"
+                            f"  <code>File  </code>: <code>{fn}</code>\n"
+                            f"  <code>Line  </code>: <code>{ln}</code>\n\n"
+                            f"<blockquote>{e}</blockquote>"
                         ),
                     )
 
