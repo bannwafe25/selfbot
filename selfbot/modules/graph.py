@@ -38,7 +38,7 @@ class Graph(Module):
             await self.respond(event, "<code>Reply to Content</code>")
             return
 
-        await event.edit_text("<code>...</code>")
+        await self.respond(event, "<code>...</code>")
         content, (title,) = (
             event.reply_to_message.content.html.replace("\n", "<br>"),
             pattern.match(event.content).groups(),
@@ -82,7 +82,8 @@ class Graph(Module):
                     )
                 )
             ):
-                await event.edit_text(
+                await self.respond(
+                    event,
                     f"<b><blockquote>{fmtsec(now)}</blockquote></b>",
                     link_preview_options=LinkPreviewOptions(
                         is_disabled=False,
@@ -93,10 +94,11 @@ class Graph(Module):
                     ),
                 )
             else:
-                await event.edit_text(
+                await self.respond(
+                    event,
                     fmtmsg(
                         "Graph Page",
                         {"Link": url, "Title": title or "Untitled"},
                         fmtsec(now),
-                    )
+                    ),
                 )

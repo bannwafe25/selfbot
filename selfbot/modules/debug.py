@@ -13,6 +13,7 @@ from pyrogram.types import (
     ChosenInlineResult,
     InlineQuery,
     Message,
+    ReplyParameters,
     Update,
 )
 
@@ -112,23 +113,26 @@ class Debug(Module):
 
         if event.content.endswith("#"):
             _, res = await asyncio.gather(
-                event.edit_text(
-                    html.escape(event.content.markdown).removesuffix("#").rstrip()
+                self.respond(
+                    event,
+                    html.escape(event.content.markdown).removesuffix("#").rstrip(),
                 ),
                 event._client.get_inline_bot_results(
                     self.client.bot.me.id, "#", chat_id=event.chat.id
                 ),
             )
             await event.reply_inline_bot_result(
-                res.query_id, res.results[0].id, quote=True
+                res.query_id,
+                res.results[0].id,
+                reply_parameters=ReplyParameters(message_id=event.id),
             )
             return
 
         cmd, msg = await asyncio.gather(
-            event.edit_text(
-                html.escape(event.content.markdown).removeprefix("e").lstrip()
+            self.respond(
+                event, html.escape(event.content.markdown).removeprefix("e").lstrip()
             ),
-            event.reply_text("<code>...</code>", quote=True),
+            self.respond(event, "<code>...</code>", reply=True),
         )
         await self.execute(cmd, msg)
 

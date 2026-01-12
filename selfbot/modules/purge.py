@@ -26,7 +26,7 @@ class Purge(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
-        await event.edit_text("<code>...</code>")
+        await self.respond(event, "<code>...</code>")
         (me, limit) = pattern.match(event.content).groups()
         if limit:
             limit = int(limit)
@@ -47,8 +47,8 @@ class Purge(Module):
             if event.chat.type == ChatType.SUPERGROUP and (
                 event.chat.is_direct_messages or event.chat.is_forum
             ):
-                await event.edit_text(
-                    f"<code>Unsupported {html.escape('<ChatType>')}</code>"
+                await self.respond(
+                    event, f"<code>Unsupported {html.escape('<ChatType>')}</code>"
                 )
                 return
 

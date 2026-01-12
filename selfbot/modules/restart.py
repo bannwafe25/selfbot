@@ -20,7 +20,7 @@ class Restart(Module):
     @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         await asyncio.gather(
-            event.edit_text("<code>Restarting...</code>"),
+            self.respond(event, "<code>Restarting...</code>"),
             self.client.db.execute(
                 "INSERT INTO restart.msg (chat_id, message_id) VALUES ($1, $2);",
                 event.chat.id,

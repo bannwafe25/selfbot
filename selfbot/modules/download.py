@@ -32,7 +32,7 @@ class Download(Module):
 
     @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
-        await event.edit_text("<code>...</code>")
+        await self.respond(event, "<code>...</code>")
         update, (private, chat_id, story, update_id, file_name) = (
             None,
             (pattern.match(event.content).groups()),
@@ -126,7 +126,8 @@ class Download(Module):
             )
         else:
             obj = getattr(update, update.media.value)
-            await event.edit_text(
+            await self.respond(
+                event,
                 fmtmsg(
                     "Media Downloaded",
                     {
@@ -146,5 +147,5 @@ class Download(Module):
                         ),
                     },
                     fmtsec(now),
-                )
+                ),
             )

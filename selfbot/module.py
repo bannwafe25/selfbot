@@ -8,6 +8,7 @@ from pyrogram.types import (
     InlineQueryResultCachedSticker,
     InputTextMessageContent,
     Message,
+    ReplyParameters,
 )
 
 from selfbot.utils import ikm
@@ -47,14 +48,15 @@ class Module:
             ]
         )
 
-    async def listen(self, timeout: int = 15) -> Message:
+    async def listen(self, revoke: bool = False, timeout: int = 15) -> Message:
         fut = asyncio.Future()
 
         async def result(event: Message) -> None:
             if not fut.done():
                 fut.set_result(event)
 
-            await event.delete()
+            if revoke:
+                await event.delete()
 
         self.client.register(self, result, "message_bot", priority=-1)
         try:
@@ -68,9 +70,29 @@ class Module:
                 if listener.mod is self:
                     self.client.unregister(listener)
 
-    async def respond(self, event: Message, text: str, delay: int = 2.5) -> None:
-        await asyncio.gather(event.edit_text(text), asyncio.sleep(delay))
-        await event.delete()
+    async def respond(
+        self,
+        event: Message,
+        text: str,
+        reply: bool = False,
+        revoke: int = 0,
+        *args,
+        **kwargs,
+    ) -> Message | int:
+        if reply:
+            return await event.reply_text(
+                text,
+                reply_parameters=ReplyParameters(message_id=event.id),
+                *args,
+                **kwargs,
+            )
+
+        event = await event.edit_text(text, *args, **kwargs)
+        if revoke:
+            await asyncio.sleep(revoke)
+            return await event.delete()
+
+        return event
 
 
 class ModuleError(Exception):

@@ -64,7 +64,7 @@ class GenAI(Module):
         ):
             resp = await event.reply_sticker(
                 self.client.config["STICKER_FILE_ID"],
-                quote=True,
+                reply_parameters=ReplyParameters(message_id=event.id),
                 reply_markup=ikm(("...", "switch_inline_query", "")),
             )
             async with self.lock:

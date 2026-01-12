@@ -28,7 +28,7 @@ class Upload(Module):
 
     @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
-        await event.edit_text("<code>...</code>")
+        await self.respond(event, "<code>...</code>")
         rep_msg, (document, chat_id) = None, pattern.match(event.content).groups()
         if not chat_id:
             chat_id = event.chat.id
@@ -61,7 +61,8 @@ class Upload(Module):
                 ),
             )
         else:
-            await event.edit_text(
+            await self.respond(
+                event,
                 fmtmsg(
                     "Document Uploaded",
                     {
@@ -71,5 +72,5 @@ class Upload(Module):
                         "MIME Type": res.document.mime_type,
                     },
                     fmtsec(now),
-                )
+                ),
             )

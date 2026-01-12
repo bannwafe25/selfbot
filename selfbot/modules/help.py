@@ -39,7 +39,7 @@ class Help(Module):
     @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         _, res = await asyncio.gather(
-            event.edit_text("<code>...</code>"),
+            self.respond(event, "<code>...</code>"),
             event._client.get_inline_bot_results(
                 self.client.bot.me.id, event.content, chat_id=event.chat.id
             ),
@@ -48,9 +48,7 @@ class Help(Module):
             event.reply_inline_bot_result(
                 res.query_id,
                 res.results[0].id,
-                reply_parameters=ReplyParameters(
-                    message_id=event.reply_to_message_id or event.id
-                ),
+                reply_parameters=ReplyParameters(message_id=event.id),
             ),
             event.delete(),
         )

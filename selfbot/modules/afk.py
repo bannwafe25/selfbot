@@ -35,7 +35,7 @@ class AFK(Module):
 
     @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
-        await event.edit_text("<code>...</code>")
+        await self.respond(event, "<code>...</code>")
         since, (reason,) = (
             datetime.datetime.now(datetime.UTC),
             pattern.match(event.content).groups(),
@@ -78,7 +78,8 @@ class AFK(Module):
         async with self.lock:
             wib = self.since.astimezone(datetime.timezone(datetime.timedelta(hours=7)))
             new, old = await asyncio.gather(
-                event.reply_text(
+                self.respond(
+                    event,
                     fmtmsg(
                         "Away From Keyboard",
                         {
@@ -87,7 +88,7 @@ class AFK(Module):
                             "Reason": self.reason,
                         },
                         fmtsec(self.since, human=True),
-                    )
+                    ),
                 ),
                 self.client.db.fetchval(
                     "SELECT message_id FROM afk.msgs WHERE chat_id = $1;", event.chat.id
