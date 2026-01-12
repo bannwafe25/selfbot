@@ -103,23 +103,25 @@ class GenAI(Module):
 
     async def execute(self, event: Update) -> None:
         if isinstance(event, ChosenInlineResult):
-            text, edit = event.query, event.edit_message_text
+            text = event.query
         else:
-            text, edit = event.content, event.edit_text
+            text = event.content
 
         (query,), question = pattern.match(text).groups(), ""
         if query:
             question = f"```Query\n{query}```\n\n"
-            await edit(question, parse_mode=ParseMode.MARKDOWN)
+            await self.respond(event, question, parse_mode=ParseMode.MARKDOWN)
         else:
             if isinstance(event, ChosenInlineResult):
-                await edit(
+                await self.respond(
+                    event,
                     "<code>Give a Query with Suffix '!?'</code>",
                     reply_markup=ikm(("Close", b"0")),
+                    revoke=2.5,
                 )
                 return
 
-            await edit("<code>...</code>")
+            await self.respond(event, "<code>...</code>")
 
         parts = []
         if query:
@@ -141,7 +143,11 @@ class GenAI(Module):
                     rep = event.reply_to_message
                     obj = getattr(rep, rep.media.value)
                     if obj.file_size > 32 * (1024**2):
-                        await edit("<code>Exceeded Size (Limit: 32 MB)</code>")
+                        await self.respond(
+                            event,
+                            "<code>Exceeded Size (Limit: 32 MB)</code>",
+                            revoke=2.5,
+                        )
                         return
 
                     mime = getattr(obj, "mime_type", "image/jpeg").lower().strip()
@@ -154,8 +160,10 @@ class GenAI(Module):
                         mime.startswith(("audio", "image", "text", "video"))
                         or mime == "application/pdf"
                     ):
-                        await edit(
-                            f"<code>Unsupported '{obj.mime_type}' MIME Type</code>"
+                        await self.respond(
+                            event,
+                            f"<code>Unsupported '{obj.mime_type}' MIME Type</code>",
+                            revoke=2.5,
                         )
                         return
 
@@ -181,6 +189,7 @@ class GenAI(Module):
                     await self.respond(
                         event,
                         f"<code>Unsupported {html.escape(f'<{event.reply_to_message.media}>')}</code>",
+                        revoke=2.5,
                     )
                     return
             elif (
@@ -193,6 +202,7 @@ class GenAI(Module):
                 await self.respond(
                     event,
                     f"<code>Give a Query or {html.escape('<Reply or Quote>')}</code>",
+                    revoke=2.5,
                 )
                 return
 
@@ -215,7 +225,8 @@ class GenAI(Module):
                 else:
                     rtt = f"[{rtt}]({url.text.strip()}.md)"
 
-            await edit(
+            await self.respond(
+                event,
                 f"{question}{res}\n\n> **{rtt}**",
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=ikm(ikb),

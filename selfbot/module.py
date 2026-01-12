@@ -9,6 +9,7 @@ from pyrogram.types import (
     InputTextMessageContent,
     Message,
     ReplyParameters,
+    Update,
 )
 
 from selfbot.utils import ikm
@@ -70,16 +71,50 @@ class Module:
                 if listener.mod is self:
                     self.client.unregister(listener)
 
+    async def progress(
+        self, current: int, total: int, event: Update, title: str = "Progress"
+    ) -> None:
+        time = event._client.loop.time()
+        if not hasattr(event, "_start"):
+            event._start, event._last = time, time
+            return
+
+        if time - event._last >= 2.5:
+            delta = time - event._start
+            speed = current / delta
+
+            await self.respond(
+                event,
+                fmtmsg(
+                    title.lstrip(),
+                    {
+                        "Current": fmtbyte(current),
+                        "Total": f"{fmtbyte(total)}\n",
+                        "Speed": f"{fmtbyte(speed)}/s\n",
+                        "Elapsed": fmtsec(delta, human=True),
+                        "Estimated": fmtsec(
+                            (total - current) / speed if speed > 0 else 0, human=True
+                        ),
+                    },
+                    fmtbar(current, total),
+                ),
+                reply_markup=ikm(("Cancel", b"0")),
+            )
+            event._last = time
+
     async def respond(
         self,
-        event: Message,
+        event: Update,
         text: str,
         reply: bool = False,
         revoke: int = 0,
         *args,
         **kwargs,
-    ) -> Message | int:
+    ) -> Update | int:
         if reply:
+            if not isinstance(event, Message):
+                raise AttributeError
+
             return await event.reply_text(
                 text,
                 reply_parameters=ReplyParameters(message_id=event.id),
@@ -87,8 +122,16 @@ class Module:
                 **kwargs,
             )
 
-        event = await event.edit_text(text, *args, **kwargs)
+        if isinstance(event, Message):
+            edit = event.edit_text
+        else:
+            edit = event.edit_message_text
+
+        event = await edit(text, *args, **kwargs)
         if revoke:
+            if not isinstance(event, Message):
+                raise AttributeError
+
             await asyncio.sleep(revoke)
             return await event.delete()
 

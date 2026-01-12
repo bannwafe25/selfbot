@@ -11,7 +11,7 @@ from pyrogram.utils import get_channel_id
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtbyte, fmtmsg, fmtsec, prog
+from selfbot.utils import fmtbyte, fmtmsg, fmtsec
 
 pattern = re.compile(
     r"^dl\s?(?:(?:https?://)?t\.me/(c/)?"
@@ -40,7 +40,9 @@ class Download(Module):
         if event.reply_to_message:
             if not event.reply_to_message.media:
                 await self.respond(
-                    event, f"<code>{html.escape('<MessageMediaType>')} None</code>"
+                    event,
+                    f"<code>{html.escape('<MessageMediaType>')} None</code>",
+                    revoke=2.5,
                 )
                 return
             elif event.reply_to_message.media not in (
@@ -57,6 +59,7 @@ class Download(Module):
                 await self.respond(
                     event,
                     f"<code>Unsupported {html.escape(f'<{event.reply_to_message.media}>')}</code>",
+                    revoke=2.5,
                 )
                 return
             elif event.reply_to_message.media == MessageMediaType.STORY:
@@ -71,6 +74,7 @@ class Download(Module):
                 await self.respond(
                     event,
                     f"<code>{html.escape('<Reply>')} or Give a Message or Story URL </code>",
+                    revoke=2.5,
                 )
                 return
             else:
@@ -92,6 +96,7 @@ class Download(Module):
                             e.MESSAGE.format(value=e.value),
                             fmtsec(now),
                         ),
+                        revoke=2.5,
                     )
                     return
 
@@ -103,7 +108,7 @@ class Download(Module):
         fut = asyncio.create_task(
             update.download(
                 file_name=file_name,
-                progress=prog,
+                progress=self.progress,
                 progress_args=(event, "Downloading..."),
             ),
             name=f"selfbot/{event.chat.id}/{event.id}",
@@ -123,6 +128,7 @@ class Download(Module):
                     ),
                     fmtsec(now),
                 ),
+                revoke=2.5,
             )
         else:
             obj = getattr(update, update.media.value)

@@ -8,7 +8,7 @@ from pyrogram.types import Message, ReplyParameters
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtbyte, fmtmsg, fmtsec, prog
+from selfbot.utils import fmtbyte, fmtmsg, fmtsec
 
 pattern = re.compile(
     r"^ul\s(.+?)(?:\s-to\s"
@@ -39,7 +39,7 @@ class Upload(Module):
                 chat_id,
                 document,
                 reply_parameters=rep_msg,
-                progress=prog,
+                progress=self.progress,
                 progress_args=(event, "Uploading..."),
             ),
             name=f"selfbot/{event.chat.id}/{event.id}",
@@ -59,6 +59,7 @@ class Upload(Module):
                     ),
                     fmtsec(now),
                 ),
+                revoke=2.5,
             )
         else:
             await self.respond(

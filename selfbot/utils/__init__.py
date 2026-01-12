@@ -1,6 +1,6 @@
 from .debug import aexec, shell
 from .fmt import fmtbar, fmtbyte, fmtexc, fmtmsg, fmtsec
-from .tg import ids, ikm, prog
+from .tg import ids, ikm
 
 __all__ = [
     "aexec",
@@ -11,6 +11,5 @@ __all__ = [
     "fmtsec",
     "ids",
     "ikm",
-    "prog",
     "shell",
 ]

@@ -114,6 +114,7 @@ class Call(Module):
                         e.MESSAGE.format(value=e.value),
                         fmtsec(now),
                     ),
+                    revoke=2.5,
                 )
                 return
             else:
@@ -134,6 +135,7 @@ class Call(Module):
                             e.MESSAGE.format(value=e.value),
                             fmtsec(now),
                         ),
+                        revoke=2.5,
                     )
                     return
                 else:
@@ -158,7 +160,9 @@ class Call(Module):
         try:
             await func(**kwargs)
         except Exception as e:
-            await self.respond(event, fmtmsg(e.__class__.__name__, str(e), fmtsec(now)))
+            await self.respond(
+                event, fmtmsg(e.__class__.__name__, str(e), fmtsec(now)), revoke=2.5
+            )
         else:
             if action == "join":
                 if mute:
@@ -191,4 +195,4 @@ class Call(Module):
                     "DELETE FROM call.chats WHERE chat_id = $1;", chat_id
                 )
 
-            await self.respond(event, fmtmsg(**text, foot=fmtsec(now)))
+            await self.respond(event, fmtmsg(**text, foot=fmtsec(now)), revoke=2.5)

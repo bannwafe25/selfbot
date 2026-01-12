@@ -101,7 +101,8 @@ class Help(Module):
 
         if act == "mod":
             page = self.maps.get(val, 0)
-            await event.edit_message_text(
+            await self.respond(
+                event,
                 self.mods[val],
                 reply_markup=ikm(
                     [("« Back", f"help/page/{page}".encode()), ("Close", b"0")]
@@ -109,8 +110,8 @@ class Help(Module):
             )
             return
 
-        await event.edit_message_text(
-            "<b>Selfbot Modules</b>", reply_markup=ikm(self.build(int(val)))
+        await self.respond(
+            event, "<b>Selfbot Modules</b>", reply_markup=ikm(self.build(int(val)))
         )
 
     def build(self, page: int = 0) -> list:

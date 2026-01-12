@@ -68,6 +68,7 @@ class AFK(Module):
                 {"Status": self.status, "Reason": reason},
                 fmtsec(since),
             ),
+            revoke=2.5,
         )
 
     @listener.handler(~filters.private, 2)

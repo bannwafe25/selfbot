@@ -1,13 +1,11 @@
 import struct
 
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, Update
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.utils import (
     MIN_MONOFORUM_CHANNEL_ID,
     get_channel_id,
     unpack_inline_message_id,
 )
-
-from .fmt import fmtbar, fmtbyte, fmtmsg, fmtsec
 
 
 def ids(inline_message_id: str) -> tuple:
@@ -47,38 +45,3 @@ def ikm(rows: list | tuple) -> InlineKeyboardMarkup:
         ikb.append(line)
 
     return InlineKeyboardMarkup(ikb)
-
-
-async def prog(
-    current: int, total: int, event: Update, title: str = "Progress"
-) -> None:
-    time = event._client.loop.time()
-    if not hasattr(event, "_start"):
-        event._start, event._last = time, time
-        return
-
-    if time - event._last >= 2.5:
-        delta = time - event._start
-        speed = current / delta
-        if isinstance(event, Message):
-            edit = event.edit_text
-        else:
-            edit = event.edit_message_text
-
-        await edit(
-            fmtmsg(
-                title.lstrip(),
-                {
-                    "Current": fmtbyte(current),
-                    "Total": f"{fmtbyte(total)}\n",
-                    "Speed": f"{fmtbyte(speed)}/s\n",
-                    "Elapsed": fmtsec(delta, human=True),
-                    "Estimated": fmtsec(
-                        (total - current) / speed if speed > 0 else 0, human=True
-                    ),
-                },
-                fmtbar(current, total),
-            ),
-            reply_markup=ikm(("Cancel", b"0")),
-        )
-        event._last = time

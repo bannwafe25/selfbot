@@ -47,12 +47,7 @@ class Ping(Module):
 
     async def execute(self, event: Update) -> None:
         if isinstance(event, Message):
-            edit = event.edit_text
-        else:
-            edit = event.edit_message_text
-
-        if isinstance(event, Message):
-            await edit("<code>...</code>")
+            await self.respond(event, "<code>...</code>")
         else:
             await event.edit_message_reply_markup(
                 ikm(("...", "user_id", event._client.me.id))
@@ -64,7 +59,8 @@ class Ping(Module):
                 self.ping(self.client.app), self.ping(self.client.bot)
             ),
         )
-        await edit(
+        await self.respond(
+            event,
             fmtmsg("Selfbot Latency", {"App": app, "Bot": bot}, fmtsec(now)),
             reply_markup=ikm([[("Ping!", b"ping")], [("Close", b"0")]]),
         )

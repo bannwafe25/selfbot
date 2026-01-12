@@ -28,7 +28,6 @@ from selfbot.utils import (
     fmtsec,
     ids,
     ikm,
-    prog,
     shell,
 )
 
@@ -67,7 +66,6 @@ class Debug(Module):
             "fmtsec": fmtsec,
             "ids": ids,
             "ikm": ikm,
-            "prog": prog,
             "shell": shell,
             "self": self,
             "client": self.client,
@@ -107,6 +105,7 @@ class Debug(Module):
                     fmtmsg(
                         "Cancel", f"{res} Task{'' if res == 1 else 's'}", fmtsec(now)
                     ),
+                    revoke=2.5,
                 )
 
             return
@@ -236,11 +235,6 @@ class Debug(Module):
         return msg, cmd
 
     async def execute(self, msg: Message, event: Update, btn: bool = False) -> None:
-        if isinstance(event, Message):
-            edit = event.edit_text
-        else:
-            edit = event.edit_message_text
-
         ikb, out, rtt = [[("Del", b"0")]], "", ""
         if btn:
             code = event.query.removesuffix("#").rstrip()
@@ -294,7 +288,8 @@ class Debug(Module):
 
             out = f"{out[:512]}..."
 
-        await edit(
+        await self.respond(
+            event,
             f"<code>{html.escape(out)}</code>\n\n<b><blockquote>{rtt}</blockquote></b>",
             reply_markup=ikm(ikb),
         )

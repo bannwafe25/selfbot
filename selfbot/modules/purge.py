@@ -48,7 +48,9 @@ class Purge(Module):
                 event.chat.is_direct_messages or event.chat.is_forum
             ):
                 await self.respond(
-                    event, f"<code>Unsupported {html.escape('<ChatType>')}</code>"
+                    event,
+                    f"<code>Unsupported {html.escape('<ChatType>')}</code>",
+                    revoke=2.5,
                 )
                 return
 
@@ -75,4 +77,5 @@ class Purge(Module):
                 f"{res} Message{'' if res == 1 else 's'}",
                 fmtsec(now),
             ),
+            revoke=2.5,
         )
