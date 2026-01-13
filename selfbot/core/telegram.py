@@ -189,7 +189,7 @@ class Telegram(abc.ABC):
     def updates(self) -> None:
         fltapp = flt.user(self.app.me.id)
         events = {
-            "listen_app": (self.app, MessageHandler, flt.incoming, -1),
+            "app": (self.app, MessageHandler, flt.incoming, -1),
             "message_in": (
                 self.app,
                 MessageHandler,
@@ -203,7 +203,7 @@ class Telegram(abc.ABC):
                 (flt.me & (flt.text | flt.caption)) & ~flt.via_bot,
                 -1,
             ),
-            "listen_bot": (self.bot, MessageHandler, flt.incoming, -1),
+            "bot": (self.bot, MessageHandler, flt.incoming, -1),
             "message_bot": (self.bot, MessageHandler, fltapp, -1),
             "inline_query": (self.bot, InlineQueryHandler, fltapp, -1),
             "inline_result": (self.bot, ChosenInlineResultHandler, fltapp, -1),

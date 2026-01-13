@@ -48,7 +48,7 @@ class Telegram:
 
     async def listen(
         self,
-        client: str = "app",
+        event: str = "app",
         filters: Filter = None,
         revoke: bool = False,
         timeout: int = 15,
@@ -56,16 +56,14 @@ class Telegram:
         fut = asyncio.Future()
         mod = self.__class__(self.client)
 
-        async def result(event: Message) -> None:
+        async def result(msg: Message) -> None:
             if not fut.done():
-                fut.set_result(event)
+                fut.set_result(msg)
 
             if revoke:
-                await event.delete()
+                await msg.delete()
 
-        self.client.register(
-            mod, result, f"listen_{client}", filters=filters, priority=-1
-        )
+        self.client.register(mod, result, event, filters=filters, priority=-1)
         try:
             res = await asyncio.wait_for(fut, timeout=timeout)
         except Exception:
@@ -73,7 +71,7 @@ class Telegram:
         else:
             return res
         finally:
-            for listener in tuple(self.client.listeners[f"listen_{client}"]):
+            for listener in tuple(self.client.listeners[event]):
                 if listener.mod is mod:
                     self.client.unregister(listener)
 
