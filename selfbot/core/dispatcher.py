@@ -110,7 +110,7 @@ class Dispatcher(abc.ABC):
         )
         self.updates()
 
-    def unregister(self, listener: "Listener") -> None:
+    def unregister(self, listener: Listener) -> None:
         self.listeners[listener.event].remove(listener)
         if not self.listeners[listener.event]:
             del self.listeners[listener.event]

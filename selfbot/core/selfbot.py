@@ -16,7 +16,7 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
         super().__init__()
 
     @classmethod
-    async def launch(cls, config: dict, loop: asyncio.AbstractEventLoop) -> "Selfbot":
+    async def launch(cls, config: dict, loop: asyncio.AbstractEventLoop) -> Selfbot:
         selfbot = cls(config)
         try:
             selfbot.http = AsyncClient(http2=True)

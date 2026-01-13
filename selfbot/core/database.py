@@ -43,9 +43,10 @@ CREATE TABLE IF NOT EXISTS storage.update_state (
 CREATE INDEX IF NOT EXISTS idx_peers_phone_number
     ON storage.peers (name, phone_number);
 CREATE SCHEMA IF NOT EXISTS restart;
-CREATE TABLE IF NOT EXISTS restart.msg (
-    chat_id     BIGINT,
-    message_id  INTEGER
+CREATE TABLE IF NOT EXISTS restart.msgs (
+    name        TEXT    PRIMARY KEY,
+    chat_id     BIGINT  NOT NULL,
+    message_id  INTEGER NOT NULL
 );
 CREATE SCHEMA IF NOT EXISTS afk;
 CREATE TABLE IF NOT EXISTS afk.meta (
@@ -53,8 +54,8 @@ CREATE TABLE IF NOT EXISTS afk.meta (
     since   TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS afk.msgs (
-    chat_id     BIGINT PRIMARY KEY,
-    message_id  INTEGER
+    chat_id     BIGINT  PRIMARY KEY,
+    message_id  INTEGER NOT NULL
 );
 CREATE SCHEMA IF NOT EXISTS call;
 CREATE TABLE IF NOT EXISTS call.chats (

@@ -12,7 +12,7 @@ class Module(Utils):
     cmds = ""
     desc = None
 
-    def __init__(self, client: "Selfbot") -> None:
+    def __init__(self, client: Selfbot) -> None:
         self.client = client
         self.logger = logging.getLogger(self.__class__.__name__)
 

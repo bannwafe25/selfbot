@@ -48,15 +48,24 @@ class Telegram(abc.ABC):
             raise RuntimeError(f"{self.__class__.__name__} Running")
 
         await self.initdb()
-        row = await self.db.fetchrow("SELECT chat_id, message_id FROM restart.msg;")
+        rows = await self.db.fetch(
+            "SELECT name, chat_id, message_id FROM restart.msgs;"
+        )
         self.logger.info(f"Starting {self.__class__.__name__}...")
         try:
             await self.start()
-            if row:
-                await asyncio.gather(
-                    self.db.execute("TRUNCATE restart.msg;"),
-                    self.app.delete_messages(row["chat_id"], row["message_id"]),
+            for row in rows:
+                name, chat_id, message_id = (
+                    row["name"],
+                    row["chat_id"],
+                    row["message_id"],
                 )
+                if name == "app":
+                    await self.app.delete_messages(chat_id, message_id)
+                elif name == "bot":
+                    await self.bot.delete_messages(chat_id, message_id)
+
+                await self.db.execute("DELETE FROM restart.msgs WHERE name = $1;", name)
 
             new = await self.bot.send_sticker(
                 self.app.me.id,
@@ -110,7 +119,22 @@ class Telegram(abc.ABC):
                 ),
             )
             await self.db.execute(
-                "INSERT INTO restart.msg (chat_id, message_id) VALUES ($1, $2);",
+                """
+                INSERT INTO restart.msgs AS r (
+                    name,
+                    chat_id,
+                    message_id
+                )
+                VALUES ($1, $2, $3)
+                ON CONFLICT (name)
+                DO UPDATE SET
+                    chat_id     = EXCLUDE.chat_id,
+                    message_id  = EXCLUDE.message_id
+                WHERE
+                    r.chat_id       IS DISTINCT FROM EXCLUDE.chat_id
+                OR  r.message_id    IS DISTINCT FROM EXCLUDE.message_id;
+                """,
+                "bot",
                 new.chat.id,
                 new.id,
             )
