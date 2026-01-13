@@ -37,15 +37,17 @@ class Purge(Module):
                 async for m in event._client.search_messages(
                     event.chat.id,
                     from_user="me",
+                    message_thread_id=event.message_thread_id,
                     limit=(limit or 100) + 1,
                     min_id=(event.reply_to_message_id or 1) - 1,
                     max_id=event.id,
                 )
             ]
         else:
-            if event.chat.type == ChatType.SUPERGROUP and (
-                event.chat.is_direct_messages or event.chat.is_forum
-            ):
+            if (
+                event.chat.type == ChatType.SUPERGROUP
+                and (event.chat.is_direct_messages or event.chat.is_forum)
+            ) or (event.chat.type == ChatType.BOT and event.message_thread_id):
                 await self.respond(
                     event,
                     f"<code>Unsupported {html.escape('<ChatType>')}</code>",
