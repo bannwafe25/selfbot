@@ -160,8 +160,8 @@ class Telegram(abc.ABC):
                 except UserIsBlocked:
                     await self.app.unblock_user(self.bot.me.id)
 
-                await self.dispatch("loading")
-                await self.dispatch("started")
+                await self.dispatch("starting")
+                asyncio.create_task(self.dispatch("started"))
 
     async def idle(self) -> None:
         if self.__idle__ and not self.__idle__.is_set():

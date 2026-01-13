@@ -7,7 +7,7 @@ from pyrogram import filters
 from pyrogram.enums import ChatType
 from pyrogram.types import Message
 
-from selfbot import listener
+from selfbot.listener import handler
 from selfbot.module import Module
 
 pattern = re.compile(r"^purge(me)?(?:\s-l\s([1-9]\d{0,2}))?$")
@@ -23,7 +23,7 @@ class Purge(Module):
         "e.g.": "purgeme -l 99",
     }
 
-    @listener.handler(filters.regex(pattern), 1)
+    @handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await self.respond(event, "<code>...</code>")
         (me, limit) = pattern.match(event.content).groups()

@@ -30,7 +30,7 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
     async def stop(self) -> None:
         try:
             await asyncio.gather(
-                self.dispatch("closing"),
+                self.dispatch("stopping"),
                 self.app.stop(),
                 self.bot.stop(),
                 self.http.aclose(),

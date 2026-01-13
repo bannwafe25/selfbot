@@ -5,7 +5,8 @@ import re
 from pyrogram import filters
 from pyrogram.types import CallbackQuery, InlineQuery, Message, ReplyParameters
 
-from selfbot import __version__, listener
+from selfbot import __version__
+from selfbot.listener import fltrep, handler
 from selfbot.module import Module
 
 pattern = re.compile(r"^help/?(mod|info|page)?(?:/(\d{1}|[a-zA-Z]+))?$")
@@ -35,7 +36,7 @@ class Help(Module):
         if page:
             self.ikbs.append([page[i : i + 2] for i in range(0, len(page), 2)])
 
-    @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
+    @handler(filters.regex(pattern) & ~fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         _, res = await asyncio.gather(
             self.respond(event, "<code>...</code>"),
@@ -52,7 +53,7 @@ class Help(Module):
             event.delete(),
         )
 
-    @listener.handler(filters.regex(pattern), 2)
+    @handler(filters.regex(pattern), 2)
     async def on_inline_query(self, event: InlineQuery) -> None:
         if len(event.query.split("/")) == 2:
             name = event.query.split("/")[1].strip().lower()
@@ -84,7 +85,7 @@ class Help(Module):
 
         await self.answer(event, self.ikm(self.build()), "<b>Selfbot Modules</b>")
 
-    @listener.handler(filters.regex(pattern), 4)
+    @handler(filters.regex(pattern), 4)
     async def on_inline_callback(self, event: CallbackQuery) -> None:
         act, val = pattern.match(event.data).groups()
         if act == "info":

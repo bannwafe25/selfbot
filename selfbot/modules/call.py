@@ -7,7 +7,7 @@ from pyrogram.errors import ChannelPrivate, PeerIdInvalid, RPCError
 from pyrogram.types import Message
 from pyrogram.utils import get_channel_id
 
-from selfbot import listener
+from selfbot.listener import fltrep, handler
 from selfbot.module import Module
 
 load = True
@@ -40,7 +40,7 @@ class Call(Module):
         "e.g.": "call -join @durov -mute",
     }
 
-    async def on_loading(self) -> None:
+    async def on_starting(self) -> None:
         if not load:
             self.client.unload(self)
             return
@@ -93,7 +93,7 @@ class Call(Module):
                 if row.get("mute"):
                     await self.client.call.mute(row["chat_id"])
 
-    @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
+    @handler(filters.regex(pattern) & ~fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         await self.respond(event, "<code>...</code>")
         now, (action, chat_id, join_as, mute, title) = (

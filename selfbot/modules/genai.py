@@ -10,7 +10,7 @@ from pyrogram import filters
 from pyrogram.enums import MessageMediaType, ParseMode
 from pyrogram.types import ChosenInlineResult, InlineQuery, Message, Sticker, Update
 
-from selfbot import listener
+from selfbot.listener import handler
 from selfbot.module import Module
 
 pattern = re.compile(r"^(?:(.+?)\s)?\!\?(?:\s-i)?$", flags=re.DOTALL)
@@ -27,7 +27,7 @@ class GenAI(Module):
         "e.g.": "Hello, World! !?",
     }
 
-    async def on_loading(self) -> None:
+    async def on_starting(self) -> None:
         try:
             self.goog = AsyncClient(
                 headers={
@@ -47,15 +47,15 @@ class GenAI(Module):
     async def on_started(self) -> None:
         self.client.config.pop("GEMINI_API_KEY", None)
 
-    async def on_closing(self) -> None:
+    async def on_stopping(self) -> None:
         if hasattr(self, "goog") and not self.goog.is_closed:
             await self.goog.aclose()
 
-    @listener.handler(filters.regex(pattern), 1)
+    @handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await self.execute(event)
 
-    @listener.handler(filters.command("start"), 2)
+    @handler(filters.command("start"), 2)
     async def on_message_bot(self, event: Message) -> None:
         if (
             len(event.content.split()) == 2
@@ -70,13 +70,13 @@ class GenAI(Module):
                 self.data.clear()
             await asyncio.gather(event.delete(), resp.delete())
 
-    @listener.handler(filters.regex(pattern), 3)
+    @handler(filters.regex(pattern), 3)
     async def on_inline_query(self, event: InlineQuery) -> None:
         await self.answer(
             event, switch_pm_text="Clear Conversation", switch_pm_parameter="clear"
         )
 
-    @listener.handler(filters.regex(pattern), 4)
+    @handler(filters.regex(pattern), 4)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         await self.execute(event)
 

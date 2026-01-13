@@ -6,7 +6,7 @@ import sys
 from pyrogram import filters
 from pyrogram.types import Message
 
-from selfbot import listener
+from selfbot.listener import fltrep, handler
 from selfbot.module import Module
 
 pattern = re.compile(r"^r(?:estart)?$")
@@ -17,7 +17,7 @@ class Restart(Module):
     cmds = "r(estart)?"
     desc = {"?": "Optional", "e.g": "restart"}
 
-    @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
+    @handler(filters.regex(pattern) & ~fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         await asyncio.gather(
             self.respond(event, "<code>Restarting...</code>"),

@@ -12,7 +12,7 @@ from pyrogram.types import (
     Update,
 )
 
-from selfbot import listener
+from selfbot.listener import fltrep, handler
 from selfbot.module import Module
 
 pattern = re.compile(r"^p(?:ing)?$")
@@ -23,19 +23,19 @@ class Ping(Module):
     cmds = "p(ing)?"
     desc = {"?": "Optional", "e.g.": "ping"}
 
-    @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
+    @handler(filters.regex(pattern) & ~fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         await self.execute(event)
 
-    @listener.handler(filters.regex(pattern), 2)
+    @handler(filters.regex(pattern), 2)
     async def on_inline_query(self, event: InlineQuery) -> None:
         await self.answer(event)
 
-    @listener.handler(filters.regex(pattern), 3)
+    @handler(filters.regex(pattern), 3)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         await self.execute(event)
 
-    @listener.handler(filters.regex(pattern), 4)
+    @handler(filters.regex(pattern), 4)
     async def on_inline_callback(self, event: CallbackQuery) -> None:
         await self.execute(event)
 

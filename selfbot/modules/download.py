@@ -9,7 +9,7 @@ from pyrogram.errors import RPCError
 from pyrogram.types import Message, Update
 from pyrogram.utils import get_channel_id
 
-from selfbot import listener
+from selfbot.listener import handler
 from selfbot.module import Module
 
 pattern = re.compile(
@@ -29,7 +29,7 @@ class Download(Module):
         "e.g.": "dl https://t.me/durov/s/1",
     }
 
-    @listener.handler(filters.regex(pattern), 1)
+    @handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await self.respond(event, "<code>...</code>")
         update, (private, chat_id, story, update_id, file_name) = (

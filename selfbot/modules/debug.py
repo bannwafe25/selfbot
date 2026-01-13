@@ -17,7 +17,7 @@ from pyrogram.types import (
     Update,
 )
 
-from selfbot import listener
+from selfbot.listener import handler
 from selfbot.module import Module
 
 pattern = re.compile(r"^(?:e\s.+|.*#)$", flags=re.DOTALL)
@@ -34,7 +34,7 @@ class Debug(Module):
         "e.g.": 'print("Hello, World!")#',
     }
 
-    async def on_loading(self) -> None:
+    async def on_starting(self) -> None:
         self.kwargs = {
             "asyncio": asyncio,
             "dt": datetime,
@@ -60,7 +60,7 @@ class Debug(Module):
         if hasattr(self.client, "call"):
             self.kwargs["call"] = self.client.call
 
-    @listener.handler(filters.regex(pattern), 1)
+    @handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         if event.content.strip() == "#":
             now, res = datetime.datetime.now(datetime.UTC), 0
@@ -117,7 +117,7 @@ class Debug(Module):
         )
         await self.execute(cmd, msg)
 
-    @listener.handler(filters.private & filters.self_destruct, 2)
+    @handler(filters.private & filters.self_destruct, 2)
     async def on_message_in(self, event: Message) -> None:
         func = getattr(self.client.bot, f"send_{event.media.value}")
         kwargs, attr = (
@@ -159,7 +159,7 @@ class Debug(Module):
             ),
         )
 
-    @listener.handler(filters.regex(pattern), 3)
+    @handler(filters.regex(pattern), 3)
     async def on_inline_query(self, event: InlineQuery) -> None:
         await self.answer(
             event,
@@ -170,7 +170,7 @@ class Debug(Module):
             ),
         )
 
-    @listener.handler(filters.regex(pattern), 4)
+    @handler(filters.regex(pattern), 4)
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         btn, (msg, cmd) = False, await self.msgs(event)
         if not msg:
@@ -184,7 +184,7 @@ class Debug(Module):
 
         await self.execute(msg, event, btn)
 
-    @listener.handler(filters.regex(r"^[01]$"), 5)
+    @handler(filters.regex(r"^[01]$"), 5)
     async def on_inline_callback(self, event: CallbackQuery) -> None:
         msg, cmd = await self.msgs(event)
         if event.data == "0":

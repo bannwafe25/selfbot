@@ -7,7 +7,7 @@ from pyrogram.errors import RPCError
 from pyrogram.raw.functions.messages import ReadMentions
 from pyrogram.types import Message
 
-from selfbot import listener
+from selfbot.listener import fltrep, handler
 from selfbot.module import Module
 
 pattern = re.compile(r"^afk(?:\s-r\s(.+))?$")
@@ -24,7 +24,7 @@ class AFK(Module):
     }
     status, reason, since = False, "", None
 
-    async def on_loading(self) -> None:
+    async def on_starting(self) -> None:
         row = await self.client.db.fetchrow("SELECT reason, since FROM afk.meta;")
         if row:
             self.status = True
@@ -32,7 +32,7 @@ class AFK(Module):
 
         self.lock = asyncio.Lock()
 
-    @listener.handler(filters.regex(pattern) & ~listener.fltrep, 1)
+    @handler(filters.regex(pattern) & ~fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
         await self.respond(event, "<code>...</code>")
         since, (reason,) = (
@@ -70,7 +70,7 @@ class AFK(Module):
             revoke=2.5,
         )
 
-    @listener.handler(~filters.private, 2)
+    @handler(~filters.private, 2)
     async def on_message_in(self, event: Message) -> None:
         if not self.status:
             return
