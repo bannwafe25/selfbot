@@ -128,11 +128,11 @@ class Telegram(abc.ABC):
                 VALUES ($1, $2, $3)
                 ON CONFLICT (name)
                 DO UPDATE SET
-                    chat_id     = EXCLUDE.chat_id,
-                    message_id  = EXCLUDE.message_id
+                    chat_id     = EXCLUDED.chat_id,
+                    message_id  = EXCLUDED.message_id
                 WHERE
-                    r.chat_id       IS DISTINCT FROM EXCLUDE.chat_id
-                OR  r.message_id    IS DISTINCT FROM EXCLUDE.message_id;
+                    r.chat_id       IS DISTINCT FROM EXCLUDED.chat_id
+                OR  r.message_id    IS DISTINCT FROM EXCLUDED.message_id;
                 """,
                 "bot",
                 new.chat.id,
