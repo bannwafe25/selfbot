@@ -120,7 +120,7 @@ class AFK(Module):
                 self.client.config["STICKER_FILE_ID"],
                 **(
                     {"message_thread_id": int(self.client.config["THREAD_ID_AFK"])}
-                    if self.config.get("THREAD_ID_AFK")
+                    if self.client.config.get("THREAD_ID_AFK")
                     else {}
                 ),
                 disable_notification=True,
