@@ -57,58 +57,63 @@ class Telegram(abc.ABC):
                     self.db.execute("TRUNCATE restart.msg;"),
                     self.app.delete_messages(row["chat_id"], row["message_id"]),
                 )
-            else:
-                await self.bot.send_sticker(
-                    self.app.me.id,
-                    self.config["STICKER_FILE_ID"],
-                    **(
-                        {"message_thread_id": int(self.config["THREAD_ID_LOG"])}
-                        if self.config.get("THREAD_ID_LOG")
-                        else {}
-                    ),
-                    disable_notification=True,
-                    reply_markup=ReplyKeyboardMarkup(
+
+            new = await self.bot.send_sticker(
+                self.app.me.id,
+                self.config["STICKER_FILE_ID"],
+                **(
+                    {"message_thread_id": int(self.config["THREAD_ID_LOG"])}
+                    if self.config.get("THREAD_ID_LOG")
+                    else {}
+                ),
+                disable_notification=True,
+                reply_markup=ReplyKeyboardMarkup(
+                    [
                         [
-                            [
-                                KeyboardButton(
-                                    "Admin Channels",
-                                    request_chat=KeyboardButtonRequestChat(
-                                        10,
-                                        chat_is_channel=True,
-                                        chat_is_created=False,
-                                        user_administrator_rights=ChatPrivileges(),
-                                    ),
+                            KeyboardButton(
+                                "Admin Channels",
+                                request_chat=KeyboardButtonRequestChat(
+                                    10,
+                                    chat_is_channel=True,
+                                    chat_is_created=False,
+                                    user_administrator_rights=ChatPrivileges(),
                                 ),
-                                KeyboardButton(
-                                    "Admin Groups",
-                                    request_chat=KeyboardButtonRequestChat(
-                                        11,
-                                        chat_is_channel=False,
-                                        chat_is_created=False,
-                                        user_administrator_rights=ChatPrivileges(),
-                                    ),
+                            ),
+                            KeyboardButton(
+                                "Admin Groups",
+                                request_chat=KeyboardButtonRequestChat(
+                                    11,
+                                    chat_is_channel=False,
+                                    chat_is_created=False,
+                                    user_administrator_rights=ChatPrivileges(),
                                 ),
-                            ],
-                            [
-                                KeyboardButton(
-                                    "Owned Channels",
-                                    request_chat=KeyboardButtonRequestChat(
-                                        20, chat_is_channel=True, chat_is_created=True
-                                    ),
-                                ),
-                                KeyboardButton(
-                                    "Owned Groups",
-                                    request_chat=KeyboardButtonRequestChat(
-                                        21, chat_is_channel=False, chat_is_created=True
-                                    ),
-                                ),
-                            ],
+                            ),
                         ],
-                        is_persistent=True,
-                        resize_keyboard=True,
-                        input_field_placeholder=f"Selfbot {__version__}",
-                    ),
-                )
+                        [
+                            KeyboardButton(
+                                "Owned Channels",
+                                request_chat=KeyboardButtonRequestChat(
+                                    20, chat_is_channel=True, chat_is_created=True
+                                ),
+                            ),
+                            KeyboardButton(
+                                "Owned Groups",
+                                request_chat=KeyboardButtonRequestChat(
+                                    21, chat_is_channel=False, chat_is_created=True
+                                ),
+                            ),
+                        ],
+                    ],
+                    is_persistent=True,
+                    resize_keyboard=True,
+                    input_field_placeholder=f"Selfbot {__version__}",
+                ),
+            )
+            await self.db.execute(
+                "INSERT INTO restart.msg (chat_id, message_id) VALUES ($1, $2);",
+                new.chat.id,
+                new.id,
+            )
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
         else:
