@@ -111,19 +111,20 @@ class Telegram:
             if not isinstance(event, Message):
                 raise AttributeError
 
-            return await event.reply_text(
+            event = await event.reply_text(
                 text,
                 reply_parameters=ReplyParameters(message_id=event.id),
                 *args,
                 **kwargs,
             )
-
-        if isinstance(event, Message):
-            edit = event.edit_text
         else:
-            edit = event.edit_message_text
+            if isinstance(event, Message):
+                edit = event.edit_text
+            else:
+                edit = event.edit_message_text
 
-        event = await edit(text, *args, **kwargs)
+            event = await edit(text, *args, **kwargs)
+
         if revoke:
             if not isinstance(event, Message):
                 raise AttributeError

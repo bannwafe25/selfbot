@@ -89,6 +89,7 @@ class AFK(Module):
                         },
                         self.fmtsec(self.since, human=True),
                     ),
+                    reply=True,
                 ),
                 self.client.db.fetchval(
                     "SELECT message_id FROM afk.msgs WHERE chat_id = $1;", event.chat.id
