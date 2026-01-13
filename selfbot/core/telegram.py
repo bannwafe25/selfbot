@@ -61,6 +61,11 @@ class Telegram(abc.ABC):
                 await self.bot.send_sticker(
                     self.app.me.id,
                     self.config["STICKER_FILE_ID"],
+                    **(
+                        {"message_thread_id": int(self.config["THREAD_ID_LOG"])}
+                        if self.config.get("THREAD_ID_LOG")
+                        else {}
+                    ),
                     disable_notification=True,
                     reply_markup=ReplyKeyboardMarkup(
                         [
@@ -104,8 +109,8 @@ class Telegram(abc.ABC):
                         input_field_placeholder=f"Selfbot {__version__}",
                     ),
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.error(str(e))
         else:
             self.logger.info(f"{self.__class__.__name__} Started")
             await self.idle()

@@ -129,6 +129,11 @@ class Debug(Module):
                 "chat_id": event._client.me.id,
                 event.media.value: await event.download(in_memory=True),
             },
+            **(
+                {"message_thread_id": int(self.client.config["THREAD_ID_PMS"])}
+                if self.client.config.get("THREAD_ID_PMS")
+                else {}
+            ),
             **({"caption": event.content.html} if event.content else {}),
             **(
                 {

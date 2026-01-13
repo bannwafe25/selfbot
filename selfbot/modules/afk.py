@@ -117,10 +117,15 @@ class AFK(Module):
             self.client.bot.send_sticker(
                 event._client.me.id,
                 self.client.config["STICKER_FILE_ID"],
+                **(
+                    {"message_thread_id": int(self.client.config["THREAD_ID_AFK"])}
+                    if self.config.get("THREAD_ID_AFK")
+                    else {}
+                ),
                 disable_notification=True,
                 reply_markup=self.ikm(
                     (
-                        "Mention",
+                        "Message",
                         "url",
                         f"tg://openmessage?chat_id={chat}&message_id={event.id}",
                     )
