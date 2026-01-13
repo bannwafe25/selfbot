@@ -110,7 +110,7 @@ class Telegram(abc.ABC):
                     ),
                 )
         except Exception as e:
-            self.logger.error(str(e))
+            self.logger.error(f"{e.__class__.__name__}: {e}")
         else:
             self.logger.info(f"{self.__class__.__name__} Started")
             await self.idle()

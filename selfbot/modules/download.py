@@ -32,7 +32,9 @@ class Download(Module):
     @handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await self.respond(event, "<code>...</code>")
-        private, chat_id, story, update_id, file_name = pattern.match(event.content).groups()
+        private, chat_id, story, update_id, file_name = pattern.match(
+            event.content
+        ).groups()
         update = None
         if event.reply_to_message:
             if not event.reply_to_message.media:
