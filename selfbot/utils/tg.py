@@ -54,6 +54,7 @@ class Telegram:
         timeout: int = 15,
     ) -> Message | None:
         fut = asyncio.Future()
+        mod = self.__class__(self.client)
 
         async def result(event: Message) -> None:
             if not fut.done():
@@ -63,7 +64,7 @@ class Telegram:
                 await event.delete()
 
         self.client.register(
-            self, result, f"listen_{client}", filters=filters, priority=-1
+            mod, result, f"listen_{client}", filters=filters, priority=-1
         )
         try:
             res = await asyncio.wait_for(fut, timeout=timeout)
@@ -73,7 +74,7 @@ class Telegram:
             return res
         finally:
             for listener in tuple(self.client.listeners[f"listen_{client}"]):
-                if listener.mod is self:
+                if listener.mod is mod:
                     self.client.unregister(listener)
 
     async def progress(
