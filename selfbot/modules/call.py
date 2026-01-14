@@ -161,7 +161,15 @@ class Call(Module):
         except Exception as e:
             await self.respond(
                 event,
-                self.fmtmsg(e.__class__.__name__, str(e), self.fmtsec(now)),
+                self.fmtmsg(
+                    e.__class__.__name__,
+                    (
+                        e.MESSAGE.format(value=e.value)
+                        if isinstance(e, RPCError)
+                        else str(e)
+                    ),
+                    self.fmtsec(now),
+                ),
                 revoke=2.5,
             )
         else:
