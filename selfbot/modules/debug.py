@@ -2,11 +2,9 @@ import asyncio
 import contextlib
 import datetime
 import html
-import inspect
 import io
 import re
 
-import pyrogram
 from pyrogram import filters
 from pyrogram.types import (
     CallbackQuery,
@@ -37,16 +35,6 @@ class Debug(Module):
     async def on_starting(self) -> None:
         self.kwargs = {
             "asyncio": asyncio,
-            "dt": datetime,
-            "inspect": inspect,
-            "io": io,
-            "re": re,
-            "pyrogram": pyrogram,
-            "filters": filters,
-            "enums": pyrogram.enums,
-            "raw": pyrogram.raw,
-            "types": pyrogram.types,
-            "utils": pyrogram.utils,
             "self": self,
             "client": self.client,
             "db": self.client.db,
@@ -120,10 +108,7 @@ class Debug(Module):
     @handler(filters.private & filters.self_destruct, 2)
     async def on_message_in(self, event: Message) -> None:
         func = getattr(self.client.bot, f"send_{event.media.value}")
-        kwargs, attr = (
-            inspect.signature(func).parameters,
-            getattr(event, event.media.value),
-        )
+        args, media = (func.__annotations__, getattr(event, event.media.value))
         await func(
             **{
                 "chat_id": event._client.me.id,
@@ -138,16 +123,16 @@ class Debug(Module):
             **(
                 {
                     "thumb": await event._client.download_media(
-                        attr.thumbs[0].file_id, in_memory=True
+                        media.thumbs[0], in_memory=True
                     )
                 }
-                if attr.thumbs and "thumb" in kwargs
+                if media.thumbs and "thumb" in args
                 else {}
             ),
             **{
                 k: v
-                for k, v in attr.__dict__.items()
-                if k in kwargs and k not in ("ttl_seconds", "protect_content")
+                for k, v in media.__dict__.items()
+                if k in args and k not in ("ttl_seconds", "protect_content")
             },
             disable_notification=True,
             reply_markup=self.ikm(
