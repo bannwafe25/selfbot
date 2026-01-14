@@ -145,6 +145,9 @@ class Telegram(abc.ABC):
             await self.idle()
 
     async def start(self) -> None:
+        if self.__idle__ and not self.__idle__.is_set():
+            raise RuntimeError(f"{self.__class__.__name__} Started")
+
         self.app = self.build(
             "app", updates=(UpdateNewChannelMessage, UpdateNewMessage)
         )
