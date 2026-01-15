@@ -1,16 +1,8 @@
 import abc
-import asyncio
 import bisect
 import contextlib
 import typing
 
-from pyrogram.errors import (
-    FloodWait,
-    MessageIdInvalid,
-    MessageNotModified,
-    QueryIdInvalid,
-    SlowmodeWait,
-)
 from pyrogram.filters import Filter
 from pyrogram.types import Update
 
@@ -31,31 +23,22 @@ class Dispatcher(abc.ABC):
                         continue
 
                 await listener.func(*args, **kwargs)
-            except (MessageIdInvalid, MessageNotModified, QueryIdInvalid):
-                continue
-            except (FloodWait, SlowmodeWait) as e:
-                if e.value <= 30:
-                    await asyncio.sleep(e.value)
-                    with contextlib.suppress(Exception):
-                        await listener.func(*args, **kwargs)
-                else:
-                    continue
             except Exception as e:
                 tb = e.__traceback__
                 while tb and tb.tb_next:
                     tb = tb.tb_next
 
-                fn = getattr(tb.tb_frame.f_code, "co_filename", "-")
-                ln = getattr(tb, "tb_lineno", "-")
+                fn = tb.tb_frame.f_code.co_filename
+                ln = tb.tb_lineno
                 with contextlib.suppress(Exception):
                     await self.bot.send_message(
                         self.app.me.id,
                         (
                             f"<b>{e.__class__.__name__}</b>\n\n"
-                            f"  <code>Module</code>: <code>{listener.mod.__class__.__name__}</code>\n"
-                            f"  <code>Event </code>: <code>{listener.event}</code>\n\n"
-                            f"  <code>File  </code>: <code>{fn}</code>\n"
-                            f"  <code>Line  </code>: <code>{ln}</code>\n\n"
+                            f"  <code>Module</code> : <code>{listener.mod.__class__.__name__}</code>\n"
+                            f"  <code>Event </code> : <code>{listener.event}</code>\n\n"
+                            f"  <code>File  </code> : <code>{fn}</code>\n"
+                            f"  <code>Line  </code> : <code>{ln}</code>\n\n"
                             f"<blockquote>{e}</blockquote>"
                         ),
                         **(
