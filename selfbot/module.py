@@ -1,13 +1,13 @@
 import logging
 import typing
 
-from selfbot.utils import Utils
+from selfbot.methods import Methods
 
 if typing.TYPE_CHECKING:
     from selfbot.core import Selfbot
 
 
-class Module(Utils):
+class Module(Methods):
     name = "Module"
     cmds = ""
     desc = None

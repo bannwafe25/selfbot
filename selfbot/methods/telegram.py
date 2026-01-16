@@ -51,7 +51,6 @@ class Telegram:
         event: str = "app",
         user_id: int | str = None,
         chat_id: int | str = None,
-        revoke: bool = False,
         timeout: int = 15,
     ) -> Message | None:
         flt = filters.all
@@ -67,9 +66,6 @@ class Telegram:
         async def result(msg: Message) -> None:
             if not fut.done():
                 fut.set_result(msg)
-
-            if revoke:
-                await msg.delete()
 
         self.client.register(mod, result, event, filters=flt, priority=-1)
         try:

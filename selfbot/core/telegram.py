@@ -31,8 +31,7 @@ from pyrogram.types import (
 )
 
 from selfbot import __version__
-
-from .storage import PostgreStorage
+from selfbot.storage import PostgreStorage
 
 
 class Telegram(abc.ABC):
