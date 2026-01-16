@@ -5,6 +5,7 @@ import html
 import io
 import re
 
+import pyrogram
 from pyrogram import filters
 from pyrogram.types import (
     CallbackQuery,
@@ -35,13 +36,26 @@ class Debug(Module):
     async def on_starting(self) -> None:
         self.kwargs = {
             "asyncio": asyncio,
+            "pyrogram": pyrogram,
+            "raw": pyrogram.raw,
+            "enums": pyrogram.enums,
+            "types": pyrogram.types,
             "self": self,
+            "ikm": self.ikm,
+            "shell": self.shell,
             "client": self.client,
             "db": self.client.db,
             "app": self.client.app,
             "bot": self.client.bot,
             "http": self.client.http,
             "loop": self.client.loop,
+            "fmtbar": self.fmtbar,
+            "fmtmsg": self.fmtmsg,
+            "fmtsec": self.fmtmsg,
+            "listen": self.listen,
+            "fmtbyte": self.fmtbyte,
+            "respond": self.respond,
+            "progress": self.progress,
         }
 
     async def on_started(self) -> None:
