@@ -1,7 +1,7 @@
 import asyncio
 import struct
 
-from pyrogram.filters import Filter
+from pyrogram import filters
 from pyrogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -49,10 +49,18 @@ class Telegram:
     async def listen(
         self,
         event: str = "app",
-        filters: Filter = None,
+        user_id: int | str = None,
+        chat_id: int | str = None,
         revoke: bool = False,
         timeout: int = 15,
     ) -> Message | None:
+        flt = filters.all
+        if user_id:
+            flt &= filters.user(user_id)
+
+        if chat_id:
+            flt &= filters.chat(chat_id)
+
         fut = asyncio.Future()
         mod = self.__class__(self.client)
 
@@ -63,7 +71,7 @@ class Telegram:
             if revoke:
                 await msg.delete()
 
-        self.client.register(mod, result, event, filters=filters, priority=-1)
+        self.client.register(mod, result, event, filters=flt, priority=-1)
         try:
             res = await asyncio.wait_for(fut, timeout=timeout)
         except Exception:
