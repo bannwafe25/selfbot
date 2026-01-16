@@ -7,6 +7,7 @@ from pyrogram.types import (
     InlineKeyboardMarkup,
     InlineQuery,
     InlineQueryResultCachedSticker,
+    InputMedia,
     InputTextMessageContent,
     Message,
     ReplyParameters,
@@ -113,7 +114,7 @@ class Telegram:
     async def respond(
         self,
         event: Update,
-        text: str,
+        message: str | InputMedia,
         reply: bool = False,
         revoke: int = 0,
         *args,
@@ -124,18 +125,24 @@ class Telegram:
                 raise AttributeError
 
             event = await event.reply_text(
-                text,
+                message,
                 reply_parameters=ReplyParameters(message_id=event.id),
                 *args,
                 **kwargs,
             )
         else:
             if isinstance(event, Message):
-                edit = event.edit_text
+                if isinstance(message, str):
+                    edit = event.edit_text
+                else:
+                    edit = event.edit_media
             else:
-                edit = event.edit_message_text
+                if isinstance(message, str):
+                    edit = event.edit_message_text
+                else:
+                    edit = event.edit_message_media
 
-            event = await edit(text, *args, **kwargs)
+            event = await edit(message, *args, **kwargs)
 
         if revoke:
             if not isinstance(event, Message):
