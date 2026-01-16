@@ -1,7 +1,7 @@
 import asyncio
 import struct
 
-from pyrogram import filters
+from pyrogram import Client, filters
 from pyrogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -48,7 +48,7 @@ class Telegram:
 
     async def listen(
         self,
-        event: str = "app",
+        client: Client = None,
         user_id: int | str = None,
         chat_id: int | str = None,
         timeout: int = 15,
@@ -63,11 +63,11 @@ class Telegram:
         fut = asyncio.Future()
         mod = self.__class__(self.client)
 
-        async def result(msg: Message) -> None:
+        async def result(event: Message) -> None:
             if not fut.done():
-                fut.set_result(msg)
+                fut.set_result(event)
 
-        self.client.register(mod, result, event, filters=flt, priority=-1)
+        self.client.register(mod, result, client.name, filters=flt, priority=-1)
         try:
             res = await asyncio.wait_for(fut, timeout=timeout)
         except Exception:
@@ -75,7 +75,7 @@ class Telegram:
         else:
             return res
         finally:
-            for listener in tuple(self.client.listeners[event]):
+            for listener in tuple(self.client.listeners[client.name]):
                 if listener.mod is mod:
                     self.client.unregister(listener)
 
