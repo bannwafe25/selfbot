@@ -5,6 +5,7 @@ import re
 from pyrogram import filters
 from pyrogram.errors import RPCError
 from pyrogram.raw.functions.messages import ReadMentions
+from pyrogram.raw.types import InputPeerChannel
 from pyrogram.types import Message
 
 from selfbot.listener import fltrep, handler
@@ -72,6 +73,32 @@ class AFK(Module):
 
     @handler(~filters.private, 2)
     async def on_message_in(self, event: Message) -> None:
+        peer = await event._client.resolve_peer(event.chat.id)
+        if isinstance(peer, InputPeerChannel):
+            chat_id = peer.channel_id
+        else:
+            chat_id = peer.chat_id
+
+        await asyncio.gather(
+            event._client.invoke(ReadMentions(peer=peer)),
+            self.client.bot.send_sticker(
+                event._client.me.id,
+                self.client.config["STICKER_FILE_ID"],
+                **(
+                    {"message_thread_id": int(self.client.config["THREAD_ID_TAG"])}
+                    if self.client.config.get("THREAD_ID_TAG")
+                    else {}
+                ),
+                disable_notification=True,
+                reply_markup=self.ikm(
+                    (
+                        "Message",
+                        "url",
+                        f"tg://openmessage?chat_id={chat_id}&message_id={event.id}",
+                    )
+                ),
+            ),
+        )
         if not self.status:
             return
 
@@ -110,26 +137,3 @@ class AFK(Module):
                     event.chat.id,
                     new.id,
                 )
-
-        peer = await event._client.resolve_peer(event.chat.id)
-        chat = getattr(peer, "channel_id", None) or getattr(peer, "chat_id", None)
-        await asyncio.gather(
-            event._client.invoke(ReadMentions(peer=peer)),
-            self.client.bot.send_sticker(
-                event._client.me.id,
-                self.client.config["STICKER_FILE_ID"],
-                **(
-                    {"message_thread_id": int(self.client.config["THREAD_ID_AFK"])}
-                    if self.client.config.get("THREAD_ID_AFK")
-                    else {}
-                ),
-                disable_notification=True,
-                reply_markup=self.ikm(
-                    (
-                        "Message",
-                        "url",
-                        f"tg://openmessage?chat_id={chat}&message_id={event.id}",
-                    )
-                ),
-            ),
-        )

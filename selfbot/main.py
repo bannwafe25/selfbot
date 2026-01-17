@@ -36,9 +36,9 @@ def config() -> dict:
                 "GEMINI_API_KEY",
                 "GEMINI_MODEL",
                 "STICKER_FILE_ID",
-                "THREAD_ID_AFK",
                 "THREAD_ID_LOG",
                 "THREAD_ID_PMS",
+                "THREAD_ID_TAG",
             )
         }
 
