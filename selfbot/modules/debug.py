@@ -11,6 +11,7 @@ from pyrogram.types import (
     CallbackQuery,
     ChosenInlineResult,
     InlineQuery,
+    InputMediaDocument,
     Message,
     ReplyParameters,
     Update,
@@ -51,7 +52,7 @@ class Debug(Module):
             "loop": self.client.loop,
             "fmtbar": self.fmtbar,
             "fmtmsg": self.fmtmsg,
-            "fmtsec": self.fmtmsg,
+            "fmtsec": self.fmtsec,
             "listen": self.listen,
             "fmtbyte": self.fmtbyte,
             "respond": self.respond,
@@ -266,15 +267,18 @@ class Debug(Module):
         if code.endswith("return"):
             return
 
-        if len(out) > 756:
-            url = (
-                await self.client.http.post("https://paste.rs", data=out.encode())
-            ).text.strip()
-            ikb.insert(0, [("Output", "url", url)])
-            if isinstance(event, Message):
-                rtt = f"<a href={url}>{rtt}</a>"
-
-            out = f"{out[:512]}..."
+        if len(out) > 768:
+            with io.BytesIO(out.encode()) as doc:
+                doc.name = "Out.TXT"
+                await self.respond(
+                    event,
+                    InputMediaDocument(
+                        doc,
+                        caption=f"<code>{html.escape(out[:512])}...</code>\n\n<b><blockquote>{rtt}</blockquote></b>",
+                    ),
+                    reply_markup=self.ikm(ikb),
+                )
+                return
 
         await self.respond(
             event,
