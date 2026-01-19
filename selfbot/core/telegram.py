@@ -69,11 +69,6 @@ class Telegram(abc.ABC):
             new = await self.bot.send_sticker(
                 self.app.me.id,
                 self.config["STICKER_FILE_ID"],
-                **(
-                    {"message_thread_id": int(self.config["THREAD_ID_LOG"])}
-                    if self.config.get("THREAD_ID_LOG")
-                    else {}
-                ),
                 disable_notification=True,
                 reply_markup=ReplyKeyboardMarkup(
                     [

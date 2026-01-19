@@ -31,15 +31,7 @@ def config() -> dict:
             k: v
             for k, v in os.environ.items()
             if k
-            in (
-                "DATABASE_URL",
-                "GEMINI_API_KEY",
-                "GEMINI_MODEL",
-                "STICKER_FILE_ID",
-                "THREAD_ID_LOG",
-                "THREAD_ID_PMS",
-                "THREAD_ID_TAG",
-            )
+            in ("DATABASE_URL", "GEMINI_API_KEY", "GEMINI_MODEL", "STICKER_FILE_ID")
         }
 
     return config

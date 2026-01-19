@@ -41,11 +41,6 @@ class Dispatcher(abc.ABC):
                             f"  <code>Line  </code> : <code>{ln}</code>\n\n"
                             f"<blockquote>{e}</blockquote>"
                         ),
-                        **(
-                            {"message_thread_id": int(self.config["THREAD_ID_LOG"])}
-                            if self.config.get("THREAD_ID_LOG")
-                            else {}
-                        ),
                     )
 
                 listener.mod.logger.error(f"{e.__class__.__name__}: {e} at {fn}:{ln}")
