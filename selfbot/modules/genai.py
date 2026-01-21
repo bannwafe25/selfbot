@@ -5,7 +5,7 @@ import datetime
 import html
 import re
 
-from httpx import AsyncClient
+from httpx import AsyncClient, Timeout
 from pyrogram import filters
 from pyrogram.enums import MessageMediaType, ParseMode
 from pyrogram.types import ChosenInlineResult, InlineQuery, Message, Sticker, Update
@@ -35,6 +35,8 @@ class GenAI(Module):
                     "x-goog-api-key": self.client.config["GEMINI_API_KEY"],
                 },
                 http2=True,
+                timeout=Timeout(timeout=None),
+                follow_redirects=True,
                 base_url="https://generativelanguage.googleapis.com",
             )
         except Exception as e:
