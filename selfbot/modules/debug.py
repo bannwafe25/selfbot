@@ -43,6 +43,7 @@ class Debug(Module):
             "types": pyrogram.types,
             "self": self,
             "ikm": self.ikm,
+            "aexec": self.aexec,
             "shell": self.shell,
             "client": self.client,
             "db": self.client.db,
