@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from httpx import AsyncClient
+from httpx import AsyncClient, Timeout
 
 from .database import Database
 from .dispatcher import Dispatcher
@@ -19,7 +19,9 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
     async def launch(cls, config: dict, loop: asyncio.AbstractEventLoop) -> Selfbot:
         selfbot = cls(config)
         try:
-            selfbot.http = AsyncClient(http2=True)
+            selfbot.http = AsyncClient(
+                http2=True, timeout=Timeout(timeout=None), follow_redirects=True
+            )
             selfbot.loop = loop
             await selfbot.run()
         finally:
