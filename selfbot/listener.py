@@ -11,7 +11,7 @@ if typing.TYPE_CHECKING:
 class Listener:
     def __init__(
         self,
-        mod: Module,
+        mod: "Module",
         func: typing.Callable,
         event: str,
         filters: filters.Filter,
