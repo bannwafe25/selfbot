@@ -23,7 +23,7 @@ class Listener:
         self.filters = filters
         self.priority = priority
 
-    def __lt__(self, other: Listener) -> bool:
+    def __lt__(self, other: "Listener") -> bool:
         return self.priority < other.priority
 
 

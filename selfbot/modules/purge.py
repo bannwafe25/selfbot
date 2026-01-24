@@ -26,7 +26,7 @@ class Purge(Module):
     @handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         await self.respond(event, "<code>...</code>")
-        (me, limit) = pattern.match(event.content).groups()
+        me, limit = pattern.match(event.content).groups()
         if limit:
             limit = int(limit)
 
