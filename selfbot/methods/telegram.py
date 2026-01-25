@@ -84,14 +84,15 @@ class Telegram:
         self, current: int, total: int, event: Update, title: str = "Progress"
     ) -> None:
         time = event._client.loop.time()
-        if not hasattr(event, "_start"):
-            event._start, event._last = time, time
+        byte = getattr(event, "prog_byte", 0)
+        if current < byte or not hasattr(event, "prog_init"):
+            event.prog_init = time
+            event.prog_last = time
+            event.prog_byte = 0
             return
 
-        if time - event._last >= 2.5:
-            delta = time - event._start
-            speed = current / delta
-
+        if time - event.prog_last >= 2.5 or current == total:
+            speed = (current - event.prog_byte) / (time - event.prog_last)
             await self.respond(
                 event,
                 self.fmtmsg(
@@ -100,7 +101,7 @@ class Telegram:
                         "Current": self.fmtbyte(current),
                         "Total": f"{self.fmtbyte(total)}\n",
                         "Speed": f"{self.fmtbyte(speed)}/s\n",
-                        "Elapsed": self.fmtsec(delta, human=True),
+                        "Elapsed": self.fmtsec(time - event.prog_init, human=True),
                         "Estimated": self.fmtsec(
                             (total - current) / speed if speed > 0 else 0, human=True
                         ),
@@ -109,7 +110,8 @@ class Telegram:
                 ),
                 reply_markup=self.ikm(("Cancel", b"0")),
             )
-            event._last = time
+            event.prog_last = time
+            event.prog_byte = current
 
     async def respond(
         self,
