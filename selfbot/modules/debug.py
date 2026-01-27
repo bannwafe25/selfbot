@@ -52,6 +52,7 @@ class Debug(Module):
             "http": self.client.http,
             "loop": self.client.loop,
             "fmtbar": self.fmtbar,
+            "fmtexc": self.fmtexc,
             "fmtmsg": self.fmtmsg,
             "fmtsec": self.fmtsec,
             "listen": self.listen,
