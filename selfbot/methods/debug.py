@@ -32,10 +32,15 @@ class Debug:
             type_ignores=[],
         )
         ast.fix_missing_locations(node)
+
         temp = {}
         exec(compile(node, "<string>", "exec"), temp)
+
         func = await temp[name](*kwargs.values())
-        return await func if inspect.iscoroutine(func) else func
+        if inspect.iscoroutine(func):
+            return await func
+
+        return func
 
     async def shell(self, cmd: str) -> str:
         proc = await asyncio.create_subprocess_shell(
@@ -43,12 +48,8 @@ class Debug:
         )
         try:
             stdout, stderr = await proc.communicate()
-            return (stdout + stderr).decode()
-        finally:
-            try:
-                if not proc.returncode:
-                    proc.terminate()
-            except ProcessLookupError:
-                pass
-            else:
-                await proc.wait()
+            return (stdout + stderr).decode("utf-8", errors="replace").rstrip()
+        except asyncio.CancelledError:
+            proc.kill()
+            await proc.wait()
+            raise

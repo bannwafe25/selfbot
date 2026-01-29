@@ -210,9 +210,7 @@ class GenAI(Module):
         ikb, now = [("Close", b"0")], datetime.datetime.now(datetime.UTC)
         async with self.lock:
             self.data.append({"role": "user", "parts": parts})
-            res = await self.gemini(
-                self.client.config.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
-            )
+            res = await self.gemini(self.client.config["GEMINI_MODEL"])
             rtt = self.fmtsec(now)
             if len(res) > 2048:
                 raw, url = await asyncio.gather(

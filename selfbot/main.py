@@ -2,8 +2,6 @@ import asyncio
 import logging
 import os
 
-from dotenv import dotenv_values
-
 try:
     import uvloop
 except ImportError:
@@ -24,22 +22,18 @@ for lib in ("pyrogram", "httpx"):
     logging.getLogger(lib).setLevel(logging.ERROR)
 
 
-def config() -> dict:
-    config = dotenv_values()
-    if not config:
-        config = {
-            k: v
-            for k, v in os.environ.items()
-            if k
-            in ("DATABASE_URL", "GEMINI_API_KEY", "GEMINI_MODEL", "STICKER_FILE_ID")
-        }
-
-    return config
-
-
 def run() -> None:
+    config = {
+        "DATABASE_URL": os.environ.get("DATABASE_URL"),
+        "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY"),
+        "GEMINI_MODEL": os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
+        "STICKER_FILE_ID": os.environ.get(
+            "STICKER_FILE_ID",
+            "CAACAgIAAxkBAAIdeWi1SLWihwZEeyFOk9YM4-mBWJqxAAJOAgACVp29CjD-a22BMgNvHgQ",
+        ),
+    }
     try:
-        loop.run_until_complete(Selfbot.launch(config(), loop))
+        loop.run_until_complete(Selfbot.launch(config, loop))
     except RuntimeError as e:
         logging.critical(f"{e.__class__.__name__}: {e}")
     finally:
