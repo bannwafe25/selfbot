@@ -145,15 +145,6 @@ class Telegram(abc.ABC):
         self.app = self.build(
             "app", updates=(UpdateNewChannelMessage, UpdateNewMessage)
         )
-        self.bot = self.build(
-            "bot",
-            updates=(
-                UpdateBotInlineQuery,
-                UpdateBotInlineSend,
-                UpdateInlineBotCallbackQuery,
-                UpdateNewMessage,
-            ),
-        )
         try:
             await self.app.start()
         except RPCError as e:
@@ -164,6 +155,16 @@ class Telegram(abc.ABC):
                 self.logger.error(f"{e.__class__.__name__}: {e}")
                 await self.app.storage.delete()
         else:
+            self.bot = self.build(
+                "bot",
+                updates=(
+                    UpdateBotInlineQuery,
+                    UpdateBotInlineSend,
+                    UpdateInlineBotCallbackQuery,
+                    UpdateNewMessage,
+                ),
+                bot_token=self.config.get("BOT_TOKEN"),
+            )
             try:
                 await self.bot.start()
             except RPCError as e:
@@ -174,6 +175,7 @@ class Telegram(abc.ABC):
                     self.logger.error(f"{e.__class__.__name__}: {e}")
                     await self.bot.storage.delete()
             else:
+                self.config.pop("BOT_TOKEN", None)
                 await asyncio.gather(
                     self.app.resolve_peer(self.bot.me.username),
                     asyncio.to_thread(self.loads),
@@ -250,7 +252,7 @@ class Telegram(abc.ABC):
                 finally:
                     self.handlers[name] = dispatcher
 
-    def build(self, name: str, updates: tuple = ()) -> Client:
+    def build(self, name: str, updates: tuple = (), *args, **kwargs) -> Client:
         client = Client(
             name=name,
             api_id=2496,
@@ -267,6 +269,8 @@ class Telegram(abc.ABC):
             client_platform=ClientPlatform.ANDROID,
             link_preview_options=LinkPreviewOptions(is_disabled=True),
             storage_engine=PostgreStorage(name, self.db),
+            *args,
+            **kwargs,
         )
         if updates:
             client.dispatcher.update_parsers = {

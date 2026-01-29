@@ -48,7 +48,7 @@ class Debug:
         )
         try:
             stdout, stderr = await proc.communicate()
-            return (stdout + stderr).decode("utf-8", errors="replace").rstrip()
+            return (stdout + stderr).decode("utf-8").rstrip()
         except asyncio.CancelledError:
             proc.kill()
             await proc.wait()

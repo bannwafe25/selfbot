@@ -1,6 +1,6 @@
 [project]
 name = "selfbot"
-version = "2026.01.14"
+version = "2026.01.30"
 description = "Telegram Selfbot"
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
