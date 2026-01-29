@@ -11,7 +11,7 @@ if typing.TYPE_CHECKING:
 class Listener:
     def __init__(
         self,
-        mod: "Module",
+        mod: Module,
         func: typing.Callable,
         event: str,
         filters: filters.Filter,
@@ -23,7 +23,7 @@ class Listener:
         self.filters = filters
         self.priority = priority
 
-    def __lt__(self, other: "Listener") -> bool:
+    def __lt__(self, other: Listener) -> bool:
         return self.priority < other.priority
 
 
