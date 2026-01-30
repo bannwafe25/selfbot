@@ -7,7 +7,13 @@ import signal
 from pyrogram import Client
 from pyrogram import filters as flt
 from pyrogram.enums import ChatAction, ClientPlatform, ParseMode
-from pyrogram.errors import FloodWait, PeerIdInvalid, RPCError, UserIsBlocked
+from pyrogram.errors import (
+    FloodWait,
+    MessageDeleteForbidden,
+    PeerIdInvalid,
+    RPCError,
+    UserIsBlocked,
+)
 from pyrogram.handlers import (
     CallbackQueryHandler,
     ChosenInlineResultHandler,
@@ -62,7 +68,10 @@ class Telegram(abc.ABC):
                 if name == "app":
                     await self.app.delete_messages(chat_id, message_id)
                 elif name == "bot":
-                    await self.bot.delete_messages(chat_id, message_id)
+                    try:
+                        await self.bot.delete_messages(chat_id, message_id)
+                    except MessageDeleteForbidden:
+                        pass
 
                 await self.db.execute("DELETE FROM restart.msgs WHERE name = $1;", name)
 
