@@ -37,10 +37,14 @@ class Debug(Module):
     async def on_starting(self) -> None:
         self.kwargs = {
             "asyncio": asyncio,
+            "datetime": datetime,
+            "io": io,
+            "re": re,
             "pyrogram": pyrogram,
             "raw": pyrogram.raw,
             "enums": pyrogram.enums,
             "types": pyrogram.types,
+            "utils": pyrogram.utils,
             "self": self,
             "ikm": self.ikm,
             "aexec": self.aexec,
