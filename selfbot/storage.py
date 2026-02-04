@@ -49,8 +49,7 @@ class PostgreStorage(Storage):
     async def save(self) -> None:
         await self.date(int(time.time()))
 
-    async def close(self) -> None:
-        pass
+    async def close(self) -> None: ...
 
     async def delete(self) -> None:
         await asyncio.gather(

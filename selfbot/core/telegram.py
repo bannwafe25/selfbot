@@ -68,10 +68,8 @@ class Telegram(abc.ABC):
                 if name == "app":
                     await self.app.delete_messages(chat_id, message_id)
                 elif name == "bot":
-                    try:
+                    with contextlib.suppress(MessageDeleteForbidden):
                         await self.bot.delete_messages(chat_id, message_id)
-                    except MessageDeleteForbidden:
-                        pass
 
                 await self.db.execute("DELETE FROM restart.msgs WHERE name = $1;", name)
 

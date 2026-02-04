@@ -17,8 +17,7 @@ class Module(Methods):
         self.logger = logging.getLogger(self.__class__.__name__)
 
 
-class ModuleError(Exception):
-    pass
+class ModuleError(Exception): ...
 
 
 class ModuleExists(ModuleError):
