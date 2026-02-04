@@ -143,9 +143,10 @@ class Telegram(abc.ABC):
             )
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
-        else:
-            self.logger.info(f"{self.__class__.__name__} Started")
-            await self.idle()
+            raise
+
+        self.logger.info(f"{self.__class__.__name__} Started")
+        await self.idle()
 
     async def start(self) -> None:
         if self.__idle__ and not self.__idle__.is_set():
@@ -163,42 +164,45 @@ class Telegram(abc.ABC):
             else:
                 self.logger.error(f"{e.__class__.__name__}: {e}")
                 await self.app.storage.delete()
-        else:
-            self.bot = self.build(
-                "bot",
-                updates=(
-                    UpdateBotInlineQuery,
-                    UpdateBotInlineSend,
-                    UpdateInlineBotCallbackQuery,
-                    UpdateNewMessage,
-                ),
-                bot_token=self.config.get("BOT_TOKEN"),
-            )
-            try:
-                await self.bot.start()
-            except RPCError as e:
-                if isinstance(e, FloodWait):
-                    self.logger.warning(f"{e.__class__.__name__}: {e}")
-                    await asyncio.sleep(e.value)
-                else:
-                    self.logger.error(f"{e.__class__.__name__}: {e}")
-                    await self.bot.storage.delete()
-            else:
-                self.config.pop("BOT_TOKEN", None)
-                await asyncio.gather(
-                    self.app.resolve_peer(self.bot.me.username),
-                    asyncio.to_thread(self.loads),
-                )
-                try:
-                    await self.bot.send_chat_action(self.app.me.id, ChatAction.TYPING)
-                except PeerIdInvalid:
-                    msg = await self.app.send_message(self.bot.me.id, "/start")
-                    await msg.delete()
-                except UserIsBlocked:
-                    await self.app.unblock_user(self.bot.me.id)
 
-                await self.dispatch("starting")
-                asyncio.create_task(self.dispatch("started"))
+            raise
+
+        self.bot = self.build(
+            "bot",
+            updates=(
+                UpdateBotInlineQuery,
+                UpdateBotInlineSend,
+                UpdateInlineBotCallbackQuery,
+                UpdateNewMessage,
+            ),
+            bot_token=self.config.get("BOT_TOKEN"),
+        )
+        try:
+            await self.bot.start()
+        except RPCError as e:
+            if isinstance(e, FloodWait):
+                self.logger.warning(f"{e.__class__.__name__}: {e}")
+                await asyncio.sleep(e.value)
+            else:
+                self.logger.error(f"{e.__class__.__name__}: {e}")
+                await self.bot.storage.delete()
+
+            raise
+
+        self.config.pop("BOT_TOKEN", None)
+        await asyncio.gather(
+            self.app.resolve_peer(self.bot.me.username), asyncio.to_thread(self.loads)
+        )
+        try:
+            await self.bot.send_chat_action(self.app.me.id, ChatAction.TYPING)
+        except PeerIdInvalid:
+            msg = await self.app.send_message(self.bot.me.id, "/start")
+            await msg.delete()
+        except UserIsBlocked:
+            await self.app.unblock_user(self.bot.me.id)
+
+        await self.dispatch("starting")
+        asyncio.create_task(self.dispatch("started"))
 
     async def idle(self) -> None:
         if self.__idle__ and not self.__idle__.is_set():

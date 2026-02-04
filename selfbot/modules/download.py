@@ -76,28 +76,28 @@ class Download(Module):
                     revoke=2.5,
                 )
                 return
-            else:
-                if story:
-                    func = event._client.get_stories
-                else:
-                    func = event._client.get_messages
-                    if private:
-                        chat_id = get_channel_id(int(chat_id))
 
-                now = datetime.datetime.now(datetime.UTC)
-                try:
-                    update = await func(chat_id, int(update_id))
-                except RPCError as e:
-                    await self.respond(
-                        event,
-                        self.fmtmsg(
-                            e.__class__.__name__,
-                            e.MESSAGE.format(value=e.value),
-                            self.fmtsec(now),
-                        ),
-                        revoke=2.5,
-                    )
-                    return
+            if story:
+                func = event._client.get_stories
+            else:
+                func = event._client.get_messages
+                if private:
+                    chat_id = get_channel_id(int(chat_id))
+
+            now = datetime.datetime.now(datetime.UTC)
+            try:
+                update = await func(chat_id, int(update_id))
+            except RPCError as e:
+                await self.respond(
+                    event,
+                    self.fmtmsg(
+                        e.__class__.__name__,
+                        e.MESSAGE.format(value=e.value),
+                        self.fmtsec(now),
+                    ),
+                    revoke=2.5,
+                )
+                return
 
         await self.download(event, update, file_name or "")
 
@@ -129,28 +129,29 @@ class Download(Module):
                 ),
                 revoke=2.5,
             )
-        else:
-            obj = getattr(update, update.media.value)
-            await self.respond(
-                event,
-                self.fmtmsg(
-                    "Media Downloaded",
-                    {
-                        "File Path": res,
-                        "File Size": f"{self.fmtbyte(obj.file_size)}\n",
-                        **(
-                            {"MIME Type": f"{obj.mime_type}\n"}
-                            if hasattr(obj, "mime_type")
-                            else {}
-                        ),
-                        **({"Width": obj.width} if hasattr(obj, "width") else {}),
-                        **({"Height": obj.height} if hasattr(obj, "height") else {}),
-                        **(
-                            {"Duration": self.fmtsec(obj.duration, human=True)}
-                            if hasattr(obj, "duration")
-                            else {}
-                        ),
-                    },
-                    self.fmtsec(now),
-                ),
-            )
+            return
+
+        obj = getattr(update, update.media.value)
+        await self.respond(
+            event,
+            self.fmtmsg(
+                "Media Downloaded",
+                {
+                    "File Path": res,
+                    "File Size": f"{self.fmtbyte(obj.file_size)}\n",
+                    **(
+                        {"MIME Type": f"{obj.mime_type}\n"}
+                        if hasattr(obj, "mime_type")
+                        else {}
+                    ),
+                    **({"Width": obj.width} if hasattr(obj, "width") else {}),
+                    **({"Height": obj.height} if hasattr(obj, "height") else {}),
+                    **(
+                        {"Duration": self.fmtsec(obj.duration, human=True)}
+                        if hasattr(obj, "duration")
+                        else {}
+                    ),
+                },
+                self.fmtsec(now),
+            ),
+        )

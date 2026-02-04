@@ -74,34 +74,36 @@ class Graph(Module):
                 self.fmtmsg(e.__class__.__name__, str(e), self.fmtsec(now)),
                 revoke=2.5,
             )
-        else:
-            if event.chat.type in (ChatType.PRIVATE, ChatType.BOT) or (
-                event.chat.type not in (ChatType.PRIVATE, ChatType.BOT)
-                and (
-                    event.chat.admin_privileges
-                    or (
-                        event.chat.permissions
-                        and event.chat.permissions.can_add_web_page_previews
-                    )
+            return
+
+        if event.chat.type in (ChatType.PRIVATE, ChatType.BOT) or (
+            event.chat.type not in (ChatType.PRIVATE, ChatType.BOT)
+            and (
+                event.chat.admin_privileges
+                or (
+                    event.chat.permissions
+                    and event.chat.permissions.can_add_web_page_previews
                 )
-            ):
-                await self.respond(
-                    event,
-                    f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>",
-                    link_preview_options=LinkPreviewOptions(
-                        is_disabled=False,
-                        url=url,
-                        prefer_small_media=True,
-                        prefer_large_media=False,
-                        show_above_text=True,
-                    ),
-                )
-            else:
-                await self.respond(
-                    event,
-                    self.fmtmsg(
-                        "Graph Page",
-                        {"Link": url, "Title": title or "Untitled"},
-                        self.fmtsec(now),
-                    ),
-                )
+            )
+        ):
+            await self.respond(
+                event,
+                f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>",
+                link_preview_options=LinkPreviewOptions(
+                    is_disabled=False,
+                    url=url,
+                    prefer_small_media=True,
+                    prefer_large_media=False,
+                    show_above_text=True,
+                ),
+            )
+            return
+
+        await self.respond(
+            event,
+            self.fmtmsg(
+                "Graph Page",
+                {"Link": url, "Title": title or "Untitled"},
+                self.fmtsec(now),
+            ),
+        )

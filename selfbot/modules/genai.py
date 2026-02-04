@@ -42,9 +42,10 @@ class GenAI(Module):
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
             self.client.unload(self)
-        else:
-            self.data = collections.deque(maxlen=32)
-            self.lock = asyncio.Lock()
+            return
+
+        self.data = collections.deque(maxlen=32)
+        self.lock = asyncio.Lock()
 
     async def on_started(self) -> None:
         self.client.config.pop("GEMINI_API_KEY", None)
@@ -91,16 +92,16 @@ class GenAI(Module):
             resp.raise_for_status()
         except Exception as e:
             return f"**{e.__class__.__name__}**:\n  `{e}`"
-        else:
-            try:
-                json = resp.json()
-                data = json["candidates"][0]["content"]
-                text = data["parts"][0]["text"]
-            except Exception as e:
-                return f"**{e.__class__.__name__}**:\n  `{e}`"
-            else:
-                self.data.append(data)
-                return text
+
+        try:
+            json = resp.json()
+            data = json["candidates"][0]["content"]
+            text = data["parts"][0]["text"]
+        except Exception as e:
+            return f"**{e.__class__.__name__}**:\n  `{e}`"
+
+        self.data.append(data)
+        return text
 
     async def execute(self, event: Update) -> None:
         if isinstance(event, ChosenInlineResult):

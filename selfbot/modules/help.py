@@ -65,22 +65,21 @@ class Help(Module):
                     ),
                     self.mods[name],
                 )
-            else:
-                names = [
-                    f"  {n}. <code>{i}</code>"
-                    for n, i in enumerate(self.client.modules, 1)
-                ]
-                await self.answer(
-                    event,
-                    self.ikm(("Close", b"0")),
-                    (
-                        f"<code>No Module with Name '{name}'</code>\n\n"
-                        f"<b>Available Modules:</b>\n{'\n'.join(names)}\n\n"
-                        "Get with Prefix '<code>help/</code>'\n"
-                        "<b>e.g.</b> <code>help/debug</code>"
-                    ),
-                )
+                return
 
+            names = [
+                f"  {n}. <code>{i}</code>" for n, i in enumerate(self.client.modules, 1)
+            ]
+            await self.answer(
+                event,
+                self.ikm(("Close", b"0")),
+                (
+                    f"<code>No Module with Name '{name}'</code>\n\n"
+                    f"<b>Available Modules:</b>\n{'\n'.join(names)}\n\n"
+                    "Get with Prefix '<code>help/</code>'\n"
+                    "<b>e.g.</b> <code>help/debug</code>"
+                ),
+            )
             return
 
         await self.answer(event, self.ikm(self.build()), "<b>Selfbot Modules</b>")

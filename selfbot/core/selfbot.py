@@ -41,5 +41,6 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
             await self.db.close()
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
-        else:
-            self.logger.info(f"{self.__class__.__name__} Stopped")
+            raise
+
+        self.logger.info(f"{self.__class__.__name__} Stopped")

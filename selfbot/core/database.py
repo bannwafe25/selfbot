@@ -76,6 +76,7 @@ class Database(abc.ABC):
             self.db = await create_pool(self.config["DATABASE_URL"])
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
-        else:
-            self.config.pop("DATABASE_URL", None)
-            await self.db.execute(queries)
+            raise
+
+        self.config.pop("DATABASE_URL", None)
+        await self.db.execute(queries)

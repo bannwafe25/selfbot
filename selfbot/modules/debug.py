@@ -84,9 +84,9 @@ class Debug(Module):
                             task.cancel()
                             await event.delete()
                             return
-                    else:
-                        task.cancel()
-                        res += 1
+
+                    task.cancel()
+                    res += 1
 
             if res > 0:
                 await self.respond(

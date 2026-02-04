@@ -51,17 +51,16 @@ class Call(Module):
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
             self.client.unload(self)
-        else:
-            for group in tuple(self.client.app.dispatcher.groups):
-                if group == -1:
-                    continue
+            return
 
-                for handler in self.client.app.dispatcher.groups[group]:
-                    await asyncio.to_thread(
-                        self.client.app.remove_handler, handler, group
-                    )
+        for group in tuple(self.client.app.dispatcher.groups):
+            if group == -1:
+                continue
 
-                self.client.app.dispatcher.groups.pop(group, None)
+            for handler in self.client.app.dispatcher.groups[group]:
+                await asyncio.to_thread(self.client.app.remove_handler, handler, group)
+
+            self.client.app.dispatcher.groups.pop(group, None)
 
     async def on_started(self) -> None:
         rows = await self.client.db.fetch(
@@ -77,8 +76,9 @@ class Call(Module):
                         "UPDATE call.chats SET join_as = NULL WHERE chat_id = $1;",
                         row["chat_id"],
                     )
-                else:
-                    kwargs["config"] = GroupCallConfig(join_as=peer)
+                    continue
+
+                kwargs["config"] = GroupCallConfig(join_as=peer)
 
             try:
                 await self.client.call.play(**kwargs)
@@ -87,11 +87,11 @@ class Call(Module):
                     await self.client.db.execute(
                         "DELETE FROM call.chats WHERE chat_id = $1;", row["chat_id"]
                     )
-                else:
-                    continue
-            else:
-                if row.get("mute"):
-                    await self.client.call.mute(row["chat_id"])
+
+                continue
+
+            if row.get("mute"):
+                await self.client.call.mute(row["chat_id"])
 
     @handler(filters.regex(pattern) & ~fltrep, 1)
     async def on_message_out(self, event: Message) -> None:
@@ -116,8 +116,8 @@ class Call(Module):
                     revoke=2.5,
                 )
                 return
-            else:
-                chat_id = chat.id
+
+            chat_id = chat.id
 
         func, kwargs, text = None, {"chat_id": chat_id}, {"data": {"Chat ID": chat_id}}
         if action == "join":
@@ -137,10 +137,10 @@ class Call(Module):
                         revoke=2.5,
                     )
                     return
-                else:
-                    join_as = get_channel_id(peer.channel_id)
-                    text["data"]["Join as"] = join_as
-                    kwargs["config"] = GroupCallConfig(join_as=peer)
+
+                join_as = get_channel_id(peer.channel_id)
+                text["data"]["Join as"] = join_as
+                kwargs["config"] = GroupCallConfig(join_as=peer)
 
             text["data"]["Mute"] = bool(mute)
         elif action == "leave":
@@ -172,38 +172,39 @@ class Call(Module):
                 ),
                 revoke=2.5,
             )
-        else:
-            if action == "join":
-                if mute:
-                    await self.client.call.mute(chat_id)
-                else:
-                    await self.client.call.unmute(chat_id)
+            return
 
-                await self.client.db.execute(
-                    """
-                    INSERT INTO call.chats AS c (
-                        chat_id,
-                        join_as,
-                        mute
-                    )
-                    VALUES ($1, $2, $3)
-                    ON CONFLICT (chat_id)
-                    DO UPDATE SET
-                        join_as = EXCLUDED.join_as,
-                        mute    = EXCLUDED.mute
-                    WHERE
-                        c.join_as IS DISTINCT FROM EXCLUDED.join_as
-                    OR  c.mute    IS DISTINCT FROM EXCLUDED.mute;
-                    """,
+        if action == "join":
+            if mute:
+                await self.client.call.mute(chat_id)
+            else:
+                await self.client.call.unmute(chat_id)
+
+            await self.client.db.execute(
+                """
+                INSERT INTO call.chats AS c (
                     chat_id,
                     join_as,
-                    bool(mute),
+                    mute
                 )
-            elif action == "leave":
-                await self.client.db.execute(
-                    "DELETE FROM call.chats WHERE chat_id = $1;", chat_id
-                )
-
-            await self.respond(
-                event, self.fmtmsg(**text, foot=self.fmtsec(now)), revoke=2.5
+                VALUES ($1, $2, $3)
+                ON CONFLICT (chat_id)
+                DO UPDATE SET
+                    join_as = EXCLUDED.join_as,
+                    mute    = EXCLUDED.mute
+                WHERE
+                    c.join_as IS DISTINCT FROM EXCLUDED.join_as
+                OR  c.mute    IS DISTINCT FROM EXCLUDED.mute;
+                """,
+                chat_id,
+                join_as,
+                bool(mute),
             )
+        elif action == "leave":
+            await self.client.db.execute(
+                "DELETE FROM call.chats WHERE chat_id = $1;", chat_id
+            )
+
+        await self.respond(
+            event, self.fmtmsg(**text, foot=self.fmtsec(now)), revoke=2.5
+        )

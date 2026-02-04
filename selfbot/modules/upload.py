@@ -60,17 +60,18 @@ class Upload(Module):
                 ),
                 revoke=2.5,
             )
-        else:
-            await self.respond(
-                event,
-                self.fmtmsg(
-                    "Document Uploaded",
-                    {
-                        "Chat ID": f"{res.chat.id}\n",
-                        "File Name": res.document.file_name,
-                        "File Size": f"{self.fmtbyte(res.document.file_size)}\n",
-                        "MIME Type": res.document.mime_type,
-                    },
-                    self.fmtsec(now),
-                ),
-            )
+            return
+
+        await self.respond(
+            event,
+            self.fmtmsg(
+                "Document Uploaded",
+                {
+                    "Chat ID": f"{res.chat.id}\n",
+                    "File Name": res.document.file_name,
+                    "File Size": f"{self.fmtbyte(res.document.file_size)}\n",
+                    "MIME Type": res.document.mime_type,
+                },
+                self.fmtsec(now),
+            ),
+        )
