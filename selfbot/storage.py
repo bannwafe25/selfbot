@@ -66,36 +66,43 @@ class PostgreStorage(Storage):
         if not peers:
             return
 
+        peer_ids = []
         peer_records = []
         username_records = []
         for p_id, p_access_hash, p_type, p_usernames, p_phone_number in peers:
+            peer_ids.append((self.name, p_id))
             peer_records.append(
                 (self.name, p_id, p_access_hash, p_type, p_phone_number)
             )
             if p_usernames:
-                for uname in p_usernames:
-                    username_records.append((self.name, p_id, uname))
+                for p_username in p_usernames:
+                    username_records.append((self.name, p_id, p_username))
 
-        await self.pool.executemany(
-            """
-            INSERT INTO storage.peers as p (
-                name,
-                id,
-                access_hash,
-                type,
-                phone_number
-            )
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (name, id) DO UPDATE SET
-                access_hash     = EXCLUDED.access_hash,
-                type            = EXCLUDED.type,
-                phone_number    = EXCLUDED.phone_number
-            WHERE
-                p.access_hash   IS DISTINCT FROM EXCLUDED.access_hash
-            OR  p.type          IS DISTINCT FROM EXCLUDED.type
-            OR  p.phone_number  IS DISTINCT FROM EXCLUDED.phone_number;
-            """,
-            peer_records,
+        await asyncio.gather(
+            self.pool.executemany(
+                "DELETE FROM storage.usernames WHERE name = $1 AND id = $2;", peer_ids
+            ),
+            self.pool.executemany(
+                """
+                INSERT INTO storage.peers as p (
+                    name,
+                    id,
+                    access_hash,
+                    type,
+                    phone_number
+                )
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (name, id) DO UPDATE SET
+                    access_hash     = EXCLUDED.access_hash,
+                    type            = EXCLUDED.type,
+                    phone_number    = EXCLUDED.phone_number
+                WHERE
+                    p.access_hash   IS DISTINCT FROM EXCLUDED.access_hash
+                OR  p.type          IS DISTINCT FROM EXCLUDED.type
+                OR  p.phone_number  IS DISTINCT FROM EXCLUDED.phone_number;
+                """,
+                peer_records,
+            ),
         )
         if username_records:
             await self.pool.executemany(
@@ -112,6 +119,8 @@ class PostgreStorage(Storage):
                 """,
                 username_records,
             )
+
+    async def update_usernames(self, usernames: list | None = None) -> None: ...
 
     async def update_state(self, value: object = Object) -> list | None:
         if value is Object:
@@ -179,7 +188,8 @@ class PostgreStorage(Storage):
                 access_hash,
                 type
             FROM storage.peers
-            WHERE name = $1 AND id = $2;
+            WHERE name = $1
+                AND id = $2;
             """,
             self.name,
             peer_id,

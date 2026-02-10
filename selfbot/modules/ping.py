@@ -49,7 +49,7 @@ class Ping(Module):
             await self.respond(event, "<code>...</code>")
         else:
             await event.edit_message_reply_markup(
-                self.ikm(("...", "user_id", event._client.me.id))
+                self.ikm(("...", "user", event._client.me.id, "green"))
             )
 
         now, (app, bot) = (
@@ -61,5 +61,10 @@ class Ping(Module):
         await self.respond(
             event,
             self.fmtmsg("Selfbot Latency", {"App": app, "Bot": bot}, self.fmtsec(now)),
-            reply_markup=self.ikm([[("Ping!", b"ping")], [("Close", b"0")]]),
+            reply_markup=self.ikm(
+                [
+                    [("Ping!", "data", b"ping", "green")],
+                    [("Close", "data", b"0", "red")],
+                ]
+            ),
         )

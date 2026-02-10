@@ -28,7 +28,9 @@ class Help(Module):
                 f"\n{' ' * 4}<code>{html.escape(mod.cmds)}</code>"
                 f"\n\n{self.fmthelp(mod.desc)}"
             )
-            page.append((mod.__class__.__name__, f"help/mod/{name}".encode()))
+            page.append(
+                (mod.__class__.__name__, "data", f"help/mod/{name}".encode(), "blue")
+            )
             if len(page) == 4:
                 self.ikbs.append([page[i : i + 2] for i in range(0, 4, 2)])
                 page = []
@@ -61,7 +63,10 @@ class Help(Module):
                 await self.answer(
                     event,
                     self.ikm(
-                        [("« Back", f"help/page/{self.maps[name]}"), ("Close", b"0")]
+                        [
+                            ("« Back", "data", f"help/page/{self.maps[name]}", "green"),
+                            ("Close", "data", b"0", "red"),
+                        ]
                     ),
                     self.mods[name],
                 )
@@ -72,7 +77,7 @@ class Help(Module):
             ]
             await self.answer(
                 event,
-                self.ikm(("Close", b"0")),
+                self.ikm(("Close", "data", b"0", "red")),
                 (
                     f"<code>No Module with Name '{name}'</code>\n\n"
                     f"<b>Available Modules:</b>\n{'\n'.join(names)}\n\n"
@@ -106,7 +111,10 @@ class Help(Module):
                 event,
                 self.mods[val],
                 reply_markup=self.ikm(
-                    [("« Back", f"help/page/{page}".encode()), ("Close", b"0")]
+                    [
+                        ("« Back", "data", f"help/page/{page}".encode(), "green"),
+                        ("Close", "data", b"0", "red"),
+                    ]
                 ),
             )
             return
@@ -118,14 +126,15 @@ class Help(Module):
     def build(self, page: int = 0) -> list:
         idx = max(0, min(page, len(self.ikbs) - 1))
         ikb = self.ikbs[idx][:]
-        ikb.append([("Selfbot Info", b"help/info")])
+        ikb.append([("Selfbot Info", "data", b"help/info")])
         nav = []
         if idx > 0:
-            nav.append((f"« ({idx})", f"help/page/{idx - 1}".encode()))
+            nav.append((f"« ({idx})", "data", f"help/page/{idx - 1}".encode(), "green"))
 
-        nav.append(("Close", b"0"))
+        nav.append(("Close", "data", b"0", "red"))
         if idx < len(self.ikbs) - 1:
-            nav.append((f"({idx + 2}) »", f"help/page/{idx + 1}".encode()))
+            nav.append((f"({idx + 2}) »", "data", f"help/page/{idx +
+            1}".encode(), "green"))
 
         ikb.append(nav)
         return ikb

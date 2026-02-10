@@ -67,7 +67,7 @@ class GenAI(Module):
             resp = await event.reply_sticker(
                 self.client.config["STICKER_FILE_ID"],
                 reply_parameters=ReplyParameters(message_id=event.id),
-                reply_markup=self.ikm(("...", "switch_inline_query", "")),
+                reply_markup=self.ikm(("...", "switch_inline_query", "", "green")),
             )
             async with self.lock:
                 self.data.clear()
@@ -118,7 +118,7 @@ class GenAI(Module):
                 await self.respond(
                     event,
                     "<code>Give a Query with Suffix '!?'</code>",
-                    reply_markup=self.ikm(("Close", b"0")),
+                    reply_markup=self.ikm(("Close", "data", b"0", "red")),
                     revoke=2.5,
                 )
                 return
@@ -208,7 +208,7 @@ class GenAI(Module):
                 )
                 return
 
-        ikb, now = [("Close", b"0")], datetime.datetime.now(datetime.UTC)
+        ikb, now = [("Close", "data", b"0", "red")], datetime.datetime.now(datetime.UTC)
         async with self.lock:
             self.data.append({"role": "user", "parts": parts})
             res = await self.gemini(self.client.config["GEMINI_MODEL"])
@@ -221,7 +221,7 @@ class GenAI(Module):
                 )
                 res = f"{raw['message'][:1024]}..."
                 if isinstance(event, ChosenInlineResult):
-                    ikb.insert(0, ("Full", "url", f"{url.text.strip()}.md"))
+                    ikb.insert(0, ("Full", "url", f"{url.text.strip()}.md", "blue"))
                 else:
                     rtt = f"[{rtt}]({url.text.strip()}.md)"
 

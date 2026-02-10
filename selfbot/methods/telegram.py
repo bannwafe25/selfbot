@@ -2,7 +2,9 @@ import asyncio
 import struct
 
 from pyrogram import Client, filters
+from pyrogram.enums import ButtonStyle
 from pyrogram.types import (
+    CopyTextButton,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     InlineQuery,
@@ -30,7 +32,7 @@ class Telegram:
         **kwargs,
     ) -> None:
         if not reply_markup:
-            reply_markup = self.ikm((">_", "user_id", event._client.me.id))
+            reply_markup = self.ikm((">_", "user", event._client.me.id, "blue"))
 
         if not message_text:
             message_text = "<code>...</code>"
@@ -108,7 +110,7 @@ class Telegram:
                     },
                     self.fmtbar(current, total),
                 ),
-                reply_markup=self.ikm(("Cancel", b"0")),
+                reply_markup=self.ikm(("Cancel", "data", b"0", "red")),
             )
             event.prog_last = time
             event.prog_byte = current
@@ -170,19 +172,53 @@ class Telegram:
     def ikm(self, rows: list | tuple) -> InlineKeyboardMarkup:
         if isinstance(rows, tuple):
             rows = [[rows]]
-
-        if isinstance(rows, list) and isinstance(rows[0], tuple):
-            rows = [rows]
+        elif isinstance(rows, list):
+            if isinstance(rows[0], tuple):
+                rows = [rows]
+            elif isinstance(rows[0], list):
+                rows = rows
+            else:
+                raise TypeError
+        else:
+            raise TypeError
 
         ikb = []
+        btn = {
+            "blue": ButtonStyle.PRIMARY,
+            "red": ButtonStyle.DANGER,
+            "green": ButtonStyle.SUCCESS,
+            "default": ButtonStyle.DEFAULT,
+        }
         for row in rows:
             line = []
             for i in row:
-                kwargs, last = {"text": i[0]}, i[-1]
-                if len(i) == 2:
-                    kwargs["callback_data"] = last
-                elif len(i) == 3:
-                    kwargs[i[1]] = last
+                kwargs, length = {"text": i[0]}, len(i)
+
+                if length == 2:
+                    kwargs["callback_data"] = i[1]
+                elif 2 < length < 6:
+                    k, v = i[1], i[2]
+                    if k == "copy":
+                        kwargs["copy_text"] = CopyTextButton(text=v)
+                    elif k == "data":
+                        kwargs["callback_data"] = v
+                    elif k == "link":
+                        kwargs["url"] = v
+                    elif k == "user":
+                        kwargs["user_id"] = v
+                    else:
+                        kwargs[k] = v
+
+                    if length > 3:
+                        if i[3] in btn:
+                            kwargs["style"] = btn[i[3]]
+                        else:
+                            kwargs["style"] = btn["default"]
+
+                        if length == 5:
+                            kwargs["icon_custom_emoji_id"] = i[4]
+                        elif length != 4:
+                            raise ValueError
                 else:
                     raise ValueError
 

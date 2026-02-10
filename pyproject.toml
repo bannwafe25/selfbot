@@ -8,7 +8,7 @@ dependencies = [
     "asyncpg==0.31.0",
     "httpx[http2]==0.28.1",
     "py-tgcalls==2.2.11",
-    "pyrotgfork==2.2.17",
+    "pyrotgfork",
     "pytgcrypto==1.2.12",
     "telegraph[aio]==2.2.0",
     "uvloop==0.22.1",
@@ -19,3 +19,6 @@ selfbot = "selfbot.main:run"
 
 [tool.uv]
 package = true
+
+[tool.uv.sources]
+pyrotgfork = { url = "https://github.com/TelegramPlayground/pyrogram/archive/refs/heads/dev.zip" }

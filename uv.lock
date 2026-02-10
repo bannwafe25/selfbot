@@ -654,15 +654,32 @@ sdist = { url = "https://files.pythonhosted.org/packages/44/66/2c17bae31c9066137
 [[package]]
 name = "pyrotgfork"
 version = "2.2.17"
-source = { registry = "https://pypi.org/simple" }
+source = { url = "https://github.com/TelegramPlayground/pyrogram/archive/refs/heads/dev.zip" }
 dependencies = [
     { name = "pyaes" },
     { name = "pysocks" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/20/6d/9c0b727559cf27ab545cddec2eb03366566fced71962460ce31fbe89121f/pyrotgfork-2.2.17.tar.gz", hash = "sha256:b2f2d8428d0cf662f1045dac103620b8821361f088b7b672cb95d8aab5d1440d", size = 526407, upload-time = "2025-12-12T17:14:45.227Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a9/d4/764bbd35d1cde651b3acbc8c1bdeccd8604de0d5dd4eeabed4a0273a493e/pyrotgfork-2.2.17-py3-none-any.whl", hash = "sha256:454f0e56e7e4f3bb5218fa74a642751884f97f7a402f1568d64ac52f168e8686", size = 5489229, upload-time = "2025-12-12T17:14:43.28Z" },
+sdist = { hash = "sha256:4d9aeaed268ba3b9802853d808b917eafe82f4623c5945bd86cb6c46fb3ce3ed" }
+
+[package.metadata]
+requires-dist = [
+    { name = "furo", marker = "extra == 'docs'", specifier = "<=2023.9.10" },
+    { name = "hatch", marker = "extra == 'dev'", specifier = "<=1.7.0" },
+    { name = "keyring", marker = "extra == 'dev'", specifier = "<=25.1.0" },
+    { name = "pyaes", specifier = "<=1.6.1" },
+    { name = "pygments", marker = "extra == 'docs'", specifier = "<=2.17.2" },
+    { name = "pysocks", specifier = "<=1.7.1" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = "<=7.4.3" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = "<=0.21.1" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = "<=4.1.0" },
+    { name = "pytgcrypto", marker = "extra == 'fast'", specifier = ">1.2.9.2,<=1.4" },
+    { name = "sphinx", marker = "extra == 'docs'", specifier = "<=7.2.6" },
+    { name = "sphinx-autobuild", marker = "extra == 'docs'", specifier = "<=2021.3.14" },
+    { name = "sphinx-copybutton", marker = "extra == 'docs'", specifier = "<=0.5.2" },
+    { name = "twine", marker = "extra == 'dev'", specifier = "<=4.0.2" },
+    { name = "uvloop", marker = "extra == 'fast'", specifier = ">0.18.0,<=0.19.0" },
 ]
+provides-extras = ["dev", "docs", "fast"]
 
 [[package]]
 name = "pysocks"
@@ -759,7 +776,7 @@ requires-dist = [
     { name = "asyncpg", specifier = "==0.31.0" },
     { name = "httpx", extras = ["http2"], specifier = "==0.28.1" },
     { name = "py-tgcalls", specifier = "==2.2.11" },
-    { name = "pyrotgfork", specifier = "==2.2.17" },
+    { name = "pyrotgfork", url = "https://github.com/TelegramPlayground/pyrogram/archive/refs/heads/dev.zip" },
     { name = "pytgcrypto", specifier = "==1.2.12" },
     { name = "telegraph", extras = ["aio"], specifier = "==2.2.0" },
     { name = "uvloop", specifier = "==0.22.1" },
