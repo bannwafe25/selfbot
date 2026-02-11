@@ -635,15 +635,24 @@ wheels = [
 [[package]]
 name = "py-tgcalls"
 version = "2.2.11"
-source = { registry = "https://pypi.org/simple" }
+source = { url = "https://github.com/pytgcalls/pytgcalls/archive/refs/heads/master.zip" }
 dependencies = [
     { name = "aiohttp" },
     { name = "deprecation" },
     { name = "ntgcalls" },
 ]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/85/4f08577a80154ca43b0da379cbb0d376bd954bcd5ced93f428f20e4147bc/py_tgcalls-2.2.11-py3-none-any.whl", hash = "sha256:cdabe3dd4a7473f1b6c81e9b776ef824432b2d2b2201c32db5d35778dfd0bd4d", size = 84868, upload-time = "2026-02-05T13:25:51.014Z" },
+sdist = { hash = "sha256:62638f0d2ddaeadc07b2de44fd06708af323f88cc14a4d79ace13946beec1655" }
+
+[package.metadata]
+requires-dist = [
+    { name = "aiohttp", specifier = ">=3.9.3" },
+    { name = "deprecation" },
+    { name = "hydrogram", marker = "extra == 'hydrogram'", specifier = ">=0.1.4" },
+    { name = "ntgcalls", specifier = ">=2.1.0,<3.0.0" },
+    { name = "pyrogram", marker = "extra == 'pyrogram'", specifier = ">=1.2.20" },
+    { name = "telethon", marker = "extra == 'telethon'", specifier = ">=1.24.0" },
 ]
+provides-extras = ["pyrogram", "telethon", "hydrogram"]
 
 [[package]]
 name = "pyaes"
@@ -659,7 +668,7 @@ dependencies = [
     { name = "pyaes" },
     { name = "pysocks" },
 ]
-sdist = { hash = "sha256:4d9aeaed268ba3b9802853d808b917eafe82f4623c5945bd86cb6c46fb3ce3ed" }
+sdist = { hash = "sha256:bd7d042aadb77c5c7d6fc43ba273df4ca06c7aaf083deabdfae2fa4011673fe2" }
 
 [package.metadata]
 requires-dist = [
@@ -759,7 +768,7 @@ wheels = [
 
 [[package]]
 name = "selfbot"
-version = "2026.1.30"
+version = "2026.2.12"
 source = { editable = "." }
 dependencies = [
     { name = "asyncpg" },
@@ -775,7 +784,7 @@ dependencies = [
 requires-dist = [
     { name = "asyncpg", specifier = "==0.31.0" },
     { name = "httpx", extras = ["http2"], specifier = "==0.28.1" },
-    { name = "py-tgcalls", specifier = "==2.2.11" },
+    { name = "py-tgcalls", url = "https://github.com/pytgcalls/pytgcalls/archive/refs/heads/master.zip" },
     { name = "pyrotgfork", url = "https://github.com/TelegramPlayground/pyrogram/archive/refs/heads/dev.zip" },
     { name = "pytgcrypto", specifier = "==1.2.12" },
     { name = "telegraph", extras = ["aio"], specifier = "==2.2.0" },

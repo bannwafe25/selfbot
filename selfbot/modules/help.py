@@ -133,8 +133,9 @@ class Help(Module):
 
         nav.append(("Close", "data", b"0", "red"))
         if idx < len(self.ikbs) - 1:
-            nav.append((f"({idx + 2}) »", "data", f"help/page/{idx +
-            1}".encode(), "green"))
+            nav.append(
+                (f"({idx + 2}) »", "data", f"help/page/{idx + 1}".encode(), "green")
+            )
 
         ikb.append(nav)
         return ikb
