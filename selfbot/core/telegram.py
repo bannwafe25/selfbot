@@ -6,7 +6,7 @@ import signal
 
 from pyrogram import Client
 from pyrogram import filters as flt
-from pyrogram.enums import ChatAction, ClientPlatform, ParseMode
+from pyrogram.enums import ButtonStyle, ChatAction, ClientPlatform, ParseMode
 from pyrogram.errors import (
     FloodWait,
     MessageDeleteForbidden,
@@ -31,6 +31,7 @@ from pyrogram.types import (
     ChatPrivileges,
     KeyboardButton,
     KeyboardButtonRequestChat,
+    KeyboardButtonRequestUsers,
     LinkPreviewOptions,
     ReplyKeyboardMarkup,
     Update,
@@ -73,51 +74,79 @@ class Telegram(abc.ABC):
 
                 await self.db.execute("DELETE FROM restart.msgs WHERE name = $1;", name)
 
+            rkm = ReplyKeyboardMarkup(
+                [
+                    [
+                        KeyboardButton(
+                            "Owned Groups",
+                            style=ButtonStyle.SUCCESS,
+                            request_chat=KeyboardButtonRequestChat(
+                                10, chat_is_channel=False, chat_is_created=True
+                            ),
+                        ),
+                        KeyboardButton(
+                            "Owned Channels",
+                            style=ButtonStyle.PRIMARY,
+                            request_chat=KeyboardButtonRequestChat(
+                                11, chat_is_channel=True, chat_is_created=True
+                            ),
+                        ),
+                    ],
+                    [
+                        KeyboardButton(
+                            "Admin Groups",
+                            style=ButtonStyle.SUCCESS,
+                            request_chat=KeyboardButtonRequestChat(
+                                20,
+                                chat_is_channel=False,
+                                chat_is_created=False,
+                                user_administrator_rights=ChatPrivileges(),
+                            ),
+                        ),
+                        KeyboardButton(
+                            "Admin Channels",
+                            style=ButtonStyle.PRIMARY,
+                            request_chat=KeyboardButtonRequestChat(
+                                21,
+                                chat_is_channel=True,
+                                chat_is_created=False,
+                                user_administrator_rights=ChatPrivileges(),
+                            ),
+                        ),
+                    ],
+                    [
+                        KeyboardButton(
+                            "Peer Groups",
+                            style=ButtonStyle.SUCCESS,
+                            request_chat=KeyboardButtonRequestChat(
+                                30, chat_is_channel=False
+                            ),
+                        ),
+                        KeyboardButton(
+                            "Peer Channels",
+                            style=ButtonStyle.PRIMARY,
+                            request_chat=KeyboardButtonRequestChat(
+                                31, chat_is_channel=True
+                            ),
+                        ),
+                    ],
+                    [
+                        KeyboardButton(
+                            "Peer Users & Peer Bots",
+                            style=ButtonStyle.DANGER,
+                            request_users=KeyboardButtonRequestUsers(40),
+                        )
+                    ],
+                ],
+                is_persistent=True,
+                resize_keyboard=True,
+                input_field_placeholder=f"Selfbot {__version__}",
+            )
             new = await self.bot.send_sticker(
                 self.app.me.id,
                 self.config["STICKER_FILE_ID"],
                 disable_notification=True,
-                reply_markup=ReplyKeyboardMarkup(
-                    [
-                        [
-                            KeyboardButton(
-                                "Admin Channels",
-                                request_chat=KeyboardButtonRequestChat(
-                                    10,
-                                    chat_is_channel=True,
-                                    chat_is_created=False,
-                                    user_administrator_rights=ChatPrivileges(),
-                                ),
-                            ),
-                            KeyboardButton(
-                                "Admin Groups",
-                                request_chat=KeyboardButtonRequestChat(
-                                    11,
-                                    chat_is_channel=False,
-                                    chat_is_created=False,
-                                    user_administrator_rights=ChatPrivileges(),
-                                ),
-                            ),
-                        ],
-                        [
-                            KeyboardButton(
-                                "Owned Channels",
-                                request_chat=KeyboardButtonRequestChat(
-                                    20, chat_is_channel=True, chat_is_created=True
-                                ),
-                            ),
-                            KeyboardButton(
-                                "Owned Groups",
-                                request_chat=KeyboardButtonRequestChat(
-                                    21, chat_is_channel=False, chat_is_created=True
-                                ),
-                            ),
-                        ],
-                    ],
-                    is_persistent=True,
-                    resize_keyboard=True,
-                    input_field_placeholder=f"Selfbot {__version__}",
-                ),
+                reply_markup=rkm,
             )
             await self.db.execute(
                 """
