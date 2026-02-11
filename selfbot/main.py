@@ -2,15 +2,6 @@ import asyncio
 import logging
 import os
 
-try:
-    import uvloop
-except ImportError:
-    loop = asyncio.new_event_loop()
-else:
-    loop = uvloop.new_event_loop()
-finally:
-    asyncio.set_event_loop(loop)
-
 from .core import Selfbot
 
 logging.basicConfig(
@@ -33,6 +24,8 @@ def run() -> None:
             "CAACAgIAAxkBAAIdeWi1SLWihwZEeyFOk9YM4-mBWJqxAAJOAgACVp29CjD-a22BMgNvHgQ",
         ),
     }
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         loop.run_until_complete(Selfbot.launch(config, loop))
     except RuntimeError as e:
