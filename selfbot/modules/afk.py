@@ -8,7 +8,7 @@ from pyrogram.raw.functions.messages import ReadMentions
 from pyrogram.raw.types import InputPeerChannel
 from pyrogram.types import Message
 
-from selfbot.listener import fltrep, handler
+from selfbot.listener import handler, reply
 from selfbot.module import Module
 
 pattern = re.compile(r"^afk(?:\s-r\s(.+))?$")
@@ -33,7 +33,7 @@ class AFK(Module):
 
         self.lock = asyncio.Lock()
 
-    @handler(filters.regex(pattern) & ~fltrep, 1)
+    @handler(filters.regex(pattern) & ~reply, 1)
     async def on_message_out(self, event: Message) -> None:
         await self.respond(event, "<code>...</code>")
         since, (reason,) = (

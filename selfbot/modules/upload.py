@@ -6,7 +6,7 @@ from pyrogram import filters
 from pyrogram.errors import RPCError
 from pyrogram.types import Message, ReplyParameters
 
-from selfbot.listener import fltrep, handler
+from selfbot.listener import handler, reply
 from selfbot.module import Module
 
 pattern = re.compile(
@@ -25,7 +25,7 @@ class Upload(Module):
         "e.g.": "ul /root/temp.bin",
     }
 
-    @handler(filters.regex(pattern) & ~fltrep, 1)
+    @handler(filters.regex(pattern) & ~reply, 1)
     async def on_message_out(self, event: Message) -> None:
         await self.respond(event, "<code>...</code>")
         rep_msg, (document, chat_id) = None, pattern.match(event.content).groups()

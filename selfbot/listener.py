@@ -36,11 +36,11 @@ def handler(filters: filters.Filter, priority: int) -> typing.Callable:
     return wrapper
 
 
-async def reply(_, __, event: Message) -> bool:
+async def _reply(_, __, event: Message) -> bool:
     return bool(
         event.reply_to_message
         and event.reply_to_message.service != MessageServiceType.FORUM_TOPIC_CREATED
     )
 
 
-fltrep = filters.create(reply, "FltRep")
+reply = filters.create(_reply, "reply")

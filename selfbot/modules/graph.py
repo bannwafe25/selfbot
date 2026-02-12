@@ -6,7 +6,7 @@ from pyrogram.enums import ChatType
 from pyrogram.types import LinkPreviewOptions, Message
 from telegraph.aio import Telegraph
 
-from selfbot.listener import fltrep, handler
+from selfbot.listener import handler, reply
 from selfbot.module import Module
 
 pattern = re.compile(r"^graph(?:\s-t\s(.+))?$")
@@ -31,7 +31,7 @@ class Graph(Module):
             self.logger.error(f"{e.__class__.__name__}: {e}")
             self.client.unload(self)
 
-    @handler(filters.regex(pattern) & fltrep, 1)
+    @handler(filters.regex(pattern) & reply, 1)
     async def on_message_out(self, event: Message) -> None:
         if not event.reply_to_message.content:
             await self.respond(event, "<code>Reply to Content</code>", revoke=2.5)

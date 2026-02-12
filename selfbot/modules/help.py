@@ -6,7 +6,7 @@ from pyrogram import filters
 from pyrogram.types import CallbackQuery, InlineQuery, Message, ReplyParameters
 
 from selfbot import __version__
-from selfbot.listener import fltrep, handler
+from selfbot.listener import handler, reply
 from selfbot.module import Module
 
 pattern = re.compile(r"^help/?(mod|info|page)?(?:/(\d{1}|[a-zA-Z]+))?$")
@@ -38,7 +38,7 @@ class Help(Module):
         if page:
             self.ikbs.append([page[i : i + 2] for i in range(0, len(page), 2)])
 
-    @handler(filters.regex(pattern) & ~fltrep, 1)
+    @handler(filters.regex(pattern) & ~reply, 1)
     async def on_message_out(self, event: Message) -> None:
         _, res = await asyncio.gather(
             self.respond(event, "<code>...</code>"),
