@@ -187,7 +187,6 @@ class Telegram(abc.ABC):
         except RPCError as e:
             if isinstance(e, FloodWait):
                 self.logger.warning(f"{e.__class__.__name__}: {e}")
-                await asyncio.sleep(e.value)
             else:
                 self.logger.error(f"{e.__class__.__name__}: {e}")
                 await self.app.storage.delete()
@@ -209,7 +208,6 @@ class Telegram(abc.ABC):
         except RPCError as e:
             if isinstance(e, FloodWait):
                 self.logger.warning(f"{e.__class__.__name__}: {e}")
-                await asyncio.sleep(e.value)
             else:
                 self.logger.error(f"{e.__class__.__name__}: {e}")
                 await self.bot.storage.delete()

@@ -24,15 +24,8 @@ def run() -> None:
             "CAACAgIAAxkBAAIdeWi1SLWihwZEeyFOk9YM4-mBWJqxAAJOAgACVp29CjD-a22BMgNvHgQ",
         ),
     }
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(Selfbot.launch(config, loop))
-    except RuntimeError as e:
-        logging.critical(f"{e.__class__.__name__}: {e}")
-    finally:
-        if loop and not loop.is_closed():
-            loop.close()
+    with asyncio.Runner() as runner:
+        runner.run(Selfbot.launch(config, runner.get_loop()))
 
 
 if __name__ == "__main__":
