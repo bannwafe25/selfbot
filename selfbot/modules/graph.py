@@ -70,9 +70,7 @@ class Graph(Module):
             url = res["url"]
         except Exception as e:
             await self.respond(
-                event,
-                self.fmtmsg(e.__class__.__name__, str(e), self.fmtsec(now)),
-                revoke=2.5,
+                event, self.fmtmsg(e.__class__.__name__, str(e), self.fmtsec(now))
             )
             return
 

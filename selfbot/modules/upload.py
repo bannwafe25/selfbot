@@ -58,7 +58,6 @@ class Upload(Module):
                     ),
                     self.fmtsec(now),
                 ),
-                revoke=2.5,
             )
             return
 

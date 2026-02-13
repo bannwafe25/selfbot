@@ -113,7 +113,6 @@ class Call(Module):
                         e.MESSAGE.format(value=e.value),
                         self.fmtsec(now),
                     ),
-                    revoke=2.5,
                 )
                 return
 
@@ -134,7 +133,6 @@ class Call(Module):
                             e.MESSAGE.format(value=e.value),
                             self.fmtsec(now),
                         ),
-                        revoke=2.5,
                     )
                     return
 
@@ -170,7 +168,6 @@ class Call(Module):
                     ),
                     self.fmtsec(now),
                 ),
-                revoke=2.5,
             )
             return
 
@@ -205,6 +202,4 @@ class Call(Module):
                 "DELETE FROM call.chats WHERE chat_id = $1;", chat_id
             )
 
-        await self.respond(
-            event, self.fmtmsg(**text, foot=self.fmtsec(now)), revoke=2.5
-        )
+        await self.respond(event, self.fmtmsg(**text, foot=self.fmtsec(now)))

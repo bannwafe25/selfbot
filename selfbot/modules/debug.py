@@ -96,7 +96,6 @@ class Debug(Module):
                         f"{res} Task{'' if res == 1 else 's'}",
                         self.fmtsec(now),
                     ),
-                    revoke=2.5,
                 )
 
             return

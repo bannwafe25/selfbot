@@ -95,7 +95,6 @@ class Download(Module):
                         e.MESSAGE.format(value=e.value),
                         self.fmtsec(now),
                     ),
-                    revoke=2.5,
                 )
                 return
 
@@ -127,7 +126,6 @@ class Download(Module):
                     ),
                     self.fmtsec(now),
                 ),
-                revoke=2.5,
             )
             return
 
