@@ -18,7 +18,6 @@ def run() -> None:
         "BOT_TOKEN": os.environ.get("BOT_TOKEN"),
         "DATABASE_URL": os.environ.get("DATABASE_URL"),
         "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY"),
-        "GEMINI_MODEL": os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
         "STICKER_FILE_ID": os.environ.get(
             "STICKER_FILE_ID",
             "CAACAgIAAxkBAAIdeWi1SLWihwZEeyFOk9YM4-mBWJqxAAJOAgACVp29CjD-a22BMgNvHgQ",

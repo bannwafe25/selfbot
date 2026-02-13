@@ -29,7 +29,7 @@ class GenAI(Module):
 
     async def on_starting(self) -> None:
         try:
-            self.goog = AsyncClient(
+            self.google = AsyncClient(
                 headers={
                     "Content-Type": "application/json",
                     "x-goog-api-key": self.client.config["GEMINI_API_KEY"],
@@ -44,15 +44,30 @@ class GenAI(Module):
             self.client.unload(self)
             return
 
-        self.data = collections.deque(maxlen=32)
+        self.models = collections.deque(
+            [
+                "gemini-3-pro-preview",
+                "gemini-3-flash-preview",
+                "gemini-2.5-pro",
+                "gemini-2.5-flash",
+                "gemini-2.5-flash-lite",
+                "gemini-2.5-flash-preview-09-25",
+                "gemini-2.5-flash-lite-preview-09-25",
+                "gemini-2.0-flash",
+                "gemini-2.0-flash-lite",
+                "gemini-2.0-flash-001",
+                "gemini-2.0-flash-lite-001",
+            ]
+        )
+        self.data = collections.deque(maxlen=16)
         self.lock = asyncio.Lock()
 
     async def on_started(self) -> None:
         self.client.config.pop("GEMINI_API_KEY", None)
 
     async def on_stopping(self) -> None:
-        if hasattr(self, "goog") and not self.goog.is_closed:
-            await self.goog.aclose()
+        if hasattr(self, "google") and not self.google.is_closed:
+            await self.google.aclose()
 
     @handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
@@ -83,21 +98,45 @@ class GenAI(Module):
     async def on_inline_result(self, event: ChosenInlineResult) -> None:
         await self.execute(event)
 
-    async def gemini(self, model: str) -> str:
+    async def gemini(self, attempt: int = 0) -> str:
+        if attempt >= len(self.models):
+            return "**Error**:\n  `Rate Limited`"
+
+        model = self.models[0]
         try:
-            resp = await self.goog.post(
+            resp = await self.google.post(
                 f"/v1beta/models/{model}:generateContent",
                 json={"contents": list(self.data), "tools": [{"google_search": {}}]},
             )
             resp.raise_for_status()
-        except Exception as e:
-            return f"**{e.__class__.__name__}**:\n  `{e}`"
+        except Exception:
+            self.models.rotate(-1)
+            return await self.gemini(attempt + 1)
 
         try:
-            json = resp.json()
-            data = json["candidates"][0]["content"]
-            text = data["parts"][0]["text"]
+            res = resp.json()
+            if "candidates" not in res or not res["candidates"]:
+                self.data.pop()
+                return "**Error**:\n  `Empty Response`"
+
+            candidates = res["candidates"][0]
+            if "content" not in candidates:
+                self.data.pop()
+                return "**Error**:\n  `Empty Content`"
+
+            data = candidates["content"]
+            if "parts" not in data or not data["parts"]:
+                self.data.pop()
+                return "**Error**:\n  `Empty Parts`"
+
+            parts = data["parts"][0]
+            if "text" not in parts:
+                self.data.pop()
+                return "**Error**:\n  `Empty Text`"
+
+            text = parts["text"]
         except Exception as e:
+            self.data.pop()
             return f"**{e.__class__.__name__}**:\n  `{e}`"
 
         self.data.append(data)
@@ -109,10 +148,9 @@ class GenAI(Module):
         else:
             text = event.content
 
-        (query,), question = pattern.match(text).groups(), ""
+        (query,) = pattern.match(text).groups()
         if query:
-            question = f"```Query\n{query}```\n\n"
-            await self.respond(event, question, parse_mode=ParseMode.MARKDOWN)
+            await self.respond(event, f"`{query}`", parse_mode=ParseMode.MARKDOWN)
         else:
             if isinstance(event, ChosenInlineResult):
                 await self.respond(
@@ -211,23 +249,24 @@ class GenAI(Module):
         ikb, now = [("Close", "data", b"0")], datetime.datetime.now(datetime.UTC)
         async with self.lock:
             self.data.append({"role": "user", "parts": parts})
-            res = await self.gemini(self.client.config["GEMINI_MODEL"])
+            res = await self.gemini()
             rtt = self.fmtsec(now)
             if len(res) > 768:
-                raw, url = await asyncio.gather(
-                    event._client.parser.parse(res, ParseMode.MARKDOWN),
+                url, raw = await asyncio.gather(
                     self.client.http.post("https://paste.rs", data=res.encode()),
-                    return_exceptions=True,
+                    event._client.parser.parse(res, ParseMode.MARKDOWN),
                 )
-                res = f"{raw['message'][:512]}..."
+                url = f"{url.text.strip()}.md"
                 if isinstance(event, ChosenInlineResult):
-                    ikb.insert(0, ("Full", "url", f"{url.text.strip()}.md"))
+                    ikb.insert(0, ("Full", "url", url))
                 else:
-                    rtt = f"[{rtt}]({url.text.strip()}.md)"
+                    rtt = f"[{rtt}]({url})"
+
+                res = f"{raw['message'][:512]}..."
 
             await self.respond(
                 event,
-                f"{question}{res}\n\n> **{rtt}**",
+                f"**{query if query else ''}**\n\n{res}\n\n> **{rtt}**",
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=self.ikm(ikb),
             )
