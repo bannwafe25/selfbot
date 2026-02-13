@@ -224,13 +224,13 @@ class Debug(Module):
         return msg, cmd
 
     async def execute(self, msg: Message, event: Update, btn: bool = False) -> None:
-        ikb, out, rtt = [[("Del", "data", b"0", "R")]], "", ""
+        ikb, out, rtt = [[("Del", "data", b"0")]], "", ""
         if btn:
             code = event.query.removesuffix("#").rstrip()
-            ikb[0].insert(0, ("Run", "switch_inline_query_current_chat", code, "G"))
+            ikb[0].insert(0, ("Run", "switch_inline_query_current_chat", code))
         else:
             code = msg.content.markdown
-            ikb[0].insert(0, ("Run", "data", b"1", "G"))
+            ikb[0].insert(0, ("Run", "data", b"1"))
 
         self.kwargs.update(
             {
@@ -243,7 +243,7 @@ class Debug(Module):
         )
         if not isinstance(event, Message):
             await event.edit_message_reply_markup(
-                reply_markup=self.ikm(("Cancel", "data", b"0", "R"))
+                reply_markup=self.ikm(("Cancel", "data", b"0"))
             )
 
         buf = io.StringIO()

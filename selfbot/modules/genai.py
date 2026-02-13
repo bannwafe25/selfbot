@@ -67,7 +67,7 @@ class GenAI(Module):
             resp = await event.reply_sticker(
                 self.client.config["STICKER_FILE_ID"],
                 reply_parameters=ReplyParameters(message_id=event.id),
-                reply_markup=self.ikm(("...", "switch_inline_query", "", "G")),
+                reply_markup=self.ikm(("...", "switch_inline_query", "")),
             )
             async with self.lock:
                 self.data.clear()
@@ -118,7 +118,7 @@ class GenAI(Module):
                 await self.respond(
                     event,
                     "<code>Give a Query with Suffix '!?'</code>",
-                    reply_markup=self.ikm(("Close", "data", b"0", "R")),
+                    reply_markup=self.ikm(("Close", "data", b"0")),
                     revoke=2.5,
                 )
                 return
@@ -208,20 +208,20 @@ class GenAI(Module):
                 )
                 return
 
-        ikb, now = [("Close", "data", b"0", "R")], datetime.datetime.now(datetime.UTC)
+        ikb, now = [("Close", "data", b"0")], datetime.datetime.now(datetime.UTC)
         async with self.lock:
             self.data.append({"role": "user", "parts": parts})
             res = await self.gemini(self.client.config["GEMINI_MODEL"])
             rtt = self.fmtsec(now)
-            if len(res) > 2048:
+            if len(res) > 768:
                 raw, url = await asyncio.gather(
                     event._client.parser.parse(res, ParseMode.MARKDOWN),
                     self.client.http.post("https://paste.rs", data=res.encode()),
                     return_exceptions=True,
                 )
-                res = f"{raw['message'][:1024]}..."
+                res = f"{raw['message'][:512]}..."
                 if isinstance(event, ChosenInlineResult):
-                    ikb.insert(0, ("Full", "url", f"{url.text.strip()}.md", "B"))
+                    ikb.insert(0, ("Full", "url", f"{url.text.strip()}.md"))
                 else:
                     rtt = f"[{rtt}]({url.text.strip()}.md)"
 

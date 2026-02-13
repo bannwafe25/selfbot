@@ -32,7 +32,7 @@ class Telegram:
         **kwargs,
     ) -> None:
         if not reply_markup:
-            reply_markup = self.ikm((">_", "user", event._client.me.id, "B"))
+            reply_markup = self.ikm((">_", "user", event._client.me.id))
 
         if not message_text:
             message_text = "<code>...</code>"
@@ -110,7 +110,7 @@ class Telegram:
                     },
                     self.fmtbar(current, total),
                 ),
-                reply_markup=self.ikm(("Cancel", "data", b"0", "R")),
+                reply_markup=self.ikm(("Cancel", b"0")),
             )
             event.prog_last = time
             event.prog_byte = current
