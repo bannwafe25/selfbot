@@ -156,7 +156,7 @@ class Debug(Module):
                     "Message",
                     "url",
                     f"tg://openmessage?user_id={event.from_user.id}&message_id={event.id}",
-                    "blue",
+                    "B",
                 )
             ),
         )
@@ -224,13 +224,13 @@ class Debug(Module):
         return msg, cmd
 
     async def execute(self, msg: Message, event: Update, btn: bool = False) -> None:
-        ikb, out, rtt = [[("Del", "data", b"0", "red")]], "", ""
+        ikb, out, rtt = [[("Del", "data", b"0", "R")]], "", ""
         if btn:
             code = event.query.removesuffix("#").rstrip()
-            ikb[0].insert(0, ("Run", "switch_inline_query_current_chat", code, "green"))
+            ikb[0].insert(0, ("Run", "switch_inline_query_current_chat", code, "G"))
         else:
             code = msg.content.markdown
-            ikb[0].insert(0, ("Run", "data", b"1", "green"))
+            ikb[0].insert(0, ("Run", "data", b"1", "G"))
 
         self.kwargs.update(
             {
@@ -243,7 +243,7 @@ class Debug(Module):
         )
         if not isinstance(event, Message):
             await event.edit_message_reply_markup(
-                reply_markup=self.ikm(("Cancel", "data", b"0", "red"))
+                reply_markup=self.ikm(("Cancel", "data", b"0", "R"))
             )
 
         buf = io.StringIO()

@@ -129,7 +129,7 @@ class AFK(Module):
                         "Message",
                         "url",
                         f"tg://openmessage?chat_id={chat_id}&message_id={event.id}",
-                        "blue",
+                        "B",
                     )
                 ),
             ),

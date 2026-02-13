@@ -32,7 +32,7 @@ class Telegram:
         **kwargs,
     ) -> None:
         if not reply_markup:
-            reply_markup = self.ikm((">_", "user", event._client.me.id, "blue"))
+            reply_markup = self.ikm((">_", "user", event._client.me.id, "B"))
 
         if not message_text:
             message_text = "<code>...</code>"
@@ -110,7 +110,7 @@ class Telegram:
                     },
                     self.fmtbar(current, total),
                 ),
-                reply_markup=self.ikm(("Cancel", "data", b"0", "red")),
+                reply_markup=self.ikm(("Cancel", "data", b"0", "R")),
             )
             event.prog_last = time
             event.prog_byte = current
@@ -183,20 +183,16 @@ class Telegram:
             raise TypeError
 
         ikb = []
-        btn = {
-            "blue": ButtonStyle.PRIMARY,
-            "red": ButtonStyle.DANGER,
-            "green": ButtonStyle.SUCCESS,
-            "default": ButtonStyle.DEFAULT,
+        rgb = {
+            "R": ButtonStyle.DANGER,
+            "G": ButtonStyle.SUCCESS,
+            "B": ButtonStyle.PRIMARY,
         }
         for row in rows:
             line = []
             for i in row:
                 kwargs, length = {"text": i[0]}, len(i)
-
-                if length == 2:
-                    kwargs["callback_data"] = i[1]
-                elif 2 < length < 6:
+                if 2 < length < 6:
                     k, v = i[1], i[2]
                     if k == "copy":
                         kwargs["copy_text"] = CopyTextButton(text=v)
@@ -210,15 +206,13 @@ class Telegram:
                         kwargs[k] = v
 
                     if length > 3:
-                        if i[3] in btn:
-                            kwargs["style"] = btn[i[3]]
-                        else:
-                            kwargs["style"] = btn["default"]
-
                         if length == 5:
                             kwargs["icon_custom_emoji_id"] = i[4]
-                        elif length != 4:
-                            raise ValueError
+
+                        if i[3] in rgb:
+                            kwargs["style"] = rgb[i[3]]
+                        else:
+                            kwargs["style"] = ButtonStyle.DEFAULT
                 else:
                     raise ValueError
 
