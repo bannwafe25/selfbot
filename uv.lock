@@ -662,13 +662,13 @@ sdist = { url = "https://files.pythonhosted.org/packages/44/66/2c17bae31c9066137
 
 [[package]]
 name = "pyrotgfork"
-version = "2.2.17"
+version = "2.2.18"
 source = { url = "https://github.com/TelegramPlayground/pyrogram/archive/refs/heads/dev.zip" }
 dependencies = [
     { name = "pyaes" },
     { name = "pysocks" },
 ]
-sdist = { hash = "sha256:bd7d042aadb77c5c7d6fc43ba273df4ca06c7aaf083deabdfae2fa4011673fe2" }
+sdist = { hash = "sha256:839d402fd5fb6527261bcd5444d099c38fadd4821db29bb4c31c560ac8da364f" }
 
 [package.metadata]
 requires-dist = [
