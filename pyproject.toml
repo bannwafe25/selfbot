@@ -7,8 +7,8 @@ requires-python = ">=3.12,<3.15"
 dependencies = [
     "asyncpg==0.31.0",
     "httpx[http2]==0.28.1",
-    "py-tgcalls",
-    "pyrotgfork",
+    "py-tgcalls==2.2.11",
+    "pyrotgfork==2.2.18",
     "pytgcrypto==1.2.12",
     "telegraph[aio]==2.2.0",
 ]
@@ -18,7 +18,3 @@ selfbot = "selfbot.main:run"
 
 [tool.uv]
 package = true
-
-[tool.uv.sources]
-pyrotgfork = { url = "https://github.com/TelegramPlayground/pyrogram/archive/refs/heads/dev.zip" }
-py-tgcalls = { url = "https://github.com/pytgcalls/pytgcalls/archive/refs/heads/master.zip" }
