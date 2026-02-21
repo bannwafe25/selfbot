@@ -29,4 +29,4 @@ class Database(abc.ABC):
 
     async def close(self) -> None:
         if self._mongo_client:
-            self._mongo_client.close()
+            await self._mongo_client.close()
