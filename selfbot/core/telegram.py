@@ -38,7 +38,7 @@ from pyrogram.types import (
 )
 
 from selfbot import __version__
-from selfbot.storage import PostgreStorage
+from selfbot.storage import MongoStorage
 
 
 class Telegram(abc.ABC):
@@ -54,9 +54,10 @@ class Telegram(abc.ABC):
             raise RuntimeError(f"{self.__class__.__name__} Running")
 
         await self.initdb()
-        rows = await self.db.fetch(
-            "SELECT name, chat_id, message_id FROM restart.msgs;"
-        )
+        cursor = self.db.restart_msgs.find()
+        rows = []
+        async for row in cursor:
+            rows.append(row)
         self.logger.info(f"Starting {self.__class__.__name__}...")
         try:
             await self.start()
@@ -72,7 +73,7 @@ class Telegram(abc.ABC):
                     with contextlib.suppress(MessageDeleteForbidden):
                         await self.bot.delete_messages(chat_id, message_id)
 
-                await self.db.execute("DELETE FROM restart.msgs WHERE name = $1;", name)
+                await self.db.restart_msgs.delete_one({"name": name})
 
             rkm = ReplyKeyboardMarkup(
                 [
@@ -141,25 +142,10 @@ class Telegram(abc.ABC):
                 disable_notification=True,
                 reply_markup=rkm,
             )
-            await self.db.execute(
-                """
-                INSERT INTO restart.msgs AS r (
-                    name,
-                    chat_id,
-                    message_id
-                )
-                VALUES ($1, $2, $3)
-                ON CONFLICT (name)
-                DO UPDATE SET
-                    chat_id     = EXCLUDED.chat_id,
-                    message_id  = EXCLUDED.message_id
-                WHERE
-                    r.chat_id       IS DISTINCT FROM EXCLUDED.chat_id
-                OR  r.message_id    IS DISTINCT FROM EXCLUDED.message_id;
-                """,
-                "bot",
-                new.chat.id,
-                new.id,
+            await self.db.restart_msgs.update_one(
+                {"name": "bot"},
+                {"$set": {"chat_id": new.chat.id, "message_id": new.id}},
+                upsert=True
             )
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
@@ -299,7 +285,7 @@ class Telegram(abc.ABC):
             no_joined_notifications=True,
             client_platform=ClientPlatform.ANDROID,
             link_preview_options=LinkPreviewOptions(is_disabled=True),
-            storage_engine=PostgreStorage(name, self.db),
+            storage_engine=MongoStorage(name, self.db),
             *args,
             **kwargs,
         )

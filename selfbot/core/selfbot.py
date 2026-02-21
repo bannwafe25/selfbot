@@ -31,14 +31,17 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
 
     async def stop(self) -> None:
         try:
-            await asyncio.gather(
+            tasks = [
                 self.dispatch("stopping"),
-                self.app.stop(),
-                self.bot.stop(),
-                self.http.aclose(),
-                return_exceptions=True,
-            )
-            await self.db.close()
+                self.http.aclose()
+            ]
+            if getattr(self, "app", None):
+                tasks.append(self.app.stop())
+            if getattr(self, "bot", None):
+                tasks.append(self.bot.stop())
+
+            await asyncio.gather(*tasks, return_exceptions=True)
+            await self.close()
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
             raise

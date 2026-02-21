@@ -26,7 +26,7 @@ class AFK(Module):
     status, reason, since = False, "", None
 
     async def on_starting(self) -> None:
-        row = await self.client.db.fetchrow("SELECT reason, since FROM afk.meta;")
+        row = await self.client.db.afk_meta.find_one()
         if row:
             self.status = True
             self.reason, self.since = row["reason"], row["since"]
@@ -41,10 +41,13 @@ class AFK(Module):
             pattern.match(event.content).groups(),
         )
         if self.status:
-            since, rows = await asyncio.gather(
-                self.client.db.fetchval("SELECT since FROM afk.meta;"),
-                self.client.db.fetch("SELECT chat_id, message_id FROM afk.msgs;"),
-            )
+            meta = await self.client.db.afk_meta.find_one()
+            since = meta["since"] if meta else self.since
+            cursor = self.client.db.afk_msgs.find()
+            rows = []
+            async for row in cursor:
+                rows.append(row)
+
             for row in rows:
                 try:
                     await event._client.delete_messages(
@@ -53,12 +56,13 @@ class AFK(Module):
                 except RPCError:
                     continue
 
-            await self.client.db.execute("TRUNCATE afk.meta, afk.msgs;")
+            await asyncio.gather(
+                self.client.db.afk_meta.delete_many({}),
+                self.client.db.afk_msgs.delete_many({})
+            )
             self.status, self.reason, self.since = False, "", None
         else:
-            await self.client.db.execute(
-                "INSERT INTO afk.meta (reason, since) VALUES ($1, $2);", reason, since
-            )
+            await self.client.db.afk_meta.insert_one({"reason": reason, "since": since})
             self.status, self.reason, self.since = True, reason, since
 
         await self.respond(
@@ -77,7 +81,7 @@ class AFK(Module):
 
         async with self.lock:
             wib = self.since.astimezone(datetime.timezone(datetime.timedelta(hours=7)))
-            new, old = await asyncio.gather(
+            new, old_doc = await asyncio.gather(
                 self.respond(
                     event,
                     self.fmtmsg(
@@ -91,24 +95,19 @@ class AFK(Module):
                     ),
                     reply=True,
                 ),
-                self.client.db.fetchval(
-                    "SELECT message_id FROM afk.msgs WHERE chat_id = $1;", event.chat.id
-                ),
+                self.client.db.afk_msgs.find_one({"chat_id": event.chat.id}),
             )
-            if old:
+            if old_doc:
                 await asyncio.gather(
-                    event._client.delete_messages(event.chat.id, old),
-                    self.client.db.execute(
-                        "UPDATE afk.msgs SET message_id = $1 WHERE chat_id = $2;",
-                        new.id,
-                        event.chat.id,
+                    event._client.delete_messages(event.chat.id, old_doc["message_id"]),
+                    self.client.db.afk_msgs.update_one(
+                        {"chat_id": event.chat.id},
+                        {"$set": {"message_id": new.id}}
                     ),
                 )
             else:
-                await self.client.db.execute(
-                    "INSERT INTO afk.msgs (chat_id, message_id) VALUES ($1, $2);",
-                    event.chat.id,
-                    new.id,
+                await self.client.db.afk_msgs.insert_one(
+                    {"chat_id": event.chat.id, "message_id": new.id}
                 )
 
         peer = await event._client.resolve_peer(event.chat.id)

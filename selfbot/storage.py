@@ -1,7 +1,7 @@
 import asyncio
 import time
 
-from asyncpg import Pool
+from pymongo import DeleteOne, UpdateOne
 from pyrogram.raw.base import InputPeer
 from pyrogram.raw.types import InputPeerChannel, InputPeerChat, InputPeerUser
 from pyrogram.storage import Storage
@@ -25,26 +25,29 @@ def get_input_peer(peer_id: int, access_hash: int, peer_type: str) -> InputPeer:
     raise ValueError(f"Invalid peer type: {peer_type}")
 
 
-class PostgreStorage(Storage):
-    def __init__(self, name: str, pool: Pool) -> None:
+class MongoStorage(Storage):
+    def __init__(self, name: str, db) -> None:
         super().__init__(name)
-        self.pool = pool
+        self.db = db
 
     async def open(self) -> None:
-        await self.pool.execute(
-            """
-            INSERT INTO storage.sessions (
-                name,
-                dc_id,
-                date
-            )
-            VALUES ($1, $2, $3)
-            ON CONFLICT (name) DO NOTHING;
-            """,
-            self.name,
-            2,
-            0,
+        await self.db.sessions.update_one(
+            {"name": self.name},
+            {"$setOnInsert": {"dc_id": 2, "date": 0}},
+            upsert=True,
         )
+
+        try:
+            await self.db.peers.create_index([("name", 1), ("id", 1)], unique=True)
+            await self.db.peers.create_index([("name", 1), ("phone_number", 1)])
+            await self.db.usernames.create_index(
+                [("name", 1), ("username", 1)], unique=True
+            )
+            await self.db.update_state.create_index(
+                [("name", 1), ("id", 1)], unique=True
+            )
+        except Exception:
+            pass
 
     async def save(self) -> None:
         await self.date(int(time.time()))
@@ -53,123 +56,84 @@ class PostgreStorage(Storage):
 
     async def delete(self) -> None:
         await asyncio.gather(
-            self.pool.execute(
-                "DELETE FROM storage.sessions WHERE name = $1", self.name
-            ),
-            self.pool.execute("DELETE FROM storage.peers WHERE name = $1", self.name),
-            self.pool.execute(
-                "DELETE FROM storage.update_state WHERE name = $1", self.name
-            ),
+            self.db.sessions.delete_many({"name": self.name}),
+            self.db.peers.delete_many({"name": self.name}),
+            self.db.update_state.delete_many({"name": self.name}),
         )
 
     async def update_peers(self, peers: list | None = None) -> None:
         if not peers:
             return
 
-        peer_ids = []
         peer_records = []
         username_records = []
+        delete_username_requests = []
         for p_id, p_access_hash, p_type, p_usernames, p_phone_number in peers:
-            peer_ids.append((self.name, p_id))
+            delete_username_requests.append(DeleteOne({"name": self.name, "id": p_id}))
             peer_records.append(
-                (self.name, p_id, p_access_hash, p_type, p_phone_number)
+                UpdateOne(
+                    {"name": self.name, "id": p_id},
+                    {
+                        "$set": {
+                            "access_hash": p_access_hash,
+                            "type": p_type,
+                            "phone_number": p_phone_number,
+                        }
+                    },
+                    upsert=True,
+                )
             )
             if p_usernames:
                 for p_username in p_usernames:
-                    username_records.append((self.name, p_id, p_username))
+                    username_records.append(
+                        UpdateOne(
+                            {"name": self.name, "username": p_username},
+                            {"$set": {"id": p_id}},
+                            upsert=True,
+                        )
+                    )
 
-        await asyncio.gather(
-            self.pool.executemany(
-                "DELETE FROM storage.usernames WHERE name = $1 AND id = $2;", peer_ids
-            ),
-            self.pool.executemany(
-                """
-                INSERT INTO storage.peers as p (
-                    name,
-                    id,
-                    access_hash,
-                    type,
-                    phone_number
-                )
-                VALUES ($1, $2, $3, $4, $5)
-                ON CONFLICT (name, id) DO UPDATE SET
-                    access_hash     = EXCLUDED.access_hash,
-                    type            = EXCLUDED.type,
-                    phone_number    = EXCLUDED.phone_number
-                WHERE
-                    p.access_hash   IS DISTINCT FROM EXCLUDED.access_hash
-                OR  p.type          IS DISTINCT FROM EXCLUDED.type
-                OR  p.phone_number  IS DISTINCT FROM EXCLUDED.phone_number;
-                """,
-                peer_records,
-            ),
-        )
+        if delete_username_requests:
+            await self.db.usernames.bulk_write(delete_username_requests, ordered=False)
+
+        if peer_records:
+            await self.db.peers.bulk_write(peer_records, ordered=False)
+
         if username_records:
-            await self.pool.executemany(
-                """
-                INSERT INTO storage.usernames AS u (
-                    name,
-                    id,
-                    username
-                )
-                VALUES ($1, $2, $3)
-                ON CONFLICT (name, username) DO UPDATE SET
-                    id = EXCLUDED.id
-                WHERE u.id IS DISTINCT FROM EXCLUDED.id;
-                """,
-                username_records,
-            )
+            await self.db.usernames.bulk_write(username_records, ordered=False)
 
     async def update_usernames(self, usernames: list | None = None) -> None: ...
 
     async def update_state(self, value: object = Object) -> list | None:
         if value is Object:
-            rows = await self.pool.fetch(
-                """
-                SELECT
-                    id,
-                    pts,
-                    qts,
-                    date,
-                    seq
-                FROM storage.update_state
-                WHERE name = $1;
-                """,
-                self.name,
-            )
-            return [tuple(r) for r in rows]
+            cursor = self.db.update_state.find({"name": self.name})
+            res = []
+            async for doc in cursor:
+                res.append(
+                    (
+                        doc.get("id"),
+                        doc.get("pts"),
+                        doc.get("qts"),
+                        doc.get("date"),
+                        doc.get("seq"),
+                    )
+                )
+            return res
 
         if value is None:
-            await self.pool.execute(
-                "DELETE FROM storage.update_state WHERE name = $1;", self.name
-            )
+            await self.db.update_state.delete_many({"name": self.name})
         else:
-            await self.pool.execute(
-                """
-                INSERT INTO storage.update_state AS u (
-                    name,
-                    id,
-                    pts,
-                    qts,
-                    date,
-                    seq
-                )
-                VALUES (
-                    $1, $2, $3, $4, $5, $6
-                )
-                ON CONFLICT (name, id) DO UPDATE SET
-                    pts  = EXCLUDED.pts,
-                    qts  = EXCLUDED.qts,
-                    date = EXCLUDED.date,
-                    seq  = EXCLUDED.seq
-                WHERE
-                    u.pts   IS DISTINCT FROM EXCLUDED.pts
-                OR  u.qts   IS DISTINCT FROM EXCLUDED.qts
-                OR  u.date  IS DISTINCT FROM EXCLUDED.date
-                OR  u.seq   IS DISTINCT FROM EXCLUDED.seq;
-                """,
-                self.name,
-                *value,
+            await self.db.update_state.update_one(
+                {"name": self.name, "id": value[0]},
+                {
+                    "$set": {
+                        "pts": value[1],
+                        "qts": value[2],
+                        "date": value[3],
+                        "seq": value[4],
+                    }
+                },
+                upsert=True,
             )
 
         return None
@@ -181,64 +145,33 @@ class PostgreStorage(Storage):
             except (ValueError, TypeError) as e:
                 raise KeyError(f"Invalid peer ID: {peer_id}") from e
 
-        row = await self.pool.fetchrow(
-            """
-            SELECT
-                id,
-                access_hash,
-                type
-            FROM storage.peers
-            WHERE name = $1
-                AND id = $2;
-            """,
-            self.name,
-            peer_id,
-        )
-        if not row:
+        doc = await self.db.peers.find_one({"name": self.name, "id": peer_id})
+        if not doc:
             raise KeyError(f"Peer ID not found: {peer_id}")
 
-        return get_input_peer(row["id"], row["access_hash"], row["type"])
+        return get_input_peer(doc["id"], doc["access_hash"], doc["type"])
 
     async def get_peer_by_username(self, username: str) -> InputPeer:
-        row = await self.pool.fetchrow(
-            """
-            SELECT
-                p.id,
-                p.access_hash,
-                p.type
-            FROM storage.peers AS p
-            JOIN storage.usernames AS u
-                ON  p.id    = u.id
-                AND p.name  = u.name
-            WHERE u.name = $1
-                AND u.username = $2;
-            """,
-            self.name,
-            username,
+        u_doc = await self.db.usernames.find_one(
+            {"name": self.name, "username": username}
         )
-        if not row:
+        if not u_doc:
             raise KeyError(f"Username not found: {username}")
 
-        return get_input_peer(row["id"], row["access_hash"], row["type"])
+        p_doc = await self.db.peers.find_one({"name": self.name, "id": u_doc["id"]})
+        if not p_doc:
+            raise KeyError(f"Username not found: {username}")
+
+        return get_input_peer(p_doc["id"], p_doc["access_hash"], p_doc["type"])
 
     async def get_peer_by_phone_number(self, phone_number: str) -> InputPeer:
-        row = await self.pool.fetchrow(
-            """
-            SELECT
-                id,
-                access_hash,
-                type
-            FROM storage.peers
-            WHERE name = $1
-                AND phone_number = $2;
-            """,
-            self.name,
-            phone_number,
+        doc = await self.db.peers.find_one(
+            {"name": self.name, "phone_number": phone_number}
         )
-        if not row:
+        if not doc:
             raise KeyError(f"Phone number not found: {phone_number}")
 
-        return get_input_peer(row["id"], row["access_hash"], row["type"])
+        return get_input_peer(doc["id"], doc["access_hash"], doc["type"])
 
     async def dc_id(self, value: object = Object) -> int | None:
         res = await self._value("dc_id", value)
@@ -270,16 +203,13 @@ class PostgreStorage(Storage):
 
     async def _value(self, attr: str, value: object = Object) -> object:
         if value is Object:
-            return await self.pool.fetchval(
-                f"SELECT {attr} FROM storage.sessions WHERE name = $1;", self.name
-            )
+            doc = await self.db.sessions.find_one({"name": self.name})
+            return doc.get(attr) if doc else None
 
         if attr in ("is_bot", "test_mode") and not isinstance(value, bool):
             value = bool(value)
 
-        await self.pool.execute(
-            f"UPDATE storage.sessions SET {attr} = $1 WHERE name = $2;",
-            value,
-            self.name,
+        await self.db.sessions.update_one(
+            {"name": self.name}, {"$set": {attr: value}}, upsert=True
         )
         return None

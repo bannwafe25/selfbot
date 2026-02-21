@@ -63,18 +63,19 @@ class Call(Module):
             self.client.app.dispatcher.groups.pop(group, None)
 
     async def on_started(self) -> None:
-        rows = await self.client.db.fetch(
-            "SELECT chat_id, join_as, mute FROM call.chats;"
-        )
+        cursor = self.client.db.call_chats.find()
+        rows = []
+        async for row in cursor:
+            rows.append(row)
         for row in rows:
             kwargs = {"chat_id": row["chat_id"]}
             if row.get("join_as"):
                 try:
                     peer = await self.client.app.resolve_peer(row["join_as"])
                 except RPCError:
-                    await self.client.db.execute(
-                        "UPDATE call.chats SET join_as = NULL WHERE chat_id = $1;",
-                        row["chat_id"],
+                    await self.client.db.call_chats.update_one(
+                        {"chat_id": row["chat_id"]},
+                        {"$set": {"join_as": None}}
                     )
                     continue
 
@@ -84,9 +85,7 @@ class Call(Module):
                 await self.client.call.play(**kwargs)
             except Exception as e:
                 if isinstance(e, (ChannelPrivate, PeerIdInvalid)):
-                    await self.client.db.execute(
-                        "DELETE FROM call.chats WHERE chat_id = $1;", row["chat_id"]
-                    )
+                    await self.client.db.call_chats.delete_one({"chat_id": row["chat_id"]})
 
                 continue
 
@@ -177,29 +176,12 @@ class Call(Module):
             else:
                 await self.client.call.unmute(chat_id)
 
-            await self.client.db.execute(
-                """
-                INSERT INTO call.chats AS c (
-                    chat_id,
-                    join_as,
-                    mute
-                )
-                VALUES ($1, $2, $3)
-                ON CONFLICT (chat_id)
-                DO UPDATE SET
-                    join_as = EXCLUDED.join_as,
-                    mute    = EXCLUDED.mute
-                WHERE
-                    c.join_as IS DISTINCT FROM EXCLUDED.join_as
-                OR  c.mute    IS DISTINCT FROM EXCLUDED.mute;
-                """,
-                chat_id,
-                join_as,
-                bool(mute),
+            await self.client.db.call_chats.update_one(
+                {"chat_id": chat_id},
+                {"$set": {"join_as": join_as, "mute": bool(mute)}},
+                upsert=True
             )
         elif action == "leave":
-            await self.client.db.execute(
-                "DELETE FROM call.chats WHERE chat_id = $1;", chat_id
-            )
+            await self.client.db.call_chats.delete_one({"chat_id": chat_id})
 
         await self.respond(event, self.fmtmsg(**text, foot=self.fmtsec(now)))
