@@ -11,9 +11,9 @@ dependencies = [
     "pymongo>=4.9.0",
     "pyrotgfork==2.2.18",
     "psutil>=6.1.1",
-    "pytgcrypto==1.2.12",
     "speedtest-cli>=2.1.3",
     "telegraph[aio]==2.2.0",
+    "tgcrypto-rs>=2.1.13",
 ]
 
 [project.scripts]

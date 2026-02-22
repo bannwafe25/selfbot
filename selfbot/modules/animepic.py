@@ -85,6 +85,67 @@ class AnimePic(Module):
         "waifu",
     ]
 
+    animepixels_tags = [
+        "animepixels",
+        "nature",
+        "one_piece",
+        "one-piece",
+        "naruto",
+        "pokemon",
+        "my_hero_academia",
+        "my-hero-academia",
+        "jujutsu_kaisen",
+        "jujutsu-kaisen",
+        "attack_on_titan",
+        "attack-on-titan",
+        "spy_x_family",
+        "spy-x-family",
+        "solo_leveling",
+        "solo-leveling",
+        "dragon_ball",
+        "dragon-ball",
+        "demon_slayer",
+        "demon-slayer",
+    ]
+
+    animepixels_category_map = {
+        "animepixels": None,
+        "nature": "nature",
+        "one_piece": "one_piece",
+        "one-piece": "one_piece",
+        "naruto": "naruto",
+        "pokemon": "pokemon",
+        "my_hero_academia": "my_hero_academia",
+        "my-hero-academia": "my_hero_academia",
+        "jujutsu_kaisen": "jujutsu_kaisen",
+        "jujutsu-kaisen": "jujutsu_kaisen",
+        "attack_on_titan": "attack_on_titan",
+        "attack-on-titan": "attack_on_titan",
+        "spy_x_family": "spy_x_family",
+        "spy-x-family": "spy_x_family",
+        "solo_leveling": "solo_leveling",
+        "solo-leveling": "solo_leveling",
+        "dragon_ball": "dragon_ball",
+        "dragon-ball": "dragon_ball",
+        "demon_slayer": "demon_slayer",
+        "demon-slayer": "demon_slayer",
+    }
+
+    yandere_tags = [
+        "yande",
+        "yandere",
+        "kowloon",
+        "rag76",
+        "ogre_illust",
+        "b-baby",
+        "cream_pan",
+        "rering",
+        "fiona_cassandra",
+        "hotvenus",
+        "stars_voice",
+        "sparxie",
+    ]
+
     mwm_moe_tags = [
         "ai",
         "aimp",
@@ -142,6 +203,8 @@ class AnimePic(Module):
                 mwm_moe_tags
                 + picre_tags
                 + waifu_im_tags
+                + animepixels_tags
+                + yandere_tags
                 + nekos_moe_tags
                 + nekobot_tags
                 + nekosapi_tags
@@ -254,6 +317,8 @@ class AnimePic(Module):
             (self.mwm_moe_tags, self._get_from_mwm_moe),
             (self.picre_tags, self._get_from_picre),
             (self.waifu_im_tags, self._get_from_waifu_im),
+            (self.animepixels_tags, self._get_from_animepixels),
+            (self.yandere_tags, self._get_from_yandere),
             (self.nekos_moe_tags, self._get_from_nekos_moe),
             (self.nekobot_tags, self._get_from_nekobot),
             (self.nekosapi_tags, self._get_from_nekosapi),
@@ -301,23 +366,45 @@ class AnimePic(Module):
         return None
 
     async def _get_from_picre(self, _: str) -> tuple | None:
-        resp = await self.client.http.get("https://pic.re/images", timeout=10)
+        resp = await self.client.http.post("https://pic.re/image", timeout=10)
+        if resp.status_code == 200:
+            data = resp.json() or {}
+            file_url = data.get("file_url")
+            if isinstance(file_url, str):
+                if file_url.startswith("//"):
+                    file_url = f"https:{file_url}"
+                elif file_url.startswith("/"):
+                    file_url = f"https://pic.re{file_url}"
+                elif not file_url.startswith(("http://", "https://")):
+                    file_url = f"https://{file_url.lstrip('/')}"
+            if self._is_valid_non_gif(file_url):
+                return (
+                    file_url,
+                    data.get("author"),
+                    {},
+                    data.get("source"),
+                )
+
+        resp = await self.client.http.get(
+            "https://pic.re/images", follow_redirects=True, timeout=10
+        )
         url = str(resp.url) if resp.status_code == 200 else None
         if self._is_valid_non_gif(url):
-            return url, None, {}, resp.headers.get("image_source")
+            return url, None, {}, None
         return None
 
     async def _get_from_waifu_im(self, tag: str) -> tuple | None:
         resp = await self.client.http.get(
-            "https://api.waifu.im/search",
-            params={"included_tags": [tag], "is_nsfw": "false"},
+            "https://api.waifu.im/images",
+            params={"IncludedTags": tag, "IsNsfw": "false", "PageSize": 1},
             timeout=10,
         )
         if resp.status_code != 200:
             return None
 
-        images = resp.json().get("images") or []
-        if not images:
+        data = resp.json() or {}
+        images = data.get("items") or data.get("images") or []
+        if not isinstance(images, list) or not images:
             return None
 
         image_data = images[0]
@@ -325,16 +412,99 @@ class AnimePic(Module):
         if not self._is_valid_non_gif(url):
             return None
 
-        artist = image_data.get("artist") or {}
+        artists = image_data.get("artists") or []
+        artist = (
+            artists[0]
+            if isinstance(artists, list) and artists and isinstance(artists[0], dict)
+            else image_data.get("artist") or {}
+        )
         links = {
             key: val
             for key, val in {
                 "Pixiv": artist.get("pixiv"),
                 "Twitter": artist.get("twitter"),
+                "Patreon": artist.get("patreon"),
+                "DeviantArt": artist.get("deviantArt"),
             }.items()
             if val
         }
-        return (url, artist.get("name"), links, image_data.get("source"))
+        return (
+            url,
+            artist.get("name"),
+            links,
+            image_data.get("source") or image_data.get("source_url"),
+        )
+
+    async def _get_from_animepixels(self, tag: str) -> tuple | None:
+        category = self.animepixels_category_map.get(tag)
+        if category:
+            resp = await self.client.http.get(
+                f"https://animepixels-api.vercel.app/api/media/image/{category}",
+                params={"limit": 1, "offset": 0},
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                return None
+
+            data = resp.json() or {}
+            results = data.get("results") or []
+            if not isinstance(results, list) or not results:
+                return None
+            data = results[0]
+        else:
+            resp = await self.client.http.get(
+                "https://animepixels-api.vercel.app/api/media/random/image",
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                return None
+            data = resp.json() or {}
+
+        url = data.get("url")
+        if not self._is_valid_non_gif(url):
+            return None
+
+        return (url, None, {}, None)
+
+    async def _get_from_yandere(self, tag: str) -> tuple | None:
+        tag_filter = None if tag in {"yande", "yandere"} else tag
+        query_tags = "rating:safe order:random"
+        if tag_filter:
+            query_tags = f"{query_tags} {tag_filter}"
+
+        resp = await self.client.http.get(
+            "https://yande.re/post.json",
+            params={"limit": 1, "tags": query_tags},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+
+        posts = resp.json() or []
+        # Fall back to plain safe random if the specific tag has no safe post.
+        if tag_filter and (not isinstance(posts, list) or not posts):
+            resp = await self.client.http.get(
+                "https://yande.re/post.json",
+                params={"limit": 1, "tags": "rating:safe order:random"},
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                return None
+            posts = resp.json() or []
+
+        if not isinstance(posts, list) or not posts:
+            return None
+
+        post = posts[0]
+        url = post.get("sample_url") or post.get("jpeg_url") or post.get("file_url")
+        if not self._is_valid_non_gif(url):
+            return None
+
+        post_id = post.get("id")
+        source_url = post.get("source") or (
+            f"https://yande.re/post/show/{post_id}" if post_id else None
+        )
+        return (url, post.get("author"), {}, source_url)
 
     async def _get_from_nekos_moe(self, _: str) -> tuple | None:
         resp = await self.client.http.get(
