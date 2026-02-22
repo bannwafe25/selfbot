@@ -14,9 +14,10 @@ for lib in ("pyrogram", "httpx"):
 
 
 def run() -> None:
+    mongo_uri = os.environ.get("MONGODB_URI") or os.environ.get("DATABASE_URL")
     config = {
         "BOT_TOKEN": os.environ.get("BOT_TOKEN"),
-        "DATABASE_URL": os.environ.get("DATABASE_URL"),
+        "MONGODB_URI": mongo_uri,
         "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY"),
         "STICKER_FILE_ID": os.environ.get(
             "STICKER_FILE_ID",
