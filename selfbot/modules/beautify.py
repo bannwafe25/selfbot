@@ -17,6 +17,10 @@ from selfbot.module import Module
 CARBON_PATTERN = re.compile(r"^(r?carbon)(?:\s+([\s\S]+))?$", re.IGNORECASE)
 CCARBON_PATTERN = re.compile(r"^ccarbon(?:\s+([\s\S]+))?$", re.IGNORECASE)
 RAYSO_PATTERN = re.compile(r"^rayso(?:\s+([\s\S]+))?$", re.IGNORECASE)
+BEAUTIFY_PATTERN = re.compile(
+    r"^(?:r?carbon|ccarbon|rayso)(?:\s+[\s\S]+)?$",
+    re.IGNORECASE,
+)
 
 RAYSO_THEMES = [
     "meadow",
@@ -61,10 +65,23 @@ class Beautify(Module):
                 "#0f172a",
             ]
 
-    @handler(filters.regex(CARBON_PATTERN), 1)
-    async def on_message_out_carbon(self, event: Message) -> None:
+    @handler(filters.regex(BEAUTIFY_PATTERN), 1)
+    async def on_message_out(self, event: Message) -> None:
+        text = str(event.content).strip()
+        if CCARBON_PATTERN.match(text):
+            await self._handle_ccarbon(event, text)
+            return
+
+        if CARBON_PATTERN.match(text):
+            await self._handle_carbon(event, text)
+            return
+
+        if RAYSO_PATTERN.match(text):
+            await self._handle_rayso(event, text)
+
+    async def _handle_carbon(self, event: Message, text: str) -> None:
         await self.respond(event, "<code>Processing...</code>")
-        command, inline_code = CARBON_PATTERN.match(event.content).groups()
+        command, inline_code = CARBON_PATTERN.match(text).groups()
 
         if command.lower().startswith("r"):
             color = random.choice(self.color_list) if self.color_list else "White"
@@ -96,10 +113,9 @@ class Beautify(Module):
         )
         await event.delete()
 
-    @handler(filters.regex(CCARBON_PATTERN), 1)
-    async def on_message_out_ccarbon(self, event: Message) -> None:
+    async def _handle_ccarbon(self, event: Message, text: str) -> None:
         await self.respond(event, "<code>Processing...</code>")
-        args = (CCARBON_PATTERN.match(event.content).group(1) or "").strip()
+        args = (CCARBON_PATTERN.match(text).group(1) or "").strip()
         if not args:
             await self.respond(
                 event,
@@ -144,10 +160,9 @@ class Beautify(Module):
         )
         await event.delete()
 
-    @handler(filters.regex(RAYSO_PATTERN), 1)
-    async def on_message_out_rayso(self, event: Message) -> None:
+    async def _handle_rayso(self, event: Message, text: str) -> None:
         await self.respond(event, "<code>Processing...</code>")
-        args = (RAYSO_PATTERN.match(event.content).group(1) or "").strip()
+        args = (RAYSO_PATTERN.match(text).group(1) or "").strip()
 
         theme = None
         dark = True
