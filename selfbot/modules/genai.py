@@ -28,11 +28,17 @@ class GenAI(Module):
     }
 
     async def on_starting(self) -> None:
+        api_key = await self.getvar("GEMINI_API_KEY")
+        if not api_key:
+            self.logger.error("GEMINI_API_KEY not configured")
+            self.client.unload(self)
+            return
+
         try:
             self.google = AsyncClient(
                 headers={
                     "Content-Type": "application/json",
-                    "x-goog-api-key": self.client.config["GEMINI_API_KEY"],
+                    "x-goog-api-key": api_key,
                 },
                 http2=True,
                 timeout=Timeout(timeout=None),

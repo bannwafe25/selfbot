@@ -81,6 +81,7 @@ class Beautify(Module):
 
     async def _handle_carbon(self, event: Message, text: str) -> None:
         await self.respond(event, "<code>Processing...</code>")
+        now = datetime.datetime.now(datetime.UTC)
         command, inline_code = CARBON_PATTERN.match(text).groups()
 
         if command.lower().startswith("r"):
@@ -108,13 +109,17 @@ class Beautify(Module):
         mention = self._mention_html(event.from_user)
         await event.reply_photo(
             carbon,
-            caption=f"Carbonised by {mention}",
+            caption=(
+                f"Carbonised by {mention}\n"
+                f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
+            ),
             reply_parameters=ReplyParameters(message_id=event.reply_to_message_id or event.id),
         )
         await event.delete()
 
     async def _handle_ccarbon(self, event: Message, text: str) -> None:
         await self.respond(event, "<code>Processing...</code>")
+        now = datetime.datetime.now(datetime.UTC)
         args = (CCARBON_PATTERN.match(text).group(1) or "").strip()
         if not args:
             await self.respond(
@@ -155,13 +160,17 @@ class Beautify(Module):
         mention = self._mention_html(event.from_user)
         await event.reply_photo(
             carbon,
-            caption=f"Carbonised by {mention}",
+            caption=(
+                f"Carbonised by {mention}\n"
+                f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
+            ),
             reply_parameters=ReplyParameters(message_id=event.reply_to_message_id or event.id),
         )
         await event.delete()
 
     async def _handle_rayso(self, event: Message, text: str) -> None:
         await self.respond(event, "<code>Processing...</code>")
+        now = datetime.datetime.now(datetime.UTC)
         args = (RAYSO_PATTERN.match(text).group(1) or "").strip()
 
         theme = None
@@ -219,6 +228,7 @@ class Beautify(Module):
         try:
             await event.reply_photo(
                 image_path,
+                caption=f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>",
                 reply_parameters=ReplyParameters(message_id=event.reply_to_message_id or event.id),
             )
             await event.delete()
@@ -325,8 +335,14 @@ class Beautify(Module):
     def _mention_html(user: User | None) -> str:
         if not user:
             return "Unknown"
-        name = html.escape(user.first_name or "User")
-        return f"<a href=\"tg://user?id={user.id}\">{name}</a>"
+        if user.username:
+            label = f"@{user.username}"
+        elif user.last_name:
+            label = f"{user.first_name or ''} {user.last_name}".strip()
+        else:
+            label = user.first_name or "User"
+
+        return f"<a href=\"tg://user?id={user.id}\">{html.escape(label)}</a>"
 
     @staticmethod
     def _chat_title(event: Message) -> str:

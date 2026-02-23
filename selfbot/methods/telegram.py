@@ -205,6 +205,15 @@ class Telegram:
                     else:
                         kwargs[k] = v
 
+                    if (
+                        length == 3
+                        and isinstance(i[0], str)
+                        and i[0].casefold() == "close"
+                        and k == "data"
+                        and v in ("0", b"0")
+                    ):
+                        kwargs["style"] = ButtonStyle.DANGER
+
                     if length > 3:
                         if length == 5:
                             kwargs["icon_custom_emoji_id"] = i[4]

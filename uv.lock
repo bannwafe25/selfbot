@@ -389,7 +389,7 @@ requires-dist = [
     { name = "pyrotgfork", specifier = "==2.2.18" },
     { name = "speedtest-cli", specifier = ">=2.1.3" },
     { name = "telegraph", extras = ["aio"], specifier = "==2.2.0" },
-    { name = "tgcrypto-rs", specifier = ">=2.1.13" },
+    { name = "tgcrypto-rs", specifier = "==2.1.13" },
 ]
 
 [[package]]

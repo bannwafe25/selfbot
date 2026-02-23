@@ -19,6 +19,9 @@ def run() -> None:
         "BOT_TOKEN": os.environ.get("BOT_TOKEN"),
         "MONGODB_URI": mongo_uri,
         "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY"),
+        "FERDEV_API_KEY": os.environ.get("FERDEV_API_KEY"),
+        "IMGUR_CLIENT_ID": os.environ.get("IMGUR_CLIENT_ID"),
+        "IMGBB_API_KEY": os.environ.get("IMGBB_API_KEY"),
         "STICKER_FILE_ID": os.environ.get(
             "STICKER_FILE_ID",
             "CAACAgIAAxkBAAIdeWi1SLWihwZEeyFOk9YM4-mBWJqxAAJOAgACVp29CjD-a22BMgNvHgQ",
