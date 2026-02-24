@@ -13,9 +13,8 @@ dependencies = [
     "psutil>=6.1.1",
     "speedtest-cli>=2.1.3",
     "telegraph[aio]==2.2.0",
-    "pytgcrypto==1.2.12",
     "py-yt-search>=0.5.7",
-    "playwright",
+    "pytgcrypto-rs",
 ]
 
 [project.scripts]
