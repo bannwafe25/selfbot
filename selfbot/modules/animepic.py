@@ -442,7 +442,13 @@ class AnimePic(Module):
         api_url = self._deline_map.get(tag)
         if not api_url:
             return None
-        resp = await self.client.http.head(api_url, timeout=10)
+            
+        import time
+        buster = f"{time.time()}"
+        sep = "&" if "?" in api_url else "?"
+        query_url = f"{api_url}{sep}t={buster}"
+        
+        resp = await self.client.http.head(query_url, timeout=10)
         if resp.status_code == 200:
             return api_url, None, {}, None
         return None
