@@ -10,17 +10,14 @@ from pyrogram.types import Message, ReplyParameters
 
 from selfbot.listener import handler
 from selfbot.module import Module
+from selfbot.apis import (
+    SEARCH_ENGINES,
+    UPLOAD_0X0,
+    UPLOAD_CATBOX,
+    UPLOAD_TMPFILES,
+)
 
 pattern = re.compile(r"^risearch(?:\s+([\s\S]+))?$", re.IGNORECASE)
-
-SEARCH_ENGINES = {
-    "lens": "https://lens.google.com/uploadbyurl?url={image}",
-    "reverse": "https://www.google.com/searchbyimage?sbisrc=4chanx&image_url={image}&safe=off",
-    "tineye": "https://www.tineye.com/search?url={image}",
-    "bing": "https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:{image}",
-    "yandex": "https://yandex.com/images/search?source=collections&url={image}&rpt=imageview",
-    "saucenao": "https://saucenao.com/search.php?db=999&url={image}",
-}
 
 
 class RISearch(Module):
@@ -180,10 +177,36 @@ class RISearch(Module):
         return "application/octet-stream"
 
     async def _upload_to_tmpfiles(self, raw: bytes, mime: str) -> str | None:
-        files = {"file": ("image", raw, mime)}
+        uploaders = [
+            self._upload_0x0,
+            self._upload_tmpfiles,
+            self._upload_catbox,
+        ]
+        for uploader in uploaders:
+            try:
+                url = await uploader(raw, mime)
+                if url:
+                    return url
+            except Exception:
+                continue
+        return None
+
+    async def _upload_0x0(self, raw: bytes, mime: str) -> str | None:
         resp = await self.client.http.post(
-            "https://tmpfiles.org/api/v1/upload",
-            files=files,
+            UPLOAD_0X0,
+            files={"file": ("image", raw, mime)},
+            timeout=60,
+        )
+        if resp.status_code == 200:
+            url = resp.text.strip()
+            if url.startswith("http"):
+                return url
+        return None
+
+    async def _upload_tmpfiles(self, raw: bytes, mime: str) -> str | None:
+        resp = await self.client.http.post(
+            UPLOAD_TMPFILES,
+            files={"file": ("image", raw, mime)},
             timeout=60,
         )
         if resp.status_code != 200:
@@ -194,10 +217,22 @@ class RISearch(Module):
         if not url:
             return None
 
-        # Convert public page URL to direct download URL.
         if "tmpfiles.org/" in url and "/dl/" not in url:
             return url.replace("tmpfiles.org/", "tmpfiles.org/dl/")
         return url
+
+    async def _upload_catbox(self, raw: bytes, mime: str) -> str | None:
+        resp = await self.client.http.post(
+            UPLOAD_CATBOX,
+            data={"reqtype": "fileupload"},
+            files={"fileToUpload": ("image", raw, mime)},
+            timeout=60,
+        )
+        if resp.status_code == 200:
+            url = resp.text.strip()
+            if url.startswith("http"):
+                return url
+        return None
 
     async def _capture_screenshots(self, urls: dict[str, str]) -> list[tuple[str, BytesIO]]:
         try:

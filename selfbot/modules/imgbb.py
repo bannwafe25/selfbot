@@ -7,11 +7,10 @@ from pyrogram.types import Message
 
 from selfbot.listener import handler
 from selfbot.module import Module
+from selfbot.apis import IMGBB_UPLOAD
 
 DISPATCH_PATTERN = re.compile(r"^(?:imgbb|setimgbb_api)(?:\s+[\s\S]+)?$", re.IGNORECASE)
 SETKEY_PATTERN = re.compile(r"^setimgbb_api(?:\s+([\s\S]+))?$", re.IGNORECASE)
-
-BASE_URL = "https://api.imgbb.com/1/upload"
 SUPPORTED_MIME_TYPES = {
     "image/jpeg",
     "image/png",
@@ -83,7 +82,7 @@ class Imgbb(Module):
             file_name, mime = self._file_meta(event, media)
             files = {"image": (file_name, raw, mime)}
             resp = await self.client.http.post(
-                BASE_URL,
+                IMGBB_UPLOAD,
                 params={"key": api_key},
                 files=files,
                 timeout=60,
@@ -110,14 +109,13 @@ class Imgbb(Module):
             if delete_url:
                 links.append(f'<a href="{delete_url}">Delete</a>')
 
-            await self.respond(
-                event,
-                self.fmtmsg(
-                    "ImgBB Upload",
-                    {"Links": " · ".join(links)},
-                    self.fmtsec(now),
-                ),
+            foot = self.fmtsec(now)
+            text = (
+                f"<b>ImgBB Upload</b>\n\n"
+                f"  <code>Links</code> : {' · '.join(links)}\n\n"
+                f"<b><blockquote>{html.escape(str(foot))}</blockquote></b>"
             )
+            await self.respond(event, text)
         except Exception as e:
             await self.respond(
                 event,

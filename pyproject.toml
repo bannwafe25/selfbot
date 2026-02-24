@@ -15,6 +15,7 @@ dependencies = [
     "telegraph[aio]==2.2.0",
     "pytgcrypto==1.2.12",
     "py-yt-search>=0.5.7",
+    "playwright",
 ]
 
 [project.scripts]

@@ -10,9 +10,10 @@ from pyrogram.types import Message
 
 from selfbot.listener import handler
 from selfbot.module import Module
+from selfbot.apis import SANGMATA_USERNAME
 
 pattern = re.compile(r"^sgb(?:\s+(.+))?$", re.IGNORECASE)
-SANGMATA_USERNAME = "@SangMata_beta_bot"
+
 
 
 class SGB(Module):

@@ -11,6 +11,7 @@ from py_yt import VideosSearch
 
 from selfbot.listener import handler
 from selfbot.module import Module
+from selfbot.apis import DELINE_YTMP3, FERDEV_YTMP3, FERDEV_APIKEY
 
 pattern = re.compile(r"^song(?:\s+(-d|--doc|-v|--voice))?\s+(.+)$", re.IGNORECASE)
 yt_id_pattern = re.compile(r'"videoId":"([A-Za-z0-9_-]{11})"')
@@ -211,7 +212,7 @@ class Song(Module):
 
     async def _fetch_song_data_deline(self, yt_link: str) -> dict:
         resp = await self.client.http.get(
-            "https://api.deline.web.id/downloader/ytmp3",
+            DELINE_YTMP3,
             params={"url": yt_link},
             timeout=60,
         )
@@ -258,9 +259,9 @@ class Song(Module):
         }
 
     async def _fetch_song_data_ferdev(self, yt_link: str) -> dict:
-        api_key = await self.getvar("FERDEV_API_KEY", "key_iOPE5w")
+        api_key = await self.getvar("FERDEV_API_KEY", FERDEV_APIKEY)
         resp = await self.client.http.get(
-            "https://api.ferdev.my.id/downloader/ytmp3",
+            FERDEV_YTMP3,
             params={"link": yt_link, "apikey": api_key},
             timeout=60,
         )

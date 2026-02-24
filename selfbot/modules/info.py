@@ -9,6 +9,7 @@ from pyrogram.types import LinkPreviewOptions, Message, User
 
 from selfbot.listener import handler
 from selfbot.module import Module
+from selfbot.apis import YASIR_REGDATE
 
 pattern = re.compile(r"^info(?:\s+(.+))?$", flags=re.DOTALL)
 
@@ -33,7 +34,7 @@ class Info(Module):
         is_full_mode = False
         cleaned = []
         for token in tokens:
-            if token.lower() == "-full":
+            if token.lower() in ("-full", "--full"):
                 is_full_mode = True
             else:
                 cleaned.append(token)
@@ -168,7 +169,7 @@ class Info(Module):
 
             try:
                 reg = await self.client.http.get(
-                    "https://yasirapi.eu.org/register_date",
+                    YASIR_REGDATE,
                     params={"user_id": user.id, "tz": "UTC"},
                     timeout=10,
                 )
@@ -257,10 +258,10 @@ class Info(Module):
                         granted = [text for text, ok in perms if ok]
                         if granted:
                             group_lines.append(
-                                "• <b>Permissions:</b><br>" + "<br>".join(granted)
+                                "• <b>Permissions:</b>\n" + "\n".join(granted)
                             )
 
-                    lines.append(f"<blockquote>{'<br>'.join(group_lines)}</blockquote>")
+                    lines.append(f"<blockquote>{chr(10).join(group_lines)}</blockquote>")
                 except Exception:
                     pass
 

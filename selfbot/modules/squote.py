@@ -11,11 +11,11 @@ from pyrogram.types import Message, ReplyParameters, User
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
+from selfbot.apis import QUOTES_API
 
 QUOTE_PATTERN = re.compile(r"^(squote|sq)(?:\s+([\s\S]+))?$", re.IGNORECASE)
 FAKE_PATTERN = re.compile(r"^(fakequote|fq)(?:\s+([\s\S]+))?$", re.IGNORECASE)
 DISPATCH_PATTERN = re.compile(r"^(?:squote|sq|fakequote|fq)(?:\s+[\s\S]+)?$", re.IGNORECASE)
-QUOTES_API = "https://quotes-o042.onrender.com/generate"
 
 
 class Squote(Module):
@@ -421,7 +421,7 @@ class Squote(Module):
             return "🎤 started a new video chat"
         if message.video_chat_ended:
             return "🎤 ended the video chat"
-        if message.video_chat_members_invited:
+        if getattr(message, "video_chat_members_invited", None):
             return "🎤 invited participants to the video chat"
         if message.group_chat_created or message.supergroup_chat_created:
             return "👥 created the group"

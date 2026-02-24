@@ -42,7 +42,7 @@ class AnimePic(Module):
         "animal_ears", "blue-archive", "blue_eyes", "cat_ears", "fox_ears", "foxgirl",
         "girl", "pink_hair", "sailor_uniform", "tail_with_ribbon", "thigh_high_socks",
         "thighs", "vtuber", "white_hair", "white_thigh_high_socks", "young_girl",
-        "kemonomimi",
+        "kemonomimi", "loli",
     ]
 
     waifu_im_tags = [
