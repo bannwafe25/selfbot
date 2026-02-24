@@ -75,13 +75,7 @@ class Imgbb(Module):
                 await self.respond(event, "<code>Failed to download image.</code>")
                 return
 
-            if hasattr(data, "getbuffer"):
-                raw = bytes(data.getbuffer())
-            elif hasattr(data, "read"):
-                raw = data.read()
-            else:
-                raw = bytes(data)
-
+            raw = self.to_bytes(data)
             if not raw:
                 await self.respond(event, "<code>Downloaded file is empty.</code>")
                 return
@@ -110,15 +104,17 @@ class Imgbb(Module):
             if not image_url:
                 raise RuntimeError("Upload succeeded but no image URL returned.")
 
+            links = [f'<a href="{image_url}">Image</a>']
+            if thumb_url and thumb_url != image_url:
+                links.append(f'<a href="{thumb_url}">Thumbnail</a>')
+            if delete_url:
+                links.append(f'<a href="{delete_url}">Delete</a>')
+
             await self.respond(
                 event,
                 self.fmtmsg(
                     "ImgBB Upload",
-                    {
-                        "Image URL": image_url,
-                        "Thumbnail": thumb_url,
-                        "Delete URL": delete_url or "-",
-                    },
+                    {"Links": " · ".join(links)},
                     self.fmtsec(now),
                 ),
             )

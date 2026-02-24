@@ -30,6 +30,7 @@ class Squote(Module):
 
     async def on_starting(self) -> None:
         self.files_cache = {}
+        self.files_cache_limit = 256
 
     @handler(filters.regex(DISPATCH_PATTERN) & reply, 1)
     async def on_message_out(self, event: Message) -> None:
@@ -281,15 +282,9 @@ class Squote(Module):
         data = await app.download_media(file_id, in_memory=True)
         if not data:
             return ""
-        if hasattr(data, "getbuffer"):
-            raw = bytes(data.getbuffer())
-        elif hasattr(data, "read"):
-            raw = data.read()
-        else:
-            raw = bytes(data)
-
+        raw = self.to_bytes(data)
         encoded = base64.b64encode(raw).decode()
-        self.files_cache[file_id] = encoded
+        self._cache_file(file_id, encoded)
         return encoded
 
     async def _build_author(self, app, message: Message) -> dict:
@@ -367,15 +362,20 @@ class Squote(Module):
         if file_id in self.files_cache:
             return self.files_cache[file_id]
         data = await app.download_media(file_id, in_memory=True)
-        if hasattr(data, "getbuffer"):
-            raw = bytes(data.getbuffer())
-        elif hasattr(data, "read"):
-            raw = data.read()
-        else:
-            raw = bytes(data)
+        raw = self.to_bytes(data)
         encoded = base64.b64encode(raw).decode()
-        self.files_cache[file_id] = encoded
+        self._cache_file(file_id, encoded)
         return encoded
+
+    def _cache_file(self, file_id: str, encoded: str) -> None:
+        self.files_cache[file_id] = encoded
+        if len(self.files_cache) <= self.files_cache_limit:
+            return
+
+        # FIFO eviction is enough for this transient cache.
+        oldest_key = next(iter(self.files_cache))
+        if oldest_key != file_id:
+            self.files_cache.pop(oldest_key, None)
 
     def _get_text(self, message: Message) -> str:
         if message.photo:

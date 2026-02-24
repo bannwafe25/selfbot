@@ -189,18 +189,20 @@ class Notes(Module):
         await self.respond(event, "<code>Loading notes...</code>")
         now = datetime.datetime.now(datetime.UTC)
 
-        rows = []
-        cursor = self.client.db.notes_items.find()
-        async for row in cursor:
-            rows.append(row)
-
-        if not rows:
-            await self.respond(event, "<code>No notes saved yet.</code>")
-            return
-
-        names = sorted(
-            {str(row.get("display_name") or row.get("name") or "").strip() for row in rows if row.get("name")}
+        names_set = set()
+        cursor = self.client.db.notes_items.find(
+            {},
+            {"_id": 0, "name": 1, "display_name": 1},
         )
+        async for row in cursor:
+            key = str(row.get("name") or "").strip()
+            if not key:
+                continue
+            shown = str(row.get("display_name") or key).strip()
+            if shown:
+                names_set.add(shown)
+
+        names = sorted(names_set, key=lambda x: x.casefold())
         if not names:
             await self.respond(event, "<code>No notes saved yet.</code>")
             return

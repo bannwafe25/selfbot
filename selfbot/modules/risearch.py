@@ -80,12 +80,7 @@ class RISearch(Module):
                 await self.respond(event, "<code>Failed to download replied media.</code>")
                 return
 
-            if hasattr(data, "getbuffer"):
-                raw = bytes(data.getbuffer())
-            elif hasattr(data, "read"):
-                raw = data.read()
-            else:
-                raw = bytes(data)
+            raw = self.to_bytes(data)
             if not raw:
                 await self.respond(event, "<code>Downloaded media is empty.</code>")
                 return
@@ -157,7 +152,11 @@ class RISearch(Module):
             return None
 
         tokens = [t for t in re.split(r"[\s,]+", args) if t]
-        return tokens or list(SEARCH_ENGINES.keys())
+        if not tokens:
+            return list(SEARCH_ENGINES.keys())
+
+        # Keep order but remove duplicates.
+        return list(dict.fromkeys(tokens))
 
     @staticmethod
     def _has_supported_media(message: Message) -> bool:

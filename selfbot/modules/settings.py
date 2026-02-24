@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import hashlib
 import html
 import math
 import os
@@ -78,74 +79,59 @@ class Settings(Module):
             cache_time=0,
         )
 
-    @handler(filters.regex(CALLBACK_PATTERN), 4)
+    @handler(filters.all, 4)
     async def on_inline_callback(self, event: CallbackQuery) -> None:
         data = event.data.decode() if isinstance(event.data, bytes) else str(event.data)
+        if not data.startswith("settings/"):
+            return
+
         match = CALLBACK_PATTERN.match(data)
         if not match:
             return
 
-        action, token, page_raw = match.groups()
-        page = int(page_raw or 0)
+        try:
+            action, token, page_raw = match.groups()
+            page = int(page_raw or 0)
 
-        if action == "menu":
-            await self.respond(
-                event,
-                await self._main_text(),
-                reply_markup=self._main_keyboard(),
-            )
-            return
-
-        if action == "vars":
-            rows = await self.listvars()
-            await self.respond(
-                event,
-                self._vars_text(rows, page),
-                reply_markup=self._vars_keyboard(rows, page),
-            )
-            return
-
-        if action == "var":
-            key = self._token_to_key.get(token or "")
-            if not key:
-                await event.answer("Var tidak ditemukan, refresh list dulu.", show_alert=True)
-                rows = await self.listvars()
-                await self.respond(
+            if action == "menu":
+                await self._safe_respond(
                     event,
-                    self._vars_text(rows, page),
-                    reply_markup=self._vars_keyboard(rows, page),
+                    await self._main_text(),
+                    reply_markup=self._main_keyboard(),
                 )
                 return
 
-            await self.respond(
-                event,
-                await self._var_text(key),
-                reply_markup=self._var_keyboard(key, page),
-            )
-            return
+            if action == "vars":
+                await self._show_vars_page(event, page)
+                return
 
-        if action == "reset":
-            key = self._token_to_key.get(token or "")
-            if not key:
-                await event.answer("Var tidak ditemukan, refresh list dulu.", show_alert=True)
-                rows = await self.listvars()
-                await self.respond(
+            if action == "var":
+                key = await self._resolve_key_or_refresh(event, token or "", page)
+                if not key:
+                    return
+
+                await self._safe_respond(
                     event,
-                    self._vars_text(rows, page),
-                    reply_markup=self._vars_keyboard(rows, page),
+                    await self._var_text(key),
+                    reply_markup=self._var_keyboard(key, page),
                 )
                 return
 
-            deleted = await self.delvar(key)
+            if action == "reset":
+                key = await self._resolve_key_or_refresh(event, token or "", page)
+                if not key:
+                    return
+
+                deleted = await self.delvar(key)
+                await event.answer(
+                    f"{key} {'direset' if deleted else 'sudah kosong'}",
+                    show_alert=False,
+                )
+                await self._show_vars_page(event, page)
+        except Exception as e:
             await event.answer(
-                f"{key} {'direset' if deleted else 'sudah kosong'}",
-                show_alert=False,
-            )
-            rows = await self.listvars()
-            await self.respond(
-                event,
-                self._vars_text(rows, page),
-                reply_markup=self._vars_keyboard(rows, page),
+                f"Settings error: {str(e)[:80]}",
+                show_alert=True,
             )
 
     async def _open_inline_panel(self, event: Message) -> None:
@@ -310,7 +296,7 @@ class Settings(Module):
     def _main_keyboard(self):
         return self.ikm(
             [
-                [("Vars", "data", b"settings/vars/0", "B")],
+                [("Vars", "data", "settings/vars/0", "B")],
                 [
                     ("Add", "copy", "settings add KEY VALUE", "G"),
                     ("Update", "copy", "settings update KEY VALUE", "B"),
@@ -350,7 +336,7 @@ class Settings(Module):
         if not rows:
             return self.ikm(
                 [
-                    [("Back", "data", b"settings/menu")],
+                    [("Back", "data", "settings/menu")],
                     [("Close", "data", b"0")],
                 ]
             )
@@ -365,7 +351,7 @@ class Settings(Module):
         for row in chunk:
             key = str(row.get("key", ""))
             token = self._tokenize_key(key)
-            pair.append((self._short_key(key), "data", f"settings/var/{token}/{idx}".encode()))
+            pair.append((self._short_key(key), "data", f"settings/var/{token}/{idx}"))
             if len(pair) == 2:
                 button_rows.append(pair)
                 pair = []
@@ -374,10 +360,10 @@ class Settings(Module):
 
         nav = []
         if idx > 0:
-            nav.append((f"<< {idx}", "data", f"settings/vars/{idx - 1}".encode()))
-        nav.append(("Menu", "data", b"settings/menu"))
+            nav.append((f"<< {idx}", "data", f"settings/vars/{idx - 1}"))
+        nav.append(("Menu", "data", "settings/menu"))
         if idx < pages - 1:
-            nav.append((f"{idx + 2} >>", "data", f"settings/vars/{idx + 1}".encode()))
+            nav.append((f"{idx + 2} >>", "data", f"settings/vars/{idx + 1}"))
 
         button_rows.append(nav)
         button_rows.append([("Close", "data", b"0")])
@@ -409,10 +395,10 @@ class Settings(Module):
                 [
                     ("Add", "copy", f"settings add {key} VALUE", "G"),
                     ("Update", "copy", f"settings update {key} VALUE", "B"),
-                    ("Reset", "data", f"settings/reset/{token}/{page}".encode(), "R"),
+                    ("Reset", "data", f"settings/reset/{token}/{page}", "R"),
                 ],
                 [
-                    ("Back", "data", f"settings/vars/{page}".encode()),
+                    ("Back", "data", f"settings/vars/{page}"),
                     ("Close", "data", b"0"),
                 ],
             ]
@@ -466,6 +452,16 @@ class Settings(Module):
             reply_markup=reply_markup,
         )
 
+    async def _safe_respond(
+        self, event: CallbackQuery, text: str, reply_markup=None
+    ) -> None:
+        try:
+            await self.respond(event, text, reply_markup=reply_markup)
+        except Exception:
+            msg = getattr(event, "message", None)
+            if msg:
+                await msg.reply_text(text, reply_markup=reply_markup)
+
     def _normalize_key(self, key: str) -> str | None:
         norm = self.normalize_key(key)
         if not KEY_PATTERN.fullmatch(norm):
@@ -507,8 +503,8 @@ class Settings(Module):
         if token:
             return token
 
-        # 10 hex chars keeps callback_data short and deterministic enough for UI mapping.
-        base = format(abs(hash(key)) & 0xFFFFFFFFFF, "010x")
+        # Stable 10 hex chars (independent from Python hash randomization).
+        base = hashlib.sha1(key.encode("utf-8")).hexdigest()[:10]
         token = base
         counter = 0
         while token in self._token_to_key and self._token_to_key[token] != key:
@@ -518,3 +514,22 @@ class Settings(Module):
         self._token_to_key[token] = key
         self._key_to_token[key] = token
         return token
+
+    async def _show_vars_page(self, event: CallbackQuery, page: int) -> None:
+        rows = await self.listvars()
+        await self._safe_respond(
+            event,
+            self._vars_text(rows, page),
+            reply_markup=self._vars_keyboard(rows, page),
+        )
+
+    async def _resolve_key_or_refresh(
+        self, event: CallbackQuery, token: str, page: int
+    ) -> str | None:
+        key = self._token_to_key.get(token or "")
+        if key:
+            return key
+
+        await event.answer("Var tidak ditemukan, refresh list dulu.", show_alert=True)
+        await self._show_vars_page(event, page)
+        return None

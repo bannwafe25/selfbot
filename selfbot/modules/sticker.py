@@ -95,6 +95,7 @@ class Sticker(Module):
     @handler(filters.regex(pattern) & reply, 1)
     async def on_message_out(self, event: Message) -> None:
         await self.respond(event, "<code>Processing...</code>")
+        now = datetime.datetime.now(datetime.UTC)
         replied = event.reply_to_message
         if not replied:
             await self.respond(event, "<code>Reply to media first.</code>", revoke=2.5)
@@ -156,13 +157,15 @@ class Sticker(Module):
             url = f"https://t.me/addstickers/{set_short_name}"
             await self.respond(
                 event,
-                f"<b>Successfully added {success}/{total} sticker(s).</b>",
+                f"<b>Successfully added {success}/{total} sticker(s).</b>"
+                f"\n\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>",
                 link_preview_options=LinkPreviewOptions(url=url, show_above_text=True),
             )
         elif success:
             await self.respond(
                 event,
-                f"<b>Successfully added {success}/{total} sticker(s).</b>",
+                f"<b>Successfully added {success}/{total} sticker(s).</b>"
+                f"\n\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>",
             )
         else:
             await self.respond(event, "<code>No valid media found to process.</code>")

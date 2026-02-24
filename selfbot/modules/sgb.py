@@ -116,28 +116,10 @@ class SGB(Module):
                 if msg_dt and msg_dt < started_at:
                     continue
 
-                text = self._message_text(msg)
+                text = self.message_text(msg)
                 if text:
                     return text
 
             await asyncio.sleep(0.8)
 
         return None
-
-    @staticmethod
-    def _message_text(message: Message) -> str:
-        for attr in ("text", "caption"):
-            value = getattr(message, attr, None)
-            if value:
-                return str(value)
-
-        content = getattr(message, "content", None)
-        if not content:
-            return ""
-        if isinstance(content, str):
-            return content
-        if hasattr(content, "markdown") and content.markdown:
-            return content.markdown
-        if hasattr(content, "html") and content.html:
-            return content.html
-        return str(content)

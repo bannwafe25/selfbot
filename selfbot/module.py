@@ -16,6 +16,43 @@ class Module(Methods):
         self.client = client
         self.logger = logging.getLogger(self.__class__.__name__)
 
+    @staticmethod
+    def to_bytes(data: object) -> bytes:
+        if data is None:
+            return b""
+        if isinstance(data, bytes):
+            return data
+        if isinstance(data, (bytearray, memoryview)):
+            return bytes(data)
+        if hasattr(data, "getbuffer"):
+            return bytes(data.getbuffer())
+        if hasattr(data, "read"):
+            return data.read()
+        return bytes(data)
+
+    @staticmethod
+    def message_text(message: object) -> str:
+        if message is None:
+            return ""
+
+        for attr in ("text", "caption"):
+            value = getattr(message, attr, None)
+            if value:
+                return str(value)
+
+        content = getattr(message, "content", None)
+        if not content:
+            return ""
+        if isinstance(content, str):
+            return content
+        markdown = getattr(content, "markdown", None)
+        if markdown:
+            return str(markdown)
+        html = getattr(content, "html", None)
+        if html:
+            return str(html)
+        return str(content)
+
 
 class ModuleError(Exception): ...
 

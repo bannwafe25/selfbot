@@ -79,7 +79,10 @@ class SendMod(Module):
         for mod in self.client.modules.values():
             class_name = mod.__class__.__name__.lower()
             pretty_name = (mod.name or "").strip().lower()
-            file_name = Path(inspect.getfile(mod.__class__)).stem.lower()
+            try:
+                file_name = Path(inspect.getfile(mod.__class__)).stem.lower()
+            except Exception:
+                file_name = ""
             if query in {class_name, pretty_name, file_name}:
                 return mod
         return None

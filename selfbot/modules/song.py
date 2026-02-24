@@ -7,6 +7,7 @@ from pathlib import Path
 
 from pyrogram import filters
 from pyrogram.types import Message, ReplyParameters
+from py_yt import VideosSearch
 
 from selfbot.listener import handler
 from selfbot.module import Module
@@ -19,10 +20,10 @@ class Song(Module):
     name = "Song"
     cmds = "song (-d|--doc|-v|--voice)? {query}"
     desc = {
-        "query": "A YouTube video link or search query.",
+        "query": "A YouTube link, video ID, or title search query.",
         "-d, --doc": "Send as a document file.",
         "-v, --voice": "Send as a voice message.",
-        "e.g.": "song https://youtu.be/es4WLcvl7Fc",
+        "e.g.": "song NaFF Kau Masih Kekasihku",
     }
 
     @staticmethod
@@ -80,7 +81,6 @@ class Song(Module):
         flag, query = match.groups()
         query = query.strip()
 
-        api_key = await self.getvar("FERDEV_API_KEY", "key_iOPE5w")
         yt_link = self._extract_youtube_url(query)
         if not yt_link:
             await self.respond(
@@ -100,13 +100,14 @@ class Song(Module):
         audio_file = None
         thumb_file = None
         try:
-            api_data = await self._fetch_ytmp3(yt_link, api_key)
-            song_data = api_data.get("data") or {}
-
-            title = str(song_data.get("title") or "Untitled").strip()
-            duration = self._parse_duration(song_data.get("duration"))
-            thumb_url = song_data.get("thumbnail")
-            dlink = song_data.get("dlink")
+            song_data = await self._fetch_song_data(yt_link)
+            title = song_data["title"]
+            thumb_url = song_data["thumbnail"]
+            quality = song_data["quality"]
+            size_label = song_data["size_label"]
+            ext = song_data["ext"]
+            dlink = song_data["dlink"]
+            duration = song_data["duration"]
             if not dlink:
                 raise RuntimeError("API did not provide a download link.")
 
@@ -115,7 +116,7 @@ class Song(Module):
 
             safe_title = self._safe_name(title)
             suffix = f"{event.chat.id}_{event.id}"
-            audio_file = download_dir / f"{safe_title}_{suffix}.mp3"
+            audio_file = download_dir / f"{safe_title}_{suffix}.{ext}"
             thumb_file = download_dir / f"thumb_{suffix}.jpg"
 
             await self.respond(
@@ -136,13 +137,20 @@ class Song(Module):
             else:
                 thumb_file = None
 
+            if duration <= 0:
+                duration = await self._probe_duration(audio_file)
             duration_str = self._duration_text(duration)
-            size_text = self.fmtbyte(audio_file.stat().st_size)
+            size_text = size_label or self.fmtbyte(audio_file.stat().st_size)
+            caption_parts = [
+                f"<b>Title:</b> {html.escape(title)}",
+                f"<b>Duration:</b> {duration_str}",
+                f"<b>Size:</b> {html.escape(size_text)}",
+            ]
+            if quality:
+                caption_parts.append(f"<b>Quality:</b> {html.escape(quality)}")
             caption = (
-                f"<b>Title:</b> {html.escape(title)}\n"
-                f"<b>Duration:</b> {duration_str}\n"
-                f"<b>Size:</b> {size_text}\n\n"
-                f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
+                "\n".join(caption_parts)
+                + f"\n\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
             )
 
             reply_parameters = ReplyParameters(
@@ -194,10 +202,17 @@ class Song(Module):
                     if file_path.exists():
                         file_path.unlink()
 
-    async def _fetch_ytmp3(self, yt_link: str, api_key: str) -> dict:
+    async def _fetch_song_data(self, yt_link: str) -> dict:
+        try:
+            return await self._fetch_song_data_deline(yt_link)
+        except Exception as e:
+            self.logger.warning(f"Primary API failed, fallback to ferdev: {e}")
+            return await self._fetch_song_data_ferdev(yt_link)
+
+    async def _fetch_song_data_deline(self, yt_link: str) -> dict:
         resp = await self.client.http.get(
-            "https://api.ferdev.my.id/downloader/ytmp3",
-            params={"link": yt_link, "apikey": api_key},
+            "https://api.deline.web.id/downloader/ytmp3",
+            params={"url": yt_link},
             timeout=60,
         )
         if resp.status_code != 200:
@@ -210,11 +225,94 @@ class Song(Module):
 
         if not isinstance(data, dict):
             raise RuntimeError("API response is not JSON object.")
-        if not data.get("success"):
-            raise RuntimeError(str(data.get("message") or "API returned an error."))
-        if not isinstance(data.get("data"), dict):
+
+        if not data.get("status"):
+            err = (
+                data.get("error")
+                or data.get("message")
+                or data.get("msg")
+                or "API returned an error."
+            )
+            raise RuntimeError(str(err))
+
+        result = data.get("result") or {}
+        if not isinstance(result, dict):
             raise RuntimeError("API returned empty song data.")
-        return data
+
+        youtube_data = result.get("youtube") or {}
+        pick_data = result.get("pick") or {}
+        title = str(youtube_data.get("title") or "Untitled").strip()
+        dlink = str(result.get("dlink") or "").strip()
+        ext = str(pick_data.get("ext") or "mp3").strip().lower()
+        if not re.fullmatch(r"[a-z0-9]{1,6}", ext):
+            ext = "mp3"
+
+        return {
+            "title": title or "Untitled",
+            "thumbnail": str(youtube_data.get("thumbnail") or "").strip(),
+            "quality": str(pick_data.get("quality") or "").strip(),
+            "size_label": str(pick_data.get("size") or "").strip(),
+            "ext": ext,
+            "dlink": dlink,
+            "duration": 0,
+        }
+
+    async def _fetch_song_data_ferdev(self, yt_link: str) -> dict:
+        api_key = await self.getvar("FERDEV_API_KEY", "key_iOPE5w")
+        resp = await self.client.http.get(
+            "https://api.ferdev.my.id/downloader/ytmp3",
+            params={"link": yt_link, "apikey": api_key},
+            timeout=60,
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(f"Fallback API error: HTTP {resp.status_code}")
+
+        try:
+            data = resp.json()
+        except Exception as e:
+            raise RuntimeError(f"Invalid fallback API response: {e}") from e
+
+        if not isinstance(data, dict):
+            raise RuntimeError("Fallback API response is not JSON object.")
+        if not data.get("success"):
+            raise RuntimeError(
+                str(
+                    data.get("message")
+                    or data.get("error")
+                    or "Fallback API returned an error."
+                )
+            )
+
+        payload = data.get("data") or {}
+        if not isinstance(payload, dict):
+            raise RuntimeError("Fallback API returned empty song data.")
+
+        dlink = str(payload.get("dlink") or "").strip()
+        title = str(payload.get("title") or "Untitled").strip()
+        thumb = str(payload.get("thumbnail") or "").strip()
+
+        size_value = payload.get("size")
+        if isinstance(size_value, (int, float)) and size_value > 0:
+            size_label = self.fmtbyte(int(size_value))
+        else:
+            size_label = str(size_value or "").strip()
+
+        duration = self._parse_int(payload.get("duration"))
+        ext = "mp3"
+        if "." in dlink.rsplit("/", 1)[-1]:
+            maybe_ext = dlink.rsplit("/", 1)[-1].rsplit(".", 1)[-1].lower()
+            if re.fullmatch(r"[a-z0-9]{1,6}", maybe_ext):
+                ext = maybe_ext
+
+        return {
+            "title": title or "Untitled",
+            "thumbnail": thumb,
+            "quality": "",
+            "size_label": size_label,
+            "ext": ext,
+            "dlink": dlink,
+            "duration": duration,
+        }
 
     async def _download_file(self, url: str, out_file: Path, timeout: int) -> None:
         async with self.client.http.stream("GET", url, timeout=timeout) as resp:
@@ -226,6 +324,24 @@ class Song(Module):
                         handle.write(chunk)
 
     async def _search_youtube_url(self, query: str) -> str | None:
+        # Primary search via py-yt-search.
+        try:
+            data = await VideosSearch(query, limit=1).next()
+            result = (data or {}).get("result") or []
+            if result:
+                item = result[0] or {}
+                vid = str(item.get("id") or "").strip()
+                link = str(item.get("link") or "").strip()
+                if vid and re.fullmatch(r"[A-Za-z0-9_-]{11}", vid):
+                    return f"https://youtu.be/{vid}"
+                if link:
+                    ext = self._extract_youtube_url(link)
+                    if ext:
+                        return ext
+        except Exception:
+            pass
+
+        # Fallback search by scraping YouTube results page.
         resp = await self.client.http.get(
             "https://www.youtube.com/results",
             params={"search_query": query},
@@ -268,10 +384,41 @@ class Song(Module):
         return clean[:60] or "song"
 
     @staticmethod
-    def _parse_duration(value: object) -> int:
+    def _parse_int(value: object) -> int:
         try:
             return max(0, int(float(value)))
         except (TypeError, ValueError):
+            return 0
+
+    async def _probe_duration(self, audio_path: Path) -> int:
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(audio_path),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except FileNotFoundError:
+            return 0
+
+        try:
+            stdout, _ = await proc.communicate()
+            if proc.returncode != 0:
+                return 0
+
+            value = (stdout or b"").decode("utf-8", errors="ignore").strip()
+            if not value:
+                return 0
+            return max(0, int(round(float(value))))
+        except Exception:
+            with contextlib.suppress(Exception):
+                proc.kill()
             return 0
 
     @staticmethod

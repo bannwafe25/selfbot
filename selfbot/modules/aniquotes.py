@@ -67,28 +67,10 @@ class Aniquotes(Module):
 
     def _resolve_query(self, event: Message, inline_text: str | None) -> str:
         if event.reply_to_message:
-            text = self._text_from_message(event.reply_to_message)
+            text = self.message_text(event.reply_to_message)
             if text:
                 return text.strip()
 
         if inline_text:
             return inline_text.strip()
         return ""
-
-    @staticmethod
-    def _text_from_message(message: Message) -> str | None:
-        for attr in ("text", "caption"):
-            value = getattr(message, attr, None)
-            if value:
-                return value
-
-        content = getattr(message, "content", None)
-        if not content:
-            return None
-        if isinstance(content, str):
-            return content
-        if hasattr(content, "markdown") and content.markdown:
-            return content.markdown
-        if hasattr(content, "html") and content.html:
-            return content.html
-        return str(content)

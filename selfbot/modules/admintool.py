@@ -58,6 +58,14 @@ class AdminTool(Module):
         )
     )
 
+    def __init__(self, client) -> None:
+        super().__init__(client)
+        self.cache: dict[int, dict] = {}
+
+    def _ensure_cache(self) -> None:
+        if not hasattr(self, "cache") or not isinstance(self.cache, dict):
+            self.cache = {}
+
     async def on_starting(self) -> None:
         try:
             await self.client.db.admintool_settings.create_index(
@@ -109,6 +117,7 @@ class AdminTool(Module):
         if event.chat.type not in (ChatType.GROUP, ChatType.SUPERGROUP):
             return
 
+        self._ensure_cache()
         settings = self.cache.get(event.chat.id)
         if not settings:
             return
@@ -315,6 +324,7 @@ class AdminTool(Module):
             await event.chat.ban_member(target_id)
 
     def _get_settings(self, chat_id: int) -> dict:
+        self._ensure_cache()
         if chat_id not in self.cache:
             self.cache[chat_id] = self._normalize_settings({})
         return self.cache[chat_id]

@@ -49,13 +49,7 @@ class Imgur(Module):
                 await self.respond(event, "<code>Failed to download media.</code>")
                 return
 
-            if hasattr(data, "getbuffer"):
-                raw = bytes(data.getbuffer())
-            elif hasattr(data, "read"):
-                raw = data.read()
-            else:
-                raw = bytes(data)
-
+            raw = self.to_bytes(data)
             if not raw:
                 await self.respond(event, "<code>Downloaded media is empty.</code>")
                 return

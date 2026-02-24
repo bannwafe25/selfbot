@@ -29,34 +29,26 @@ class ID(Module):
         self._append_line(lines, "Chat DC ID", getattr(event.chat, "dc_id", None))
         self._append_line(lines, "Message ID", event.id)
 
-        if event.from_user:
-            self._append_line(lines, "Your ID", event.from_user.id)
-            self._append_line(lines, "Your DC ID", getattr(event.from_user, "dc_id", None))
-        elif event.sender_chat:
-            self._append_line(lines, "Sender Chat ID", event.sender_chat.id)
-            self._append_line(
-                lines, "Sender Chat DC ID", getattr(event.sender_chat, "dc_id", None)
-            )
+        self._append_actor(
+            lines=lines,
+            user=event.from_user,
+            sender_chat=event.sender_chat,
+            user_prefix="Your",
+            chat_prefix="Sender Chat",
+        )
 
         replied = event.reply_to_message
         if replied:
             lines.append("")
             self._append_line(lines, "Replied Message ID", replied.id)
 
-            if replied.from_user:
-                self._append_line(lines, "Replied User ID", replied.from_user.id)
-                self._append_line(
-                    lines,
-                    "Replied User DC ID",
-                    getattr(replied.from_user, "dc_id", None),
-                )
-            elif replied.sender_chat:
-                self._append_line(lines, "Replied Chat ID", replied.sender_chat.id)
-                self._append_line(
-                    lines,
-                    "Replied Chat DC ID",
-                    getattr(replied.sender_chat, "dc_id", None),
-                )
+            self._append_actor(
+                lines=lines,
+                user=replied.from_user,
+                sender_chat=replied.sender_chat,
+                user_prefix="Replied User",
+                chat_prefix="Replied Chat",
+            )
 
             self._append_forward_info(lines, replied)
 
@@ -129,3 +121,22 @@ class ID(Module):
         if value is None or value == "":
             value = "-"
         lines.append(f"{label}: {value}")
+
+    def _append_actor(
+        self,
+        lines: list[str],
+        user,
+        sender_chat,
+        user_prefix: str,
+        chat_prefix: str,
+    ) -> None:
+        if user:
+            self._append_line(lines, f"{user_prefix} ID", user.id)
+            self._append_line(lines, f"{user_prefix} DC ID", getattr(user, "dc_id", None))
+            return
+
+        if sender_chat:
+            self._append_line(lines, f"{chat_prefix} ID", sender_chat.id)
+            self._append_line(
+                lines, f"{chat_prefix} DC ID", getattr(sender_chat, "dc_id", None)
+            )
