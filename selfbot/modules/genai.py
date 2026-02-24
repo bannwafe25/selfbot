@@ -119,7 +119,10 @@ class GenAI(Module):
                 self.history.pop()
                 return "**Error**:\n  `Empty Content`"
 
-            text = candidate.text
+            text = ""
+            for part in candidate.content.parts:
+                if hasattr(part, "text") and part.text:
+                    text += part.text
             if not text:
                 self.history.pop()
                 return "**Error**:\n  `Empty Text`"

@@ -55,11 +55,17 @@ class PPCouple(Module):
             res = await event._client.get_inline_bot_results(
                 self.client.bot.me.id, "ppcouple", chat_id=event.chat.id
             )
-            if res.results:
+            if len(res.results) >= 2:
                 await event.reply_inline_bot_result(
                     res.query_id,
                     res.results[0].id,
                     reply_parameters=ReplyParameters(message_id=event.id),
+                )
+                await event._client.send_inline_bot_result(
+                    chat_id=event.chat.id,
+                    query_id=res.query_id,
+                    result_id=res.results[1].id,
+                    reply_to_message_id=event.id,
                 )
                 with contextlib.suppress(Exception):
                     await event.delete()

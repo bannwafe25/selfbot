@@ -51,18 +51,25 @@ class Restart(Module):
             # Get current commit hash before pull
             old_hash = await self._run_git("rev-parse", "--short", "HEAD")
 
-            # Git pull
-            pull_output = await self._run_git("pull", "--rebase")
+            # Git pull (autostash handles unstaged changes)
+            pull_output = await self._run_git("pull", "--rebase", "--autostash")
 
-            if "Already up to date" in pull_output:
+            if "already up to date" in pull_output.lower() or "already up-to-date" in pull_output.lower():
                 await self.respond(
                     event,
-                    "<b>Update</b>\n\n<code>Already up to date.</code>",
+                    "<b>Update</b>\n\n<code>Already up to date. ✅</code>",
                 )
                 return
 
             # Get new commit hash
             new_hash = await self._run_git("rev-parse", "--short", "HEAD")
+
+            if old_hash == new_hash:
+                await self.respond(
+                    event,
+                    "<b>Update</b>\n\n<code>Already up to date. ✅</code>",
+                )
+                return
 
             # Get commit log between old and new
             log_output = await self._run_git(
