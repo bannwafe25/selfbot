@@ -10,6 +10,10 @@ DELINE_CEWEKBRAT = f"{DELINE_BASE}/maker/cewekbrat"
 DELINE_ASUPAN = f"{DELINE_BASE}/random/asupan"
 DELINE_REMOVEBG = f"{DELINE_BASE}/tools/removebg"
 DELINE_YTMP3 = f"{DELINE_BASE}/downloader/ytmp3"
+DELINE_RANDOM_BA = f"{DELINE_BASE}/random/ba"
+DELINE_RANDOM_LOLI = f"{DELINE_BASE}/random/loli"
+DELINE_SCREENSHOT = f"{DELINE_BASE}/tools/screenshot"
+DELINE_PPCOUPLE = f"{DELINE_BASE}/random/ppcouple"
 
 # ── Ferdev APIs ──────────────────────────────────────────────────────
 FERDEV_ANIMEQUOTE = "https://api.ferdev.my.id/random/animequote"

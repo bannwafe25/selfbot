@@ -19,6 +19,7 @@ from pyrogram.types import (
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
+from selfbot.apis import DELINE_RANDOM_BA, DELINE_RANDOM_LOLI
 
 
 class AnimePic(Module):
@@ -42,7 +43,7 @@ class AnimePic(Module):
         "animal_ears", "blue-archive", "blue_eyes", "cat_ears", "fox_ears", "foxgirl",
         "girl", "pink_hair", "sailor_uniform", "tail_with_ribbon", "thigh_high_socks",
         "thighs", "vtuber", "white_hair", "white_thigh_high_socks", "young_girl",
-        "kemonomimi", "loli",
+        "kemonomimi",
     ]
 
     waifu_im_tags = [
@@ -96,6 +97,12 @@ class AnimePic(Module):
 
     nekobot_tags = ["coffee", "food", "holo", "kanna"]
 
+    deline_tags = ["ba", "loli"]
+    _deline_map = {
+        "ba": DELINE_RANDOM_BA,
+        "loli": DELINE_RANDOM_LOLI,
+    }
+
     nekosapi_tags = [
         "black_hair", "blonde_hair", "blue_hair", "brown_hair", "horsegirl",
         "large_breasts", "medium_breasts", "mountain", "night", "purple_hair", "rain",
@@ -108,7 +115,7 @@ class AnimePic(Module):
             safebooru_tags + konachan_tags + mwm_moe_tags + picre_tags
             + waifu_im_tags + animepixels_tags + yandere_tags + nekos_moe_tags
             + nekobot_tags + nekosapi_tags + nekosia_tags + waifu_pics_tags
-            + nekos_best_tags
+            + nekos_best_tags + deline_tags
             + ["gecg", "meow", "gasm", "goose", "lewd", "v3", "wallpaper",
                "lizard", "woof", "fox_girl", "avatar", "cuddle", "hug", "kiss",
                "spank", "feed"]
@@ -142,6 +149,7 @@ class AnimePic(Module):
 
     # ── API routing registry (list_attr, method_name, pass_moe_tag) ───────────
     _API_REGISTRY = (
+        ("deline_tags",    "_get_from_deline",     False),
         ("safebooru_tags", "_get_from_safebooru", False),
         ("konachan_tags",  "_get_from_konachan",  False),
         ("mwm_moe_tags",   "_get_from_mwm_moe",   False),
@@ -230,7 +238,8 @@ class AnimePic(Module):
                     reply_parameters=reply_params,
                 )
             except Exception as inline_err:
-                if "WEBPAGE_MEDIA_EMPTY" not in str(inline_err).upper():
+                err_str = str(inline_err).upper()
+                if "WEBPAGE_MEDIA_EMPTY" not in err_str and "WEBPAGE_CURL_FAILED" not in err_str:
                     raise
 
                 result = await self.get_image_url(tag, moe_tag)
@@ -428,6 +437,16 @@ class AnimePic(Module):
         return None
 
     # ── API fetchers ──────────────────────────────────────────────────────────
+
+    async def _get_from_deline(self, tag: str) -> tuple | None:
+        api_url = self._deline_map.get(tag)
+        if not api_url:
+            return None
+        resp = await self.client.http.head(api_url, timeout=10)
+        if resp.status_code == 200:
+            return api_url, None, {}, None
+        return None
+
 
     async def _get_from_mwm_moe(self, tag: str) -> tuple | None:
         resp = await self.client.http.get(

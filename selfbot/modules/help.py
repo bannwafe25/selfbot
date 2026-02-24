@@ -89,19 +89,17 @@ class Help(Module):
             )
             return
 
-        name = self.client.app.me.first_name or "Selfbot"
         quote = await self._get_quote()
-        header = self._build_header(name, quote)
+        header = self._build_header(quote)
         await self.answer(event, self.ikm(self.build()), header)
 
     @handler(filters.regex(pattern), 4)
     async def on_inline_callback(self, event: CallbackQuery) -> None:
         act, val = pattern.match(event.data).groups()
         if act == "info":
-            name = self.client.app.me.first_name or "Selfbot"
             await event.answer(
                 (
-                    f"{name} v{__version__}\n"
+                    f"Selfbot v{__version__}\n"
                     f"Pyrogram {pyrogram.__version__}\n"
                     f"Python {sys.version.split()[0]}\n"
                     f"\n    {len(self.client.handlers)} Handlers"
@@ -127,16 +125,15 @@ class Help(Module):
             )
             return
 
-        name = self.client.app.me.first_name or "Selfbot"
         quote = await self._get_quote()
-        header = self._build_header(name, quote)
+        header = self._build_header(quote)
         await self.respond(
             event, header, reply_markup=self.ikm(self.build(int(val)))
         )
 
-    def _build_header(self, name: str, quote: str = "") -> str:
+    def _build_header(self, quote: str = "") -> str:
         header = (
-            f"<b>{html.escape(name)} Modules</b>\n\n"
+            f"<b>Selfbot Modules</b>\n\n"
             f"<blockquote>"
             f"<code>Version </code> : <code>{__version__}</code>\n"
             f"<code>Pyrogram</code> : <code>{pyrogram.__version__}</code>\n"
