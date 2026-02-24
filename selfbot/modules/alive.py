@@ -30,15 +30,17 @@ class Alive(Module):
         await self.client.app.invoke(Latency(ping_id=0))
         started_at = getattr(self, "started_at", now)
 
+        text = (
+            f"Status  : Online\n"
+            f"  Version : {__version__}\n"
+            f"  Uptime  : {self.fmtsec(started_at, human=True)}"
+        )
+
         await self.respond(
             event,
             self.fmtmsg(
                 "Selfbot Alive",
-                {
-                    "Status": "Online",
-                    "Version": __version__,
-                    "Uptime": self.fmtsec(started_at, human=True),
-                },
+                text,
                 self.fmtsec(now),
                 "Repository: Coming Soon",
             ),
