@@ -18,32 +18,15 @@ dispatch_pattern = re.compile(r"^(?:r(?:estart)?|update)$", re.IGNORECASE)
 
 class Restart(Module):
     name = "Restart System"
-    cmds = "r(estart)? | update"
+    cmds = "update | r(estart)?"
     desc = {
-        "restart": "Restart the selfbot.",
-        "update": "Pull latest changes from GitHub and restart.",
-        "e.g.": "update",
+        "Info": "Pull latest changes from GitHub and restart the selfbot.",
+        "e.g.": "restart",
     }
 
     @handler(filters.regex(dispatch_pattern) & ~reply, 1)
     async def on_message_out(self, event: Message) -> None:
-        text = str(event.content or "").strip().lower()
-
-        if update_pattern.match(text):
-            await self._do_update(event)
-        else:
-            await self._do_restart(event)
-
-    async def _do_restart(self, event: Message) -> None:
-        await asyncio.gather(
-            self.respond(event, "<code>Restarting...</code>"),
-            self.client.db.restart_msgs.update_one(
-                {"name": "app"},
-                {"$set": {"chat_id": event.chat.id, "message_id": event.id}},
-                upsert=True,
-            ),
-        )
-        os.execv(sys.argv[0], sys.argv)
+        await self._do_update(event)
 
     async def _do_update(self, event: Message) -> None:
         await self.respond(event, "<code>Checking for updates...</code>")
