@@ -11,14 +11,12 @@ from pyrogram.types import Message
 from selfbot.listener import handler, reply
 from selfbot.module import Module
 
-restart_pattern = re.compile(r"^r(?:estart)?$")
-update_pattern = re.compile(r"^update$", re.IGNORECASE)
-dispatch_pattern = re.compile(r"^(?:r(?:estart)?|update)$", re.IGNORECASE)
-
+restart_pattern = re.compile(r"^r(?:estart)?$", re.IGNORECASE)
+dispatch_pattern = re.compile(r"^r(?:estart)?$", re.IGNORECASE)
 
 class Restart(Module):
     name = "Restart System"
-    cmds = "update | r(estart)?"
+    cmds = "r(estart)?"
     desc = {
         "Info": "Pull latest changes from GitHub and restart the selfbot.",
         "e.g.": "restart",
