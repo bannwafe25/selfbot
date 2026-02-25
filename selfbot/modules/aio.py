@@ -11,7 +11,6 @@ from pyrogram.types import InputMediaPhoto, InputMediaVideo, Message
 
 from selfbot import listener
 from selfbot.module import Module
-from selfbot.utils import fmtsec
 
 # Regex to match 'dl', 'mediadl', 'img', 'gallerydl' followed by a URL
 pattern = re.compile(r"^(?:aio|dl)\s+(https?://[^\s]+)$")
@@ -92,7 +91,7 @@ class MediaDL(Module):
             caption = (
                 f"<blockquote>{html.escape(title)}</blockquote>\n"
                 f"<a href='{url}'>Source</a>\n"
-                f"<b><blockquote>{fmtsec(now)}</blockquote></b>"
+                f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
             )
 
             if len(media_to_send) == 1:

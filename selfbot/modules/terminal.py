@@ -9,8 +9,6 @@ from pyrogram.types import Message, InputMediaDocument
 
 from selfbot.listener import handler
 from selfbot.module import Module
-from selfbot.utils import fmtsec
-
 pattern = re.compile(r"^(?:sh|term|cmd)\s+(.+)$", re.IGNORECASE | re.DOTALL)
 
 class Terminal(Module):
@@ -57,7 +55,7 @@ class Terminal(Module):
             if not result_text:
                 result_text = "[No Output]"
                 
-            elapsed = fmtsec(now)
+            elapsed = self.fmtsec(now)
 
             if len(result_text) > 3000:
                 with io.BytesIO(result_text.encode()) as doc:
@@ -78,5 +76,5 @@ class Terminal(Module):
         except Exception as e:
             await self.respond(
                 event,
-                f"<code>$ {html.escape(command)}\n\nError: {html.escape(str(e))}</code>\n\n<b><blockquote>{fmtsec(now)}</blockquote></b>"
+                f"<code>$ {html.escape(command)}\n\nError: {html.escape(str(e))}</code>\n\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
             )
