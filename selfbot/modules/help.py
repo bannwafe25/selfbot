@@ -154,9 +154,8 @@ class Help(Module):
             )
             if resp.status_code == 200:
                 data = resp.json()
-                results = data.get("result", [])
-                if results:
-                    q = random.choice(results)
+                if isinstance(data, list) and data:
+                    q = random.choice(data)
                     text = html.escape(q.get("quote", ""))
                     char = html.escape(q.get("char", ""))
                     anime = html.escape(q.get("from_anime", ""))
