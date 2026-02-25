@@ -16,6 +16,7 @@ dependencies = [
     "py-yt-search>=0.5.7",
     "pytgcrypto==1.2.12",
     "google-genai",
+    "yt-dlp>=2026.2.21",
 ]
 
 [project.scripts]
