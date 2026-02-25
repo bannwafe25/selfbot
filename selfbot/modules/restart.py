@@ -178,17 +178,17 @@ class Restart(Module):
         elapsed: str,
     ) -> str:
         pull_preview = self._shrink_lines(pull_output, limit=3)
-        return self.fmtmsg(
-            "Update Summary",
-            {
-                "Status": "Already up to date ✅",
-                "Branch": branch,
-                "Commit": commit_hash,
-                "Worktree": worktree_state,
-            },
-            elapsed,
-            f"Pull Output\n{pull_preview}",
+        body = (
+            f"<b>Update Summary</b>\n\n"
+            f"Status: Already up to date ✅\n"
+            f"Branch: {html.escape(branch)}\n"
+            f"Commit: {html.escape(commit_hash)}\n"
+            f"Worktree: {html.escape(worktree_state)}\n\n"
+            f"<b>Pull Output</b>\n"
+            f"<blockquote expandable>{html.escape(pull_preview)}</blockquote>\n\n"
+            f"<b><blockquote>{html.escape(elapsed)}</blockquote></b>"
         )
+        return body
 
     def _build_updated_message(
         self,
@@ -211,20 +211,23 @@ class Restart(Module):
         diff_summary = self._summarize_diff(diff_output)
         pull_preview = self._shrink_lines(pull_output, limit=4)
 
-        return self.fmtmsg(
-            "Update Summary",
-            {
-                "Status": "Updated ✅",
-                "Branch": branch,
-                "From": old_hash,
-                "To": new_hash,
-                "Commits": len(commits),
-                "Changes": diff_summary,
-                "Worktree": worktree_state,
-            },
-            elapsed,
-            f"Pull Output\n{pull_preview}\n\nNew Commits\n{commit_block}\n\nRestarting...",
+        body = (
+            f"<b>Update Summary</b>\n\n"
+            f"Status: Updated ✅\n"
+            f"Branch: {html.escape(branch)}\n"
+            f"From: {html.escape(old_hash)}\n"
+            f"To: {html.escape(new_hash)}\n"
+            f"Commits: {len(commits)}\n"
+            f"Changes: {html.escape(diff_summary)}\n"
+            f"Worktree: {html.escape(worktree_state)}\n\n"
+            f"<b>Pull Output</b>\n"
+            f"<blockquote expandable>{html.escape(pull_preview)}</blockquote>\n\n"
+            f"<b>New Commits</b>\n"
+            f"<blockquote expandable>{html.escape(commit_block)}</blockquote>\n\n"
+            f"Restarting...\n\n"
+            f"<b><blockquote>{html.escape(elapsed)}</blockquote></b>"
         )
+        return body
 
     @staticmethod
     async def _run_git(*args: str) -> str:
