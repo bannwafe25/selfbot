@@ -19,7 +19,6 @@ from pyrogram.types import (
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
-from selfbot.apis import DELINE_RANDOM_BA, DELINE_RANDOM_LOLI
 
 
 class AnimePic(Module):
@@ -109,15 +108,6 @@ class AnimePic(Module):
 
     nekobot_tags = ["coffee", "food", "holo", "kanna", "kemonomimi", "gasm", "meow", "fox_girl", "avatar"]
 
-    deline_tags = ["ba", "loli", "waifu", "husbu", "cosplay"]
-    _deline_map = {
-        "ba": DELINE_RANDOM_BA,
-        "loli": DELINE_RANDOM_LOLI,
-        "waifu": "https://api.deline.web.id/random/waifu",
-        "husbu": "https://api.deline.web.id/random/husbu",
-        "cosplay": "https://api.deline.web.id/random/cosplay",
-    }
-
     nekosapi_tags = [
         "black_hair", "blonde_hair", "blue_hair", "brown_hair", "horsegirl",
         "large_breasts", "medium_breasts", "mountain", "night", "purple_hair", "rain",
@@ -130,7 +120,7 @@ class AnimePic(Module):
             safebooru_tags + konachan_tags + mwm_moe_tags + picre_tags
             + waifu_im_tags + animepixels_tags + yandere_tags + nekos_moe_tags
             + nekobot_tags + nekosapi_tags + nekosia_tags + waifu_pics_tags
-            + nekos_best_tags + deline_tags
+            + nekos_best_tags
             + ["gecg", "meow", "gasm", "goose", "lewd", "v3", "wallpaper",
                "lizard", "woof", "fox_girl", "avatar", "cuddle", "hug", "kiss",
                "spank", "feed"]
@@ -164,7 +154,6 @@ class AnimePic(Module):
 
     # ── API routing registry (list_attr, method_name, pass_moe_tag) ───────────
     _API_REGISTRY = (
-        ("deline_tags",    "_get_from_deline",     False),
         ("safebooru_tags", "_get_from_safebooru", False),
         ("konachan_tags",  "_get_from_konachan",  False),
         ("mwm_moe_tags",   "_get_from_mwm_moe",   False),
@@ -452,22 +441,6 @@ class AnimePic(Module):
         return None
 
     # ── API fetchers ──────────────────────────────────────────────────────────
-
-    async def _get_from_deline(self, tag: str) -> tuple | None:
-        api_url = self._deline_map.get(tag)
-        if not api_url:
-            return None
-            
-        import time
-        buster = f"{time.time()}"
-        sep = "&" if "?" in api_url else "?"
-        query_url = f"{api_url}{sep}t={buster}"
-        
-        resp = await self.client.http.head(query_url, timeout=10)
-        if resp.status_code == 200:
-            return api_url, None, {}, None
-        return None
-
 
     async def _get_from_mwm_moe(self, tag: str) -> tuple | None:
         resp = await self.client.http.get(

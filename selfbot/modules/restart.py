@@ -178,15 +178,16 @@ class Restart(Module):
         elapsed: str,
     ) -> str:
         pull_preview = self._shrink_lines(pull_output, limit=3)
-        return (
-            "<b>Update Summary</b>\n\n"
-            f"Status: <b>Already up to date</b> ✅\n"
-            f"Branch: <b>{html.escape(branch)}</b>\n"
-            f"Commit: <b>{html.escape(commit_hash)}</b>\n"
-            f"Worktree: <b>{html.escape(worktree_state)}</b>\n"
-            f"Duration: <b>{html.escape(elapsed)}</b>\n\n"
-            "<b>Pull Output</b>\n"
-            f"<blockquote expandable>{html.escape(pull_preview)}</blockquote>"
+        return self.fmtmsg(
+            "Update Summary",
+            {
+                "Status": "Already up to date ✅",
+                "Branch": branch,
+                "Commit": commit_hash,
+                "Worktree": worktree_state,
+            },
+            elapsed,
+            f"Pull Output\n{pull_preview}",
         )
 
     def _build_updated_message(
@@ -202,7 +203,7 @@ class Restart(Module):
     ) -> str:
         commit_lines = []
         for commit_hash, subject in commits[:12]:
-            commit_lines.append(f"• <b>{html.escape(commit_hash)}</b> {html.escape(subject)}")
+            commit_lines.append(f"• {commit_hash} {subject}")
         if len(commits) > 12:
             commit_lines.append(f"... and {len(commits) - 12} more")
 
@@ -210,21 +211,19 @@ class Restart(Module):
         diff_summary = self._summarize_diff(diff_output)
         pull_preview = self._shrink_lines(pull_output, limit=4)
 
-        return (
-            "<b>Update Summary</b>\n\n"
-            "Status: <b>Updated</b> ✅\n"
-            f"Branch: <b>{html.escape(branch)}</b>\n"
-            f"From: <b>{html.escape(old_hash)}</b>\n"
-            f"To: <b>{html.escape(new_hash)}</b>\n"
-            f"Commits: <b>{len(commits)}</b>\n"
-            f"Changes: <b>{html.escape(diff_summary)}</b>\n"
-            f"Worktree: <b>{html.escape(worktree_state)}</b>\n"
-            f"Duration: <b>{html.escape(elapsed)}</b>\n\n"
-            "<b>Pull Output</b>\n"
-            f"<blockquote expandable>{html.escape(pull_preview)}</blockquote>\n\n"
-            "<b>New Commits</b>\n"
-            f"<blockquote expandable>{commit_block}</blockquote>\n\n"
-            "<b>Restarting...</b>"
+        return self.fmtmsg(
+            "Update Summary",
+            {
+                "Status": "Updated ✅",
+                "Branch": branch,
+                "From": old_hash,
+                "To": new_hash,
+                "Commits": len(commits),
+                "Changes": diff_summary,
+                "Worktree": worktree_state,
+            },
+            f"Restarting... | {elapsed}",
+            f"Pull Output\n{pull_preview}\n\nNew Commits\n{commit_block}",
         )
 
     @staticmethod
