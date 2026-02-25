@@ -222,8 +222,8 @@ class Restart(Module):
                 "Changes": diff_summary,
                 "Worktree": worktree_state,
             },
-            f"Restarting... | {elapsed}",
-            f"Pull Output\n{pull_preview}\n\nNew Commits\n{commit_block}",
+            elapsed,
+            f"Pull Output\n{pull_preview}\n\nNew Commits\n{commit_block}\n\nRestarting...",
         )
 
     @staticmethod
