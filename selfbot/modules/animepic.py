@@ -29,12 +29,19 @@ class AnimePic(Module):
     #   → animepixels → yandere → nekos_moe → nekobot → nekosapi → nekosia
     #   → waifu_pics → nekos_best) ──────────────────────────────────────────
 
-    safebooru_tags = ["safebooru", "1girl", "1boy", "2boys", "2girls"]
-    konachan_tags  = ["konachan", "landscape", "scenery"]
-    nekos_best_tags = ["husbando", "kitsune", "pat"]
+    safebooru_tags = [
+        "safebooru", "1girl", "1boy", "2boys", "2girls", "genshin_impact",
+        "blue_archive", "azur_lane", "honkai_star_rail", "vocaloid",
+        "touhou", "miku", "maid", "school_uniform", "swimsuit",
+    ]
+    konachan_tags  = ["konachan", "landscape", "scenery", "sky", "water", "city", "tree", "clouds", "stars"]
+    nekos_best_tags = [
+        "husbando", "kitsune", "pat", "baka", "bored", "laugh", "nod", "nope",
+        "pout", "shrug", "sleep", "smile", "stare", "think", "thumbsup", "tickle",
+    ]
 
     waifu_pics_tags = [
-        "neko", "shinobu", "megumin", "bully", "cuddle", "cry", "hug", "awoo", "kiss",
+        "waifu", "happy", "neko", "shinobu", "megumin", "bully", "cuddle", "cry", "hug", "awoo", "kiss",
         "lick", "smug", "bonk", "yeet", "wave", "highfive", "handhold", "nom", "bite",
         "glomp", "slap", "kill", "kick", "wink", "poke", "dance", "cringe",
     ]
@@ -43,12 +50,12 @@ class AnimePic(Module):
         "animal_ears", "blue-archive", "blue_eyes", "cat_ears", "fox_ears", "foxgirl",
         "girl", "pink_hair", "sailor_uniform", "tail_with_ribbon", "thigh_high_socks",
         "thighs", "vtuber", "white_hair", "white_thigh_high_socks", "young_girl",
-        "kemonomimi",
+        "kemonomimi", "loli", "maid", "short_hair", "long_hair", "twintails",
     ]
 
     waifu_im_tags = [
-        "kamisato-ayaka", "marin-kitagawa", "mori-calliope", "raiden-shogun",
-        "oppai", "selfies",
+        "maid", "waifu", "uniform", "kamisato-ayaka", "marin-kitagawa", "mori-calliope",
+        "raiden-shogun", "oppai", "selfies",
     ]
 
     animepixels_tags = [
@@ -56,7 +63,8 @@ class AnimePic(Module):
         "my_hero_academia", "my-hero-academia", "jujutsu_kaisen", "jujutsu-kaisen",
         "attack_on_titan", "attack-on-titan", "spy_x_family", "spy-x-family",
         "solo_leveling", "solo-leveling", "dragon_ball", "dragon-ball",
-        "demon_slayer", "demon-slayer",
+        "demon_slayer", "demon-slayer", "bleach", "hunter_x_hunter", "hunter-x-hunter",
+        "tokyo_ghoul", "tokyo-ghoul", "death_note", "death-note",
     ]
 
     animepixels_category_map = {
@@ -70,11 +78,15 @@ class AnimePic(Module):
         "solo_leveling": "solo_leveling", "solo-leveling": "solo_leveling",
         "dragon_ball": "dragon_ball", "dragon-ball": "dragon_ball",
         "demon_slayer": "demon_slayer", "demon-slayer": "demon_slayer",
+        "bleach": "bleach", "hunter_x_hunter": "hunter_x_hunter", "hunter-x-hunter": "hunter_x_hunter",
+        "tokyo_ghoul": "tokyo_ghoul", "tokyo-ghoul": "tokyo_ghoul",
+        "death_note": "death_note", "death-note": "death_note",
     }
 
     yandere_tags = [
         "yande", "yandere", "kowloon", "rag76", "ogre_illust", "b-baby", "cream_pan",
-        "rering", "fiona_cassandra", "hotvenus", "stars_voice", "sparxie",
+        "rering", "fiona_cassandra", "hotvenus", "stars_voice", "sparxie", "blue_archive",
+        "genshin_impact", "honkai_star_rail", "idolmaster", "fate", "kancolle",
     ]
 
     mwm_moe_tags = [
@@ -95,19 +107,22 @@ class AnimePic(Module):
         "twintails", "umbrella", "underwear", "uniform", "waifu", "wings", "yukata",
     ]
 
-    nekobot_tags = ["coffee", "food", "holo", "kanna"]
+    nekobot_tags = ["coffee", "food", "holo", "kanna", "kemonomimi", "gasm", "meow", "fox_girl", "avatar"]
 
-    deline_tags = ["ba", "loli"]
+    deline_tags = ["ba", "loli", "waifu", "husbu", "cosplay"]
     _deline_map = {
         "ba": DELINE_RANDOM_BA,
         "loli": DELINE_RANDOM_LOLI,
+        "waifu": "https://api.deline.web.id/random/waifu",
+        "husbu": "https://api.deline.web.id/random/husbu",
+        "cosplay": "https://api.deline.web.id/random/cosplay",
     }
 
     nekosapi_tags = [
         "black_hair", "blonde_hair", "blue_hair", "brown_hair", "horsegirl",
         "large_breasts", "medium_breasts", "mountain", "night", "purple_hair", "rain",
         "red_hair", "school_uniform", "shorts", "small_breasts", "sportswear", "tree",
-        "usagimimi", "wet",
+        "usagimimi", "wet", "maid", "foxgirl", "catgirl",
     ]
 
     tags = sorted(
