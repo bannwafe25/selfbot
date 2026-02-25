@@ -48,6 +48,8 @@ class PPCouple(Module):
 
     @handler(filters.regex(pattern) & ~reply, 1)
     async def on_message_out(self, event: Message) -> None:
+        from io import BytesIO
+
         await self.respond(event, "<code>...</code>")
         now = datetime.datetime.now(datetime.UTC)
 
@@ -60,14 +62,31 @@ class PPCouple(Module):
             f"<b>PP Couple</b>\n\n"
             f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
         )
-        await event._client.send_media_group(
-            chat_id=event.chat.id,
-            media=[
-                InputMediaPhoto(media=couple[0], caption="👦 Cowo"),
-                InputMediaPhoto(media=couple[1], caption=f"👧 Cewe\n\n{caption}"),
-            ],
-            reply_to_message_id=event.reply_to_message_id or event.id,
-        )
+        
+        try:
+            resp_cowo = await self.client.http.get(couple[0], timeout=15)
+            resp_cewe = await self.client.http.get(couple[1], timeout=15)
+            
+            if resp_cowo.status_code != 200 or resp_cewe.status_code != 200:
+                raise RuntimeError("Failed to download images")
+                
+            stream_cowo = BytesIO(resp_cowo.content)
+            stream_cowo.name = "cowo.jpg"
+            
+            stream_cewe = BytesIO(resp_cewe.content)
+            stream_cewe.name = "cewe.jpg"
+
+            await event._client.send_media_group(
+                chat_id=event.chat.id,
+                media=[
+                    InputMediaPhoto(media=stream_cowo, caption="👦 Cowo"),
+                    InputMediaPhoto(media=stream_cewe, caption=f"👧 Cewe\n\n{caption}"),
+                ],
+                reply_to_message_id=event.reply_to_message_id or event.id,
+            )
+        except Exception as e:
+            await self.respond(event, f"<code>Failed to send PP Couple: {e}</code>")
+            
         with contextlib.suppress(Exception):
             await event.delete()
 
