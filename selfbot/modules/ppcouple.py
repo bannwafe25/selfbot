@@ -51,29 +51,6 @@ class PPCouple(Module):
         await self.respond(event, "<code>...</code>")
         now = datetime.datetime.now(datetime.UTC)
 
-        try:
-            res = await event._client.get_inline_bot_results(
-                self.client.bot.me.id, "ppcouple", chat_id=event.chat.id
-            )
-            if len(res.results) >= 2:
-                await event.reply_inline_bot_result(
-                    res.query_id,
-                    res.results[0].id,
-                    reply_parameters=ReplyParameters(message_id=event.id),
-                )
-                await event._client.send_inline_bot_result(
-                    chat_id=event.chat.id,
-                    query_id=res.query_id,
-                    result_id=res.results[1].id,
-                    reply_to_message_id=event.id,
-                )
-                with contextlib.suppress(Exception):
-                    await event.delete()
-                return
-        except Exception:
-            pass
-
-        # Fallback: send directly
         couple = await self._fetch_couple()
         if not couple:
             await self.respond(event, "<code>Failed to fetch PP Couple.</code>")
@@ -89,6 +66,7 @@ class PPCouple(Module):
                 InputMediaPhoto(media=couple[0], caption="👦 Cowo"),
                 InputMediaPhoto(media=couple[1], caption=f"👧 Cewe\n\n{caption}"),
             ],
+            reply_to_message_id=event.reply_to_message_id or event.id,
         )
         with contextlib.suppress(Exception):
             await event.delete()

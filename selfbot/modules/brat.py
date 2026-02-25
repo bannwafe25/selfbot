@@ -61,17 +61,42 @@ class Brat(Module):
             reply_params = ReplyParameters(message_id=reply_id)
 
             if mode == "video":
-                video = BytesIO(resp.content)
-                video.name = "brat.mp4"
-                video.seek(0)
-                await event._client.send_video(
-                    chat_id=event.chat.id,
-                    video=video,
-                    reply_parameters=reply_params,
-                )
+                import tempfile
+                import asyncio
+                import os
+                
+                with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp_mp4:
+                    tmp_mp4.write(resp.content)
+                    in_path = tmp_mp4.name
+                out_path = in_path.replace(".mp4", ".webm")
+                
+                try:
+                    proc = await asyncio.create_subprocess_exec(
+                        "ffmpeg", "-y", "-i", in_path,
+                        "-c:v", "libvpx-vp9", "-b:v", "256k", "-an",
+                        "-vf", "scale=512:512,fps=30",
+                        out_path,
+                        stdout=asyncio.subprocess.DEVNULL,
+                        stderr=asyncio.subprocess.DEVNULL,
+                    )
+                    await proc.wait()
+                    
+                    if proc.returncode == 0 and os.path.exists(out_path):
+                        await event._client.send_sticker(
+                            chat_id=event.chat.id,
+                            sticker=out_path,
+                            reply_parameters=reply_params,
+                        )
+                    else:
+                        raise RuntimeError("Failed to convert video to WebM sticker")
+                finally:
+                    if os.path.exists(in_path):
+                        os.remove(in_path)
+                    if os.path.exists(out_path):
+                        os.remove(out_path)
             else:
                 image = BytesIO(resp.content)
-                image.name = "brat.png"
+                image.name = "brat.webp"
                 image.seek(0)
                 await event._client.send_sticker(
                     chat_id=event.chat.id,
