@@ -30,6 +30,7 @@ class MediaDL(Module):
         output_template = download_dir / "%(title).200s.%(ext)s"
         command = (
             f'yt-dlp -f "bv*+ba/b" --no-warnings --no-playlist '
+            f'--write-description '
             f'--remux-video mp4 -o "{output_template}" "{url}"'
         )
 
@@ -65,14 +66,27 @@ class MediaDL(Module):
                 raise Exception(f"yt-dlp failed with code {returncode}:\n{error_details[:500]}")
 
             downloaded_files = sorted(
-                [f for f in download_dir.iterdir() if f.is_file()],
+                [f for f in download_dir.iterdir() if f.is_file() and f.suffix.lower() != ".description"],
                 key=lambda p: p.stat().st_mtime,
             )
 
             if not downloaded_files:
-                raise Exception("yt-dlp finished, but no files were downloaded.")
+                raise Exception("yt-dlp finished, but no media files were downloaded.")
 
-            title = downloaded_files[0].stem
+            desc_file = next(download_dir.glob("*.description"), None)
+            post_caption = ""
+            if desc_file:
+                try:
+                    post_caption = desc_file.read_text(encoding="utf-8").strip()
+                except Exception:
+                    pass
+            
+            if not post_caption:
+                post_caption = downloaded_files[0].stem
+
+            if len(post_caption) > 800:
+                post_caption = post_caption[:800] + "..."
+
             media_to_send = []
             for file_path in downloaded_files:
                 ext = file_path.suffix.lower()
@@ -89,7 +103,7 @@ class MediaDL(Module):
             await event.edit_text(f"<code>Uploading {len(media_to_send)} item(s)...</code>")
 
             caption = (
-                f"<blockquote>{html.escape(title)}</blockquote>\n"
+                f"<blockquote>{html.escape(post_caption)}</blockquote>\n"
                 f"<a href='{url}'>Source</a>\n"
                 f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
             )
