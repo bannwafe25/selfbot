@@ -1,141 +1,133 @@
-import contextlib
+import asyncio
 import datetime
 import html
+import os
 import re
-from io import BytesIO
+import shutil
 from pathlib import Path
 
 from pyrogram import filters
-from pyrogram.types import Message, ReplyParameters
+from pyrogram.types import InputMediaPhoto, InputMediaVideo, Message
 
-from selfbot.listener import handler
+from selfbot import listener
 from selfbot.module import Module
-from selfbot.apis import CHOCOMILK_AIO
+from selfbot.utils import fmtsec
 
-pattern = re.compile(r"^aio(?:\s+([\s\S]+))?$", re.IGNORECASE)
+# Regex to match 'dl', 'mediadl', 'img', 'gallerydl' followed by a URL
+pattern = re.compile(r"^(?:aio|dl)\s+(https?://[^\s]+)$")
 
 
-class AIO(Module):
+class MediaDL(Module):
     name = "AIO Downloader"
-    cmds = "aio {url}"
+    cmds = "aio|dl {url}"
     desc = {
-        "url": "Link from TikTok, Instagram, Facebook, Twitter, etc.",
-        "e.g.": "aio https://vt.tiktok.com/...",
+        "Info": "Downloads media (video, audio, or images) from various sites.",
+        "url": "The URL of the content to download.",
+        "e.g.": "aio https://www.tiktok.com/@user/video/12345",
     }
 
-    @handler(filters.regex(pattern), 1)
+    async def _run_ytdlp(self, url: str, download_dir: Path) -> tuple[str, str, int]:
+        """Menjalankan yt-dlp untuk mengunduh media."""
+        output_template = download_dir / "%(title).200s.%(ext)s"
+        command = (
+            f'yt-dlp -f "bv*+ba/b" --no-warnings --no-playlist '
+            f'--remux-video mp4 -o "{output_template}" "{url}"'
+        )
+
+        process = await asyncio.create_subprocess_shell(
+            command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        stdout, stderr = await process.communicate()
+        return stdout.decode(), stderr.decode(), process.returncode
+
+    @listener.handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
-        await self.respond(event, "<code>Processing...</code>")
+        """Handles media or image download command."""
+        await event.edit_text("<code>Processing...</code>")
         now = datetime.datetime.now(datetime.UTC)
+        match = pattern.match(event.text)
+        url = match.group(1)
 
-        url = (pattern.match(str(event.content).strip()).group(1) or "").strip()
-        if not url:
-            if event.reply_to_message:
-                url = self.message_text(event.reply_to_message).strip()
-
-        if not url or not url.startswith("http"):
-            await self.respond(
-                event,
-                "<code>Usage: aio {url} or reply to a message with a link.</code>",
-            )
-            return
+        download_dir = Path("downloads") / f"mediadl_{event.id}"
+        download_dir.mkdir(parents=True, exist_ok=True)
+        temp_dir_path = None
 
         try:
-            await self.respond(event, "<code>Fetching media...</code>")
-            resp = await self.client.http.get(
-                CHOCOMILK_AIO,
-                params={"url": url},
-                timeout=60,
+            temp_dir_path = download_dir
+            await event.edit_text("<code>Downloading with yt-dlp...</code>")
+
+            stdout, stderr, returncode = await self._run_ytdlp(url, download_dir)
+
+            if returncode != 0 and not os.listdir(download_dir):
+                error_details = stderr or stdout
+                raise Exception(f"yt-dlp failed with code {returncode}:\n{error_details[:500]}")
+
+            downloaded_files = sorted(
+                [f for f in download_dir.iterdir() if f.is_file()],
+                key=lambda p: p.stat().st_mtime,
             )
-            if resp.status_code != 200:
-                raise RuntimeError(f"API error: HTTP {resp.status_code}")
 
-            data = resp.json()
-            if not data.get("success"):
-                err = data.get("error") or "API returned an error."
-                raise RuntimeError(str(err))
+            if not downloaded_files:
+                raise Exception("yt-dlp finished, but no files were downloaded.")
 
-            result = data.get("data") or {}
-            medias = result.get("medias") or []
-            if not medias:
-                raise RuntimeError("No downloadable media found.")
+            title = downloaded_files[0].stem
+            media_to_send = []
+            for file_path in downloaded_files:
+                ext = file_path.suffix.lower()
+                if ext in [".mp4", ".mkv", ".webm"]:
+                    media_to_send.append({"path": file_path, "type": "video"})
+                elif ext in [".jpg", ".jpeg", ".png", ".webp"]:
+                    media_to_send.append({"path": file_path, "type": "image"})
+                else:
+                    self.logger.info(f"Skipping unsupported file type: {ext}")
 
-            source = html.escape(str(result.get("source", "unknown")))
-            title = html.escape(str(result.get("title", ""))[:100])
+            if not media_to_send:
+                raise Exception("No supported media files (video/image) found.")
 
-            # Pick the best media: prefer HD video, fallback to first video, then first anything
-            media = self._pick_best(medias)
-            media_url = media["url"]
-            media_type = media.get("type", "video")
-            ext = media.get("extension", "mp4")
-            quality = media.get("quality", "")
+            await event.edit_text(f"<code>Uploading {len(media_to_send)} item(s)...</code>")
 
-            await self.respond(event, f"<code>Downloading {source} media...</code>")
-            dl_resp = await self.client.http.get(media_url, timeout=300)
-            if dl_resp.status_code != 200:
-                raise RuntimeError(f"Download failed: HTTP {dl_resp.status_code}")
+            caption = (
+                f"<blockquote>{html.escape(title)}</blockquote>\n"
+                f"<a href='{url}'>Source</a>\n"
+                f"<b><blockquote>{fmtsec(now)}</blockquote></b>"
+            )
 
-            buf = BytesIO(dl_resp.content)
-            buf.name = f"aio.{ext}"
-            buf.seek(0)
-
-            caption = f"<b>{source}</b>"
-            if title and title != "Unknown":
-                caption += f"\n<blockquote>{title}</blockquote>"
-            if quality:
-                caption += f"\n<code>{html.escape(quality)}</code>"
-            caption += f"\n\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
-
-            reply_id = event.reply_to_message_id or event.id
-            reply_params = ReplyParameters(message_id=reply_id)
-
-            if media_type == "audio":
-                await event._client.send_audio(
-                    chat_id=event.chat.id,
-                    audio=buf,
-                    caption=caption,
-                    reply_parameters=reply_params,
-                )
-            elif media_type == "image":
-                await event._client.send_photo(
-                    chat_id=event.chat.id,
-                    photo=buf,
-                    caption=caption,
-                    reply_parameters=reply_params,
-                )
+            if len(media_to_send) == 1:
+                media = media_to_send[0]
+                if media["type"] == "video":
+                    await event.reply_video(video=media["path"], caption=caption)
+                else:
+                    await event.reply_photo(photo=media["path"], caption=caption)
             else:
-                await event._client.send_video(
-                    chat_id=event.chat.id,
-                    video=buf,
-                    caption=caption,
-                    reply_parameters=reply_params,
-                )
+                album_media = []
+                for i, media in enumerate(media_to_send):
+                    is_first = i == 0
+                    current_caption = caption if is_first else None
+                    if media["type"] == "video":
+                        album_media.append(InputMediaVideo(media["path"], caption=current_caption))
+                    else:
+                        album_media.append(InputMediaPhoto(media["path"], caption=current_caption))
+
+                # Kirim dalam potongan 10 media
+                for i in range(0, len(album_media), 10):
+                    chunk = album_media[i : i + 10]
+                    await event.reply_media_group(chunk)
 
             await event.delete()
+
         except Exception as e:
-            await self.respond(
-                event,
-                f"<b>AIO failed</b>\n\n<code>{html.escape(str(e)[:300])}</code>",
+            error_msg = str(e)[:200]
+            self.logger.error(f"MediaDL failed: {error_msg}")
+            await event.edit_text(
+                f"<b>Error:</b> <code>{html.escape(str(e))}</code>"
             )
-
-    @staticmethod
-    def _pick_best(medias: list[dict]) -> dict:
-        # Prefer HD no-watermark video
-        for m in medias:
-            q = (m.get("quality") or "").lower()
-            if m.get("type") == "video" and "hd" in q and "watermark" not in q:
-                return m
-
-        # Then any no-watermark video
-        for m in medias:
-            q = (m.get("quality") or "").lower()
-            if m.get("type") == "video" and "watermark" not in q:
-                return m
-
-        # Then any video
-        for m in medias:
-            if m.get("type") == "video":
-                return m
-
-        # Fallback: first media
-        return medias[0]
+        finally:
+            if temp_dir_path and temp_dir_path.exists():
+                try:
+                    # Gunakan asyncio.to_thread untuk operasi I/O yang memblokir
+                    await asyncio.to_thread(shutil.rmtree, temp_dir_path)
+                except Exception as e:
+                    self.logger.warning(f"Failed to cleanup {temp_dir_path}: {e}")
