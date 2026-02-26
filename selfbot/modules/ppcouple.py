@@ -79,8 +79,8 @@ class PPCouple(Module):
             await event._client.send_media_group(
                 chat_id=event.chat.id,
                 media=[
-                    InputMediaPhoto(media=stream_cowo, caption="👦 Cowo"),
-                    InputMediaPhoto(media=stream_cewe, caption=f"👧 Cewe\n\n{caption}"),
+                    InputMediaPhoto(media=stream_cowo, caption=f"👦 <b>Cowo</b> & 👧 <b>Cewe</b>\n\n{caption}"),
+                    InputMediaPhoto(media=stream_cewe),
                 ],
                 reply_to_message_id=event.reply_to_message_id or event.id,
             )
