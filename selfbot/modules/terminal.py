@@ -31,7 +31,7 @@ class Terminal(Module):
             await self.respond(event, "<code>Usage: sh {command}</code>")
             return
 
-        await self.respond(event, f"<code>$ {html.escape(command)}\n\nProcessing...</code>")
+        await self.respond(event, f"<code>$ {html.escape(command)}</code>\n\n<b><blockquote>Processing...</blockquote></b>")
         now = datetime.datetime.now(datetime.UTC)
 
         try:
@@ -64,17 +64,21 @@ class Terminal(Module):
                         event,
                         InputMediaDocument(
                             doc,
-                            caption=f"<code>$ {html.escape(command[:100])}...</code>\n\n<b><blockquote>{elapsed}</blockquote></b>",
+                            caption=f"<code>$ {html.escape(command[:100])}...</code>\n\n<b><blockquote>Output too long, attached as file.</blockquote></b>\n\n<b><blockquote>{elapsed}</blockquote></b>",
                         )
                     )
             else:
                 await self.respond(
                     event,
-                    f"<code>$ {html.escape(command)}\n\n{html.escape(result_text)}</code>\n\n<b><blockquote>{elapsed}</blockquote></b>"
+                    f"<code>$ {html.escape(command)}</code>\n"
+                    f"<blockquote><pre language=\"bash\">{html.escape(result_text)}</pre></blockquote>\n\n"
+                    f"<b><blockquote>{elapsed}</blockquote></b>"
                 )
 
         except Exception as e:
             await self.respond(
                 event,
-                f"<code>$ {html.escape(command)}\n\nError: {html.escape(str(e))}</code>\n\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
+                f"<code>$ {html.escape(command)}</code>\n"
+                f"<blockquote><pre language=\"bash\">Error: {html.escape(str(e))}</pre></blockquote>\n\n"
+                f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
             )
