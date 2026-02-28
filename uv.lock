@@ -547,6 +547,18 @@ wheels = [
 ]
 
 [[package]]
+name = "instaloader"
+version = "4.15"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d1/38/f82de9f71d6b8403f5b752d8eab4e466ac99c237ec8c642548a544948f23/instaloader-4.15.tar.gz", hash = "sha256:baf1c29ba16f9d30f7c6e330a00bc1fca100522bb3a217d3c36ad620eb744685", size = 66295, upload-time = "2025-11-08T21:30:32.06Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/96/7a/2e878dff89aa2ec8ffa6367aad31975e5d457ff303b8ea7568fd284e301c/instaloader-4.15-py3-none-any.whl", hash = "sha256:ba897ec738c238bdc427ad3f4a3478c6d2db07055361f2373779af8227ac2c08", size = 68310, upload-time = "2025-11-08T21:30:30.777Z" },
+]
+
+[[package]]
 name = "multidict"
 version = "6.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1120,6 +1132,7 @@ dependencies = [
     { name = "dnspython" },
     { name = "google-genai" },
     { name = "httpx", extra = ["http2"] },
+    { name = "instaloader" },
     { name = "pillow" },
     { name = "psutil" },
     { name = "py-yt-search" },
@@ -1136,6 +1149,7 @@ requires-dist = [
     { name = "dnspython", specifier = ">=2.6.1" },
     { name = "google-genai" },
     { name = "httpx", extras = ["http2"], specifier = "==0.28.1" },
+    { name = "instaloader", specifier = ">=4.13" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "psutil", specifier = ">=6.1.1" },
     { name = "py-yt-search", specifier = ">=0.5.7" },
