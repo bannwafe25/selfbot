@@ -59,6 +59,30 @@ class ID(Module):
             f"<b>title:</b> <code>{html.escape(title)}</code>",
         ]
 
+        try:
+            # Try to get the very first message to determine creation date
+            creation_date = None
+            if chat.type == enums.ChatType.CHANNEL or chat.type == enums.ChatType.SUPERGROUP:
+                # For channels and supergroups, message ID 1 is often the creation action
+                try:
+                    first_msg = await event._client.get_messages(chat.id, 1)
+                    if first_msg and first_msg.date:
+                        creation_date = first_msg.date.strftime("%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    pass
+            
+            if not creation_date:
+                # Fallback to fetching the earliest message in history
+                async for msg in event._client.get_chat_history(chat.id, limit=1, reverse=True):
+                    if msg.date:
+                        creation_date = msg.date.strftime("%Y-%m-%d %H:%M:%S")
+                    break
+
+            if creation_date:
+                lines.append(f"<b>created:</b> <code>{creation_date}</code>")
+        except Exception:
+            pass
+
         if chat.type in (enums.ChatType.GROUP, enums.ChatType.SUPERGROUP, enums.ChatType.CHANNEL):
             items = []
             admins_ids = []
