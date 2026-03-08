@@ -3,239 +3,210 @@ import html
 import re
 
 from pyrogram import filters, enums
-from pyrogram.types import Message
+from pyrogram.types import Message, Chat
 
 from selfbot.listener import handler
 from selfbot.module import Module
 
-pattern = re.compile(r"^id(?:\s+)?$", re.IGNORECASE)
-cinfo_pattern = re.compile(r"^cinfo(?:\s+(.+))?$", re.IGNORECASE)
-
 
 class ID(Module):
     name = "ID"
-    cmds = "id | cinfo {chat}"
+    cmds = "id | cinfo {chat}?"
     desc = {
-        "Info": "Show IDs for current chat/message and replied/forwarded context. Cinfo command gets chat details and admins.",
-        "chat": "Optional. Chat ID or Username",
+        "Info": "Show IDs for the current chat/message, replied/forwarded context, and detailed chat info.",
+        "chat": "Optional. Chat ID or Username for cinfo command.",
         "e.g.": "id\ncinfo -1001129887931",
     }
 
-    @handler(filters.regex(cinfo_pattern), 1)
-    async def on_info_cmd(self, event: Message) -> None:
-        await self.respond(event, "<code>Fetching info...</code>")
-        match = cinfo_pattern.match(str(event.content or "").strip())
+    _id_pattern = re.compile(r"^id(?:\s+)?$", re.IGNORECASE)
+    _cinfo_pattern = re.compile(r"^cinfo(?:\s+(.+))?$", re.IGNORECASE)
+
+    @handler(filters.regex(_cinfo_pattern), 1)
+    async def on_cinfo_cmd(self, event: Message) -> None:
+        await self.respond(event, "<code>Fetching chat information...</code>")
+        match = self._cinfo_pattern.match(str(event.content or "").strip())
         chat_req = match.group(1)
 
-        if not chat_req:
-            chat_req = event.chat.id
-        else:
-            chat_req = chat_req.strip()
-            if chat_req.lstrip('-').isdigit():
-                chat_req = int(chat_req)
+        chat_req = chat_req.strip() if chat_req else event.chat.id
+        if isinstance(chat_req, str) and chat_req.lstrip('-').isdigit():
+            chat_req = int(chat_req)
 
         try:
-            chat = await event._client.get_chat(chat_req)
+            chat: Chat = await event._client.get_chat(chat_req)
         except Exception as e:
-            await self.respond(event, f"<b>Error:</b> <code>{html.escape(str(e))}</code>")
-            return
-
-        chat_id = chat.id
-        title = chat.title or chat.first_name or "Unknown"
+            return await self.respond(event, f"<b>Error:</b> <code>{html.escape(str(e))}</code>")
 
         if hasattr(self.client, "db") and hasattr(self.client.db, "chats"):
             try:
                 await self.client.db.chats.update_one(
-                    {"_id": chat_id},
-                    {"$set": {"id": chat_id, "title": title}},
+                    {"_id": chat.id},
+                    {"$set": {"id": chat.id, "title": chat.title or chat.first_name or "Unknown"}},
                     upsert=True
                 )
             except Exception:
                 pass
 
         lines = [
-            "<b>Chat Info</b>",
-            f"<b>chat_id:</b> <code>{chat_id}</code>",
-            f"<b>title:</b> <code>{html.escape(title)}</code>",
+            "<b>Chat Information</b>",
+            self._kv("ID", chat.id),
+            self._kv("Title", chat.title or chat.first_name or "Unknown"),
         ]
 
-        try:
-            # Try to get the very first message to determine creation date
-            creation_date = None
-            if chat.type == enums.ChatType.CHANNEL or chat.type == enums.ChatType.SUPERGROUP:
-                # For channels and supergroups, message ID 1 is often the creation action
-                try:
-                    first_msg = await event._client.get_messages(chat.id, 1)
-                    if first_msg and first_msg.date:
-                        creation_date = first_msg.date.strftime("%Y-%m-%d %H:%M:%S")
-                except Exception:
-                    pass
-            
-            if not creation_date:
-                # Fallback to fetching the earliest message in history
-                async for msg in event._client.get_chat_history(chat.id, limit=1, reverse=True):
-                    if msg.date:
-                        creation_date = msg.date.strftime("%Y-%m-%d %H:%M:%S")
-                    break
+        if chat.username:
+            lines.append(self._kv("Username", f"@{chat.username}"))
+        
+        if chat.members_count:
+            lines.append(self._kv("Members", chat.members_count))
 
-            if creation_date:
-                lines.append(f"<b>created:</b> <code>{creation_date}</code>")
-        except Exception:
-            pass
+        creation_date = await self._get_creation_date(event._client, chat)
+        if creation_date:
+            lines.append(self._kv("Created", creation_date))
 
         if chat.type in (enums.ChatType.GROUP, enums.ChatType.SUPERGROUP, enums.ChatType.CHANNEL):
-            items = []
-            admins_ids = []
+            admin_lines = await self._get_admin_gban_lines(event._client, chat)
+            if admin_lines:
+                lines.append("\n<b>Admins</b>")
+                lines.extend(admin_lines)
+
+        await self._send_result(event, lines)
+
+    @handler(filters.regex(_id_pattern), 2)
+    async def on_id_cmd(self, event: Message) -> None:
+        await self.respond(event, "<code>Collecting IDs...</code>")
+        
+        lines = [
+            "<b>ID Information</b>",
+            self._kv("Chat ID", event.chat.id),
+        ]
+        
+        if getattr(event.chat, "dc_id", None):
+            lines.append(self._kv("Chat DC", event.chat.dc_id))
             
-            # Attempt to use prefix from config or fallback to '.'
-            prefix = "."
-            if hasattr(self.client, "config") and "prefix" in self.client.config:
-                cfg_prefix = self.client.config["prefix"]
-                if isinstance(cfg_prefix, list) and cfg_prefix:
-                    prefix = cfg_prefix[0]
-                elif isinstance(cfg_prefix, str):
-                    prefix = cfg_prefix
+        lines.append(self._kv("Message ID", event.id))
 
-            try:
-                async for p in event._client.get_chat_members(chat.id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
-                    if p.status == enums.ChatMemberStatus.OWNER:
-                        items.append(f"<code>{prefix}gban {p.user.id} \"Spamadd[0x0 {chat_id}]\"</code>")
-                    elif p.user and not p.user.is_bot:
-                        admins_ids.append(str(p.user.id))
+        self._append_user_chat_info(lines, event.from_user, event.sender_chat, "Your", "Sender Chat")
 
-                if admins_ids:
-                    items.append(f"<code>{prefix}gban {' '.join(admins_ids)} \"Spamadd[0x1 {chat_id}]\"</code>")
+        if event.reply_to_message:
+            replied = event.reply_to_message
+            lines.append("")
+            lines.append(self._kv("Replied Msg ID", replied.id))
+            self._append_user_chat_info(lines, replied.from_user, replied.sender_chat, "Replied User", "Replied Chat")
+            self._extract_forward_info(lines, replied)
 
-                if items:
-                    lines.append("")
-                    lines.append("<b>Admins</b>")
-                    lines.extend(items)
-            except Exception as e:
-                lines.append(f"\n<i>Could not get admins: {html.escape(str(e))}</i>")
+        await self._send_result(event, lines)
 
-        text = "\n".join(lines)
+    # --- Helper Methods ---
+
+    async def _send_result(self, event: Message, lines: list[str]) -> None:
+        text = "\n".join(lines).strip()
         now = datetime.datetime.now(datetime.UTC)
         text += f"\n\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
         await self.respond(event, text)
 
-    @handler(filters.regex(pattern), 2)
-    async def on_message_out(self, event: Message) -> None:
-        await self.respond(event, "<code>Collecting IDs...</code>")
-        now = datetime.datetime.now(datetime.UTC)
+    @staticmethod
+    def _kv(key: str, value: object) -> str:
+        val_str = html.escape(str(value)) if value not in (None, "") else "-"
+        return f"<b>{key}:</b> <code>{val_str}</code>"
 
+    @staticmethod
+    async def _get_creation_date(client, chat: Chat) -> str:
+        try:
+            if chat.type in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP):
+                try:
+                    first_msg = await client.get_messages(chat.id, 1)
+                    if first_msg and first_msg.date:
+                        return first_msg.date.strftime("%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    pass
+            
+            async for msg in client.get_chat_history(chat.id, limit=1, reverse=True):
+                if msg.date:
+                    return msg.date.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            pass
+        return ""
+
+    async def _get_admin_gban_lines(self, client, chat: Chat) -> list[str]:
         lines = []
-        self._append_line(lines, "Chat ID", event.chat.id)
-        self._append_line(lines, "Chat DC ID", getattr(event.chat, "dc_id", None))
-        self._append_line(lines, "Message ID", event.id)
+        admins_ids = []
+        prefix = "."
+        
+        if hasattr(self.client, "config") and "prefix" in self.client.config:
+            cfg_prefix = self.client.config["prefix"]
+            prefix = cfg_prefix[0] if isinstance(cfg_prefix, list) and cfg_prefix else str(cfg_prefix)
 
-        self._append_actor(
-            lines=lines,
-            user=event.from_user,
-            sender_chat=event.sender_chat,
-            user_prefix="Your",
-            chat_prefix="Sender Chat",
-        )
+        try:
+            async for p in client.get_chat_members(chat.id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
+                if p.status == enums.ChatMemberStatus.OWNER:
+                    lines.append(f"<code>{prefix}gban {p.user.id} \"Spamadd[0x0 {chat.id}]\"</code>")
+                elif p.user and not p.user.is_bot:
+                    admins_ids.append(str(p.user.id))
 
-        replied = event.reply_to_message
-        if replied:
-            lines.append("")
-            self._append_line(lines, "Replied Message ID", replied.id)
+            if admins_ids:
+                lines.append(f"<code>{prefix}gban {' '.join(admins_ids)} \"Spamadd[0x1 {chat.id}]\"</code>")
+        except Exception as e:
+            lines.append(f"<i>Could not fetch admins: {html.escape(str(e))}</i>")
+            
+        return lines
 
-            self._append_actor(
-                lines=lines,
-                user=replied.from_user,
-                sender_chat=replied.sender_chat,
-                user_prefix="Replied User",
-                chat_prefix="Replied Chat",
-            )
+    def _append_user_chat_info(self, lines: list[str], user, chat, user_prefix: str, chat_prefix: str) -> None:
+        if user:
+            lines.append(self._kv(f"{user_prefix} ID", user.id))
+            if getattr(user, "dc_id", None):
+                lines.append(self._kv(f"{user_prefix} DC", user.dc_id))
+        elif chat:
+            lines.append(self._kv(f"{chat_prefix} ID", chat.id))
+            if getattr(chat, "dc_id", None):
+                lines.append(self._kv(f"{chat_prefix} DC", chat.dc_id))
 
-            self._append_forward_info(lines, replied)
-
-        content = "\n".join(lines).strip()
-        text = (
-            "<b>ID Information</b>\n\n"
-            f"<code>{html.escape(content)}</code>\n\n"
-            f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
-        )
-        await self.respond(event, text)
-
-    def _append_forward_info(self, lines: list[str], message: Message) -> None:
+    def _extract_forward_info(self, lines: list[str], message: Message) -> None:
         origin = getattr(message, "forward_origin", None)
         if origin:
             lines.append("")
-            self._append_line(lines, "Forwarded Message ID", getattr(origin, "message_id", None))
-
-            sender_user = getattr(origin, "sender_user", None)
-            if sender_user:
-                self._append_line(lines, "Forwarded User ID", getattr(sender_user, "id", None))
-                self._append_line(
-                    lines, "Forwarded User DC ID", getattr(sender_user, "dc_id", None)
-                )
-                return
-
-            sender_chat = getattr(origin, "sender_chat", None)
-            if sender_chat:
-                self._append_line(lines, "Forwarded Chat ID", getattr(sender_chat, "id", None))
-                self._append_line(
-                    lines, "Forwarded Chat DC ID", getattr(sender_chat, "dc_id", None)
-                )
-                return
-
-            sender_name = (
-                getattr(origin, "sender_name", None)
-                or getattr(origin, "hidden_user_name", None)
-                or getattr(origin, "author_signature", None)
-            )
-            if sender_name:
-                self._append_line(lines, "Forwarded From", sender_name)
-            else:
-                self._append_line(lines, "Forwarded From", "Hidden user")
+            self._add_origin_details(lines, origin)
             return
 
         if message.forward_from_message_id:
             lines.append("")
-            self._append_line(lines, "Forwarded Message ID", message.forward_from_message_id)
+            lines.append(self._kv("Forwarded Msg ID", message.forward_from_message_id))
 
         if message.forward_from:
-            self._append_line(lines, "Forwarded User ID", message.forward_from.id)
-            self._append_line(
-                lines, "Forwarded User DC ID", getattr(message.forward_from, "dc_id", None)
-            )
+            lines.append(self._kv("Forwarded User ID", message.forward_from.id))
+            if getattr(message.forward_from, "dc_id", None):
+                lines.append(self._kv("Forwarded User DC", message.forward_from.dc_id))
             return
 
         if message.forward_from_chat:
-            self._append_line(lines, "Forwarded Chat ID", message.forward_from_chat.id)
-            self._append_line(
-                lines,
-                "Forwarded Chat DC ID",
-                getattr(message.forward_from_chat, "dc_id", None),
-            )
+            lines.append(self._kv("Forwarded Chat ID", message.forward_from_chat.id))
+            if getattr(message.forward_from_chat, "dc_id", None):
+                lines.append(self._kv("Forwarded Chat DC", message.forward_from_chat.dc_id))
             return
 
         if message.forward_sender_name:
-            self._append_line(lines, "Forwarded From", message.forward_sender_name)
+            lines.append(self._kv("Forwarded From", message.forward_sender_name))
 
-    @staticmethod
-    def _append_line(lines: list[str], label: str, value: object) -> None:
-        if value is None or value == "":
-            value = "-"
-        lines.append(f"{label}: {value}")
+    def _add_origin_details(self, lines: list[str], origin) -> None:
+        if getattr(origin, "message_id", None):
+            lines.append(self._kv("Forwarded Msg ID", origin.message_id))
 
-    def _append_actor(
-        self,
-        lines: list[str],
-        user,
-        sender_chat,
-        user_prefix: str,
-        chat_prefix: str,
-    ) -> None:
-        if user:
-            self._append_line(lines, f"{user_prefix} ID", user.id)
-            self._append_line(lines, f"{user_prefix} DC ID", getattr(user, "dc_id", None))
+        if getattr(origin, "sender_user", None):
+            lines.append(self._kv("Forwarded User ID", origin.sender_user.id))
+            if getattr(origin.sender_user, "dc_id", None):
+                lines.append(self._kv("Forwarded User DC", origin.sender_user.dc_id))
             return
 
-        if sender_chat:
-            self._append_line(lines, f"{chat_prefix} ID", sender_chat.id)
-            self._append_line(
-                lines, f"{chat_prefix} DC ID", getattr(sender_chat, "dc_id", None)
-            )
+        if getattr(origin, "sender_chat", None):
+            lines.append(self._kv("Forwarded Chat ID", origin.sender_chat.id))
+            if getattr(origin.sender_chat, "dc_id", None):
+                lines.append(self._kv("Forwarded Chat DC", origin.sender_chat.dc_id))
+            return
+
+        sender_name = (
+            getattr(origin, "sender_name", None)
+            or getattr(origin, "hidden_user_name", None)
+            or getattr(origin, "author_signature", None)
+        )
+        if hasattr(origin, "name") and origin.name:
+            sender_name = sender_name or origin.name
+            
+        lines.append(self._kv("Forwarded From", sender_name or "Hidden user"))
