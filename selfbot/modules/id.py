@@ -2,24 +2,99 @@ import datetime
 import html
 import re
 
-from pyrogram import filters
+from pyrogram import filters, enums
 from pyrogram.types import Message
 
 from selfbot.listener import handler
 from selfbot.module import Module
 
 pattern = re.compile(r"^id(?:\s+)?$", re.IGNORECASE)
+cinfo_pattern = re.compile(r"^cinfo(?:\s+(.+))?$", re.IGNORECASE)
 
 
 class ID(Module):
     name = "ID"
-    cmds = "id"
+    cmds = "id | cinfo {chat}"
     desc = {
-        "Info": "Show IDs for current chat/message and replied/forwarded context.",
-        "e.g.": "id",
+        "Info": "Show IDs for current chat/message and replied/forwarded context. Cinfo command gets chat details and admins.",
+        "chat": "Optional. Chat ID or Username",
+        "e.g.": "id\ncinfo -1001129887931",
     }
 
-    @handler(filters.regex(pattern), 1)
+    @handler(filters.regex(cinfo_pattern), 1)
+    async def on_info_cmd(self, event: Message) -> None:
+        await self.respond(event, "<code>Fetching info...</code>")
+        match = cinfo_pattern.match(str(event.content or "").strip())
+        chat_req = match.group(1)
+
+        if not chat_req:
+            chat_req = event.chat.id
+        else:
+            chat_req = chat_req.strip()
+            if chat_req.lstrip('-').isdigit():
+                chat_req = int(chat_req)
+
+        try:
+            chat = await event._client.get_chat(chat_req)
+        except Exception as e:
+            await self.respond(event, f"<b>Error:</b> <code>{html.escape(str(e))}</code>")
+            return
+
+        chat_id = chat.id
+        title = chat.title or chat.first_name or "Unknown"
+
+        if hasattr(self.client, "db") and hasattr(self.client.db, "chats"):
+            try:
+                await self.client.db.chats.update_one(
+                    {"_id": chat_id},
+                    {"$set": {"id": chat_id, "title": title}},
+                    upsert=True
+                )
+            except Exception:
+                pass
+
+        lines = [
+            "<b>Chat Info</b>",
+            f"<b>chat_id:</b> <code>{chat_id}</code>",
+            f"<b>title:</b> <code>{html.escape(title)}</code>",
+        ]
+
+        if chat.type in (enums.ChatType.GROUP, enums.ChatType.SUPERGROUP, enums.ChatType.CHANNEL):
+            items = []
+            admins_ids = []
+            
+            # Attempt to use prefix from config or fallback to '.'
+            prefix = "."
+            if hasattr(self.client, "config") and "prefix" in self.client.config:
+                cfg_prefix = self.client.config["prefix"]
+                if isinstance(cfg_prefix, list) and cfg_prefix:
+                    prefix = cfg_prefix[0]
+                elif isinstance(cfg_prefix, str):
+                    prefix = cfg_prefix
+
+            try:
+                async for p in event._client.get_chat_members(chat.id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
+                    if p.status == enums.ChatMemberStatus.OWNER:
+                        items.append(f"<code>{prefix}gban {p.user.id} \"Spamadd[0x0 {chat_id}]\"</code>")
+                    elif p.user and not p.user.is_bot:
+                        admins_ids.append(str(p.user.id))
+
+                if admins_ids:
+                    items.append(f"<code>{prefix}gban {' '.join(admins_ids)} \"Spamadd[0x1 {chat_id}]\"</code>")
+
+                if items:
+                    lines.append("")
+                    lines.append("<b>Admins</b>")
+                    lines.extend(items)
+            except Exception as e:
+                lines.append(f"\n<i>Could not get admins: {html.escape(str(e))}</i>")
+
+        text = "\n".join(lines)
+        now = datetime.datetime.now(datetime.UTC)
+        text += f"\n\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
+        await self.respond(event, text)
+
+    @handler(filters.regex(pattern), 2)
     async def on_message_out(self, event: Message) -> None:
         await self.respond(event, "<code>Collecting IDs...</code>")
         now = datetime.datetime.now(datetime.UTC)
