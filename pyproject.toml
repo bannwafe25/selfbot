@@ -18,6 +18,7 @@ dependencies = [
     "google-genai",
     "yt-dlp>=2026.2.21",
     "instaloader>=4.13",
+    "py-tgcalls>=2.0.0",
 ]
 
 [project.scripts]
