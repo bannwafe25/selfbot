@@ -39,11 +39,16 @@ class Call(Module):
             self.client.call = PyTgCalls(self.client.app)
         return self.client.call
 
+    @handler(filters.regex(pattern) & ~reply, 1)
     async def on_message_out(self, event: Message) -> None:
+        match = pattern.match(event.text or event.caption or "")
+        if not match:
+            return
+
         await event.edit_text("<code>...</code>")
         now, (action, chat_id, join_as, mute) = (
             datetime.datetime.now(datetime.UTC),
-            pattern.match(event.text or event.caption).groups(),
+            match.groups(),
         )
 
         if not chat_id:
