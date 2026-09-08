@@ -34,9 +34,11 @@ class Call(Module):
         "e.g.": "call -join @nama_grup -mute",
     }
 
-    def _get_call(self):
+    async def _get_call(self):
         if getattr(self.client, "call", None) is None:
-            self.client.call = PyTgCalls(self.client.app)
+            call = PyTgCalls(self.client.app)
+            await call.start()
+            self.client.call = call
         return self.client.call
 
     @handler(filters.regex(pattern) & ~reply, 1)
@@ -65,7 +67,7 @@ class Call(Module):
         join_as_id = None
 
         if action == "join":
-            func = self._get_call().play
+            func = (await self._get_call()).play
             head = "✅ Joined Call"
             if join_as:
                 try:
@@ -76,7 +78,7 @@ class Call(Module):
                 join_as_id = join_as
                 kwargs["config"] = GroupCallConfig(join_as=peer)
         elif action == "leave":
-            func = self._get_call().leave_call
+            func = (await self._get_call()).leave_call
             head = "👋 Left Call"
         elif action == "start":
             func = event._client.create_video_chat
@@ -94,7 +96,7 @@ class Call(Module):
         col = self.client.db["call_chats"]
 
         if action == "join":
-            call = self._get_call()
+            call = await self._get_call()
             if mute:
                 await call.mute(chat_id)
             else:
