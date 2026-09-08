@@ -1,9 +1,8 @@
-import asyncio
 import datetime
 import re
 
 from pyrogram import filters
-from pyrogram.errors import ChannelPrivate, PeerIdInvalid, RPCError
+from pyrogram.errors import RPCError
 from pyrogram.types import Message
 
 from selfbot.listener import handler, reply
@@ -32,17 +31,14 @@ class Call(Module):
         "chat": "Chat ID or Username",
         "peer": "Username channel (join as)",
         "-mute": "Join dalam kondisi mute",
-        "e.g.": "call -join @durov -mute",
+        "e.g.": "call -join @nama_grup -mute",
     }
 
-    async def on_loading(self) -> None:
-        if not load:
-            self.client.unload(self)
-            return
+    def _get_call(self):
+        if getattr(self.client, "call", None) is None:
+            self.client.call = PyTgCalls(self.client.app)
+        return self.client.call
 
-        self.client.call = PyTgCalls(self.client.app)
-
-    @handler(filters.regex(pattern) & ~reply, 1)
     async def on_message_out(self, event: Message) -> None:
         await event.edit_text("<code>...</code>")
         now, (action, chat_id, join_as, mute) = (
@@ -64,7 +60,7 @@ class Call(Module):
         join_as_id = None
 
         if action == "join":
-            func = self.client.call.play
+            func = self._get_call().play
             head = "✅ Joined Call"
             if join_as:
                 try:
@@ -75,7 +71,7 @@ class Call(Module):
                 join_as_id = join_as
                 kwargs["config"] = GroupCallConfig(join_as=peer)
         elif action == "leave":
-            func = self.client.call.leave_call
+            func = self._get_call().leave_call
             head = "👋 Left Call"
         elif action == "start":
             func = event._client.create_video_chat
@@ -93,14 +89,15 @@ class Call(Module):
         col = self.client.db["call_chats"]
 
         if action == "join":
+            call = self._get_call()
             if mute:
-                await self.client.call.mute(chat_id)
+                await call.mute(chat_id)
             else:
-                await self.client.call.unmute(chat_id)
+                await call.unmute(chat_id)
 
             await col.update_one(
                 {"chat_id": chat_id},
-                {"$set": {"chat_id": chat_id, "join_as": join_as_id, "mute": bool(mute)}},
+                {"$set": {"join_as": join_as_id, "mute": bool(mute)}},
                 upsert=True,
             )
         elif action == "leave":
@@ -109,11 +106,11 @@ class Call(Module):
         extra = []
         if join_as_id:
             extra.append(f"Join as: <code>{join_as_id}</code>")
-        if mute:
+        if mute and action == "join":
             extra.append("Mute: <code>True</code>")
 
         dur = (datetime.datetime.now(datetime.UTC) - now).total_seconds()
         await event.edit_text(
-            f"{head}\n" + ("\n".join(extra) + "\n" if extra else "")
+            f"<b>{head}</b>\n" + ("\n".join(extra) + "\n" if extra else "")
             + f"<code>{dur:.2f}s</code>"
         )
