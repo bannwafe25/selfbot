@@ -23,13 +23,19 @@ class Broadcast(Module):
         mode = (event.text or event.caption).split()[-1]
         rep = event.reply_to_message
 
-        msg = await self.respond(event, "<code>Menghitung target...</code>")
-        now = datetime.datetime.now(datetime.UTC)
+        msg = await self.respond(
+            event,
+            "<code>Menghitung target...</code>",
+        )
 
+        now = datetime.datetime.now(datetime.UTC)
         targets = []
+
         async for dialog in event._client.get_dialogs():
-            if dialog.id == event._client.me.id:
+            # ID user sendiri berada di dialog.chat.id
+            if dialog.chat.id == event._client.me.id:
                 continue
+
             if mode == "groups":
                 if dialog.chat.type in (
                     enums.ChatType.GROUP,
@@ -41,18 +47,23 @@ class Broadcast(Module):
                 targets.append(dialog)
 
         total = len(targets)
-        ok = fail = 0
+        ok = 0
+        fail = 0
+
         for i, dialog in enumerate(targets, 1):
             try:
                 await rep.copy(dialog.chat.id)
                 ok += 1
+
             except FloodWait as e:
                 await asyncio.sleep(e.value)
+
                 try:
                     await rep.copy(dialog.chat.id)
                     ok += 1
                 except RPCError:
                     fail += 1
+
             except RPCError:
                 fail += 1
 
@@ -63,9 +74,13 @@ class Broadcast(Module):
                     f"  <code>Sukses</code> : <code>{ok}</code>\n"
                     f"  <code>Gagal </code> : <code>{fail}</code>"
                 )
-            await asyncio.sleep(2)  # anti-flood
 
-        dur = (datetime.datetime.now(datetime.UTC) - now).total_seconds()
+            await asyncio.sleep(2)
+
+        dur = (
+            datetime.datetime.now(datetime.UTC) - now
+        ).total_seconds()
+
         await msg.edit_text(
             f"📢 <b>Broadcast Selesai</b>\n"
             f"  <code>Target</code> : <code>{total}</code>\n"
@@ -73,3 +88,4 @@ class Broadcast(Module):
             f"  <code>Gagal </code> : <code>{fail}</code>\n"
             f"  <code>Waktu </code> : <code>{dur:.1f}s</code>"
         )
+
