@@ -27,7 +27,7 @@ class Broadcast(Module):
         now = datetime.datetime.now(datetime.UTC)
 
         targets = []
-        async for dialog in event._client.iter_dialogs():
+        async for dialog in event._client.get_dialogs():
             if dialog.id == event._client.me.id:
                 continue
             if mode == "groups":
