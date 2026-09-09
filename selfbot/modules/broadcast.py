@@ -11,7 +11,7 @@ from selfbot.module import Module
 
 class Broadcast(Module):
     name = "Broadcast"
-    cmds = "bc {groups|all} | addbl | delbl"
+    cmds = "bc {groups|all} | addbl [chat_id] | delbl [chat_id|all]"
     desc = {
         "groups": "Kirim ke semua grup & channel tempat kamu member",
         "all": "Kirim ke semua grup + chat pribadi",
@@ -50,12 +50,12 @@ class Broadcast(Module):
     # =========================
 
     @handler(
-        filters.regex(r"^bc\s( groups| all)$".replace(" ", ""))
-        & reply,
+        filters.regex(r"^bc\s+(groups|all)$") & reply,
         1,
     )
     async def on_message_out(self, event: Message) -> None:
-        mode = (event.text or event.caption).split()[-1]
+        text = event.text or event.caption or ""
+        mode = text.strip().split()[-1].lower()
         rep = event.reply_to_message
 
         msg = await self.respond(
@@ -69,7 +69,8 @@ class Broadcast(Module):
         targets = []
 
         async for dialog in event._client.get_dialogs():
-            chat_id = dialog.chat.id
+            chat = dialog.chat
+            chat_id = chat.id
 
             # Skip akun sendiri
             if chat_id == event._client.me.id:
@@ -80,7 +81,7 @@ class Broadcast(Module):
                 continue
 
             if mode == "groups":
-                if dialog.chat.type in (
+                if chat.type in (
                     enums.ChatType.GROUP,
                     enums.ChatType.SUPERGROUP,
                     enums.ChatType.CHANNEL,
@@ -135,59 +136,99 @@ class Broadcast(Module):
         )
 
     # =========================
-    # ADD BLACKLIST
+    # ADD / DELETE BLACKLIST
     # =========================
 
-    @handler(filters.regex(r"^addbl(?:\s(-?\d+))?$"), 1)
-    async def addbl_cmd(self, event: Message) -> None:
-        parts = (event.text or event.caption or "").split()
+    @handler(
+        filters.regex(r"^(?:addbl|delbl)(?:\s+(?:-?\d+|all))?$"),
+        1,
+    )
+    async def blacklist_cmd(self, event: Message) -> None:
+        text = event.text or event.caption or ""
 
-        if len(parts) > 1:
-            try:
-                chat_id = int(parts[1])
-            except ValueError:
+        # Normalisasi
+        parts = text.strip().split()
+
+        if not parts:
+            return
+
+        command = parts[0].lower()
+
+        # =========================
+        # ADD BLACKLIST
+        # =========================
+
+        if command == "addbl":
+            if len(parts) > 1:
+                try:
+                    chat_id = int(parts[1])
+                except ValueError:
+                    await self.respond(
+                        event,
+                        "<code>ID chat tidak valid.</code>",
+                        revoke=3,
+                    )
+                    return
+            else:
+                chat_id = event.chat.id
+
+            blacklist = await self.get_blacklist()
+
+            if chat_id in blacklist:
                 await self.respond(
                     event,
-                    "<code>ID chat tidak valid.</code>",
+                    f"🚫 <code>{chat_id}</code> sudah ada di blacklist.",
                     revoke=3,
                 )
                 return
-        else:
-            chat_id = event.chat.id
 
-        blacklist = await self.get_blacklist()
+            blacklist.add(chat_id)
+            await self.save_blacklist(blacklist)
 
-        if chat_id in blacklist:
             await self.respond(
                 event,
-                f"🚫 <code>{chat_id}</code> sudah ada di blacklist.",
+                f"🚫 <b>Blacklist ditambahkan</b>\n"
+                f"<code>{chat_id}</code>\n\n"
+                f"Total blacklist: <code>{len(blacklist)}</code>",
                 revoke=3,
             )
             return
 
-        blacklist.add(chat_id)
-        await self.save_blacklist(blacklist)
+        # =========================
+        # DELETE BLACKLIST
+        # =========================
 
-        await self.respond(
-            event,
-            f"🚫 <b>Blacklist ditambahkan</b>\n"
-            f"<code>{chat_id}</code>",
-            revoke=3,
-        )
+        if command == "delbl":
+            blacklist = await self.get_blacklist()
 
-    # =========================
-    # DELETE BLACKLIST
-    # =========================
+            # delbl all
+            if len(parts) > 1 and parts[1].lower() == "all":
+                total = len(blacklist)
 
-    @handler(filters.regex(r"^delbl(?:\s(-?\d+|all))?$"), 1)
-    async def delbl_cmd(self, event: Message) -> None:
-        parts = (event.text or event.caption or "").split()
+                await self.save_blacklist(set())
 
-        blacklist = await self.get_blacklist()
+                await self.respond(
+                    event,
+                    f"✅ <b>Semua blacklist dihapus</b>\n"
+                    f"<code>{total}</code> chat",
+                    revoke=3,
+                )
+                return
 
-        # delbl
-        if len(parts) == 1:
-            chat_id = event.chat.id
+            # delbl <id>
+            if len(parts) > 1:
+                try:
+                    chat_id = int(parts[1])
+                except ValueError:
+                    await self.respond(
+                        event,
+                        "<code>ID chat tidak valid.</code>",
+                        revoke=3,
+                    )
+                    return
+            else:
+                # delbl tanpa ID = chat sekarang
+                chat_id = event.chat.id
 
             if chat_id not in blacklist:
                 await self.respond(
@@ -203,49 +244,7 @@ class Broadcast(Module):
             await self.respond(
                 event,
                 f"✅ <b>Blacklist dihapus</b>\n"
-                f"<code>{chat_id}</code>",
+                f"<code>{chat_id}</code>\n\n"
+                f"Sisa blacklist: <code>{len(blacklist)}</code>",
                 revoke=3,
             )
-            return
-
-        target = parts[1].lower()
-
-        # delbl all
-        if target == "all":
-            await self.save_blacklist(set())
-
-            await self.respond(
-                event,
-                f"✅ <b>Semua blacklist dihapus</b>\n"
-                f"<code>{len(blacklist)}</code> chat",
-                revoke=3,
-            )
-            return
-
-        try:
-            chat_id = int(target)
-        except ValueError:
-            await self.respond(
-                event,
-                "<code>ID chat tidak valid.</code>",
-                revoke=3,
-            )
-            return
-
-        if chat_id not in blacklist:
-            await self.respond(
-                event,
-                f"<code>{chat_id}</code> tidak ada di blacklist.",
-                revoke=3,
-            )
-            return
-
-        blacklist.remove(chat_id)
-        await self.save_blacklist(blacklist)
-
-        await self.respond(
-            event,
-            f"✅ <b>Blacklist dihapus</b>\n"
-            f"<code>{chat_id}</code>",
-            revoke=3,
-        )
