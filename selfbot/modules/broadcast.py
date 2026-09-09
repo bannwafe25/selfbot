@@ -7,12 +7,11 @@ from pyrogram.types import Message
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
-from selfbot.database import dB
 
 
 class Broadcast(Module):
     name = "Broadcast"
-    cmds = "bc {groups|all} (reply pesan)"
+    cmds = "bc {groups|all} | addbl | delbl"
     desc = {
         "groups": "Kirim ke semua grup & channel tempat kamu member",
         "all": "Kirim ke semua grup + chat pribadi",
@@ -22,10 +21,39 @@ class Broadcast(Module):
     }
 
     # =========================
+    # DATABASE BLACKLIST
+    # =========================
+
+    async def get_blacklist(self):
+        doc = await self.client.db.broadcast_blacklist.find_one(
+            {"_id": self.client.me.id}
+        )
+
+        if not doc:
+            return set()
+
+        return set(doc.get("chat_ids", []))
+
+    async def save_blacklist(self, blacklist):
+        await self.client.db.broadcast_blacklist.update_one(
+            {"_id": self.client.me.id},
+            {
+                "$set": {
+                    "chat_ids": list(blacklist),
+                }
+            },
+            upsert=True,
+        )
+
+    # =========================
     # BROADCAST
     # =========================
 
-    @handler(filters.regex(r"^bc\s( groups| all)$".replace(" ", "")) & reply, 1)
+    @handler(
+        filters.regex(r"^bc\s( groups| all)$".replace(" ", ""))
+        & reply,
+        1,
+    )
     async def on_message_out(self, event: Message) -> None:
         mode = (event.text or event.caption).split()[-1]
         rep = event.reply_to_message
@@ -37,15 +65,7 @@ class Broadcast(Module):
 
         now = datetime.datetime.now(datetime.UTC)
 
-        # Ambil blacklist
-        blacklist = await dB.get_list_from_var(
-            event._client.me.id,
-            "BLACKLIST_GCAST",
-        )
-
-        # Pastikan blacklist berupa set agar pengecekan cepat
-        blacklist = set(map(str, blacklist))
-
+        blacklist = await self.get_blacklist()
         targets = []
 
         async for dialog in event._client.get_dialogs():
@@ -56,7 +76,7 @@ class Broadcast(Module):
                 continue
 
             # Skip blacklist
-            if str(chat_id) in blacklist:
+            if chat_id in blacklist:
                 continue
 
             if mode == "groups":
@@ -135,24 +155,18 @@ class Broadcast(Module):
         else:
             chat_id = event.chat.id
 
-        blacklist = await dB.get_list_from_var(
-            event._client.me.id,
-            "BLACKLIST_GCAST",
-        )
+        blacklist = await self.get_blacklist()
 
-        if str(chat_id) in map(str, blacklist):
+        if chat_id in blacklist:
             await self.respond(
                 event,
-                f"<code>{chat_id}</code> sudah ada di blacklist.",
+                f"🚫 <code>{chat_id}</code> sudah ada di blacklist.",
                 revoke=3,
             )
             return
 
-        await dB.add_to_var(
-            event._client.me.id,
-            "BLACKLIST_GCAST",
-            chat_id,
-        )
+        blacklist.add(chat_id)
+        await self.save_blacklist(blacklist)
 
         await self.respond(
             event,
@@ -169,15 +183,13 @@ class Broadcast(Module):
     async def delbl_cmd(self, event: Message) -> None:
         parts = (event.text or event.caption or "").split()
 
-        blacklist = await dB.get_list_from_var(
-            event._client.me.id,
-            "BLACKLIST_GCAST",
-        )
+        blacklist = await self.get_blacklist()
 
-        if not parts or len(parts) == 1:
+        # delbl
+        if len(parts) == 1:
             chat_id = event.chat.id
 
-            if str(chat_id) not in map(str, blacklist):
+            if chat_id not in blacklist:
                 await self.respond(
                     event,
                     f"<code>{chat_id}</code> tidak ada di blacklist.",
@@ -185,11 +197,8 @@ class Broadcast(Module):
                 )
                 return
 
-            await dB.remove_from_var(
-                event._client.me.id,
-                "BLACKLIST_GCAST",
-                chat_id,
-            )
+            blacklist.remove(chat_id)
+            await self.save_blacklist(blacklist)
 
             await self.respond(
                 event,
@@ -201,14 +210,9 @@ class Broadcast(Module):
 
         target = parts[1].lower()
 
-        # Hapus semua
+        # delbl all
         if target == "all":
-            for chat_id in list(blacklist):
-                await dB.remove_from_var(
-                    event._client.me.id,
-                    "BLACKLIST_GCAST",
-                    chat_id,
-                )
+            await self.save_blacklist(set())
 
             await self.respond(
                 event,
@@ -228,7 +232,7 @@ class Broadcast(Module):
             )
             return
 
-        if str(chat_id) not in map(str, blacklist):
+        if chat_id not in blacklist:
             await self.respond(
                 event,
                 f"<code>{chat_id}</code> tidak ada di blacklist.",
@@ -236,11 +240,8 @@ class Broadcast(Module):
             )
             return
 
-        await dB.remove_from_var(
-            event._client.me.id,
-            "BLACKLIST_GCAST",
-            chat_id,
-        )
+        blacklist.remove(chat_id)
+        await self.save_blacklist(blacklist)
 
         await self.respond(
             event,
