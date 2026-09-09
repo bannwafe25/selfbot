@@ -8,7 +8,7 @@ from pyrogram.types import Message
 
 from selfbot.listener import handler
 from selfbot.module import Module
-from selfbot.apis import SANKA_ANIMEQUOTE, SANKA_APIKEY
+from selfbot.apis import FERDEV_ANIMEQUOTE, FERDEV_APIKEY
 
 pattern = re.compile(r"^animequote(?:\s+)?$", re.IGNORECASE)
 
@@ -28,8 +28,8 @@ class AnimeQuote(Module):
 
         try:
             resp = await self.client.http.get(
-                SANKA_ANIMEQUOTE,
-                params={"apikey": SANKA_APIKEY},
+                FERDEV_ANIMEQUOTE,
+                params={"apikey": FERDEV_APIKEY},
                 timeout=15,
             )
             if resp.status_code != 200:
