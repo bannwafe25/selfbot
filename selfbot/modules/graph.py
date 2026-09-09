@@ -22,34 +22,81 @@ class Graph(Module):
         "e.g.": "<Reply> graph -t Hello, World!",
     }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.graph = None
+
     async def on_starting(self) -> None:
-        self.graph = Telegraph(access_token=None, domain="graph.org")
         try:
-            await self.graph.create_account(short_name=self.client.bot.me.username)
+            self.graph = Telegraph(
+                access_token=None,
+                domain="graph.org",
+            )
+
+            await self.graph.create_account(
+                short_name=self.client.bot.me.username or "Selfbot"
+            )
+
+            self.logger.info("Telegraph account berhasil dibuat.")
+
         except Exception as e:
-            self.logger.error(f"{e.__class__.__name__}: {e}")
-            self.client.unload(self)
+            self.graph = None
+            self.logger.error(
+                f"Telegraph init gagal: {e.__class__.__name__}: {e}"
+            )
 
     @handler(filters.regex(pattern) & reply, 1)
     async def on_message_out(self, event: Message) -> None:
+        if self.graph is None:
+            await self.respond(
+                event,
+                "<code>Telegraph belum siap. Cek log selfbot.</code>",
+                revoke=3,
+            )
+            return
+
         if not event.reply_to_message.content:
-            await self.respond(event, "<code>Reply to Content</code>", revoke=2.5)
+            await self.respond(
+                event,
+                "<code>Reply to Content</code>",
+                revoke=2.5,
+            )
             return
 
         await self.respond(event, "<code>...</code>")
-        content, (title,) = (
-            event.reply_to_message.content.html.replace("\n", "<br>"),
-            pattern.match(event.content).groups(),
+
+        match = pattern.match(event.content)
+        title = match.group(1) if match else None
+
+        content = event.reply_to_message.content.html.replace(
+            "\n",
+            "<br>",
         )
-        content = re.sub(r"<emoji id=\"\d+\">(.*?)</emoji>", r"\1", content)
-        content = re.sub(r"</?spoiler\b[^>]*>", "", content)
+
+        content = re.sub(
+            r"<emoji id=\"\d+\">(.*?)</emoji>",
+            r"\1",
+            content,
+        )
+
+        content = re.sub(
+            r"</?spoiler\b[^>]*>",
+            "",
+            content,
+        )
+
         content = re.sub(
             r"(?<!\S)@([a-zA-Z0-9_]{5,32})(?!\S)",
             r"<a href='https://t.me/\1'>@\1</a>",
             content,
         )
-        if event.reply_to_message.web_page and event.reply_to_message.web_page.photo:
+
+        if (
+            event.reply_to_message.web_page
+            and event.reply_to_message.web_page.photo
+        ):
             img = event.reply_to_message.web_page.url
+
             if (
                 event.reply_to_message.link_preview_options
                 and event.reply_to_message.link_preview_options.show_above_text
@@ -59,6 +106,7 @@ class Graph(Module):
                 content = f"{content}<img src='{img}'>"
 
         now = datetime.datetime.now(datetime.UTC)
+
         try:
             res = await self.graph.create_page(
                 title or "Untitled",
@@ -66,15 +114,28 @@ class Graph(Module):
                 author_name="Telegraph",
                 author_url="https://t.me/Telegraph",
             )
+
             url = res["url"]
+
         except Exception as e:
             await self.respond(
-                event, self.fmtmsg(e.__class__.__name__, str(e), self.fmtsec(now))
+                event,
+                self.fmtmsg(
+                    e.__class__.__name__,
+                    str(e),
+                    self.fmtsec(now),
+                ),
             )
             return
 
-        if event.chat.type in (ChatType.PRIVATE, ChatType.BOT) or (
-            event.chat.type not in (ChatType.PRIVATE, ChatType.BOT)
+        if event.chat.type in (
+            ChatType.PRIVATE,
+            ChatType.BOT,
+        ) or (
+            event.chat.type not in (
+                ChatType.PRIVATE,
+                ChatType.BOT,
+            )
             and (
                 event.chat.admin_privileges
                 or (
@@ -100,7 +161,10 @@ class Graph(Module):
             event,
             self.fmtmsg(
                 "Graph Page",
-                {"Link": url, "Title": title or "Untitled"},
+                {
+                    "Link": url,
+                    "Title": title or "Untitled",
+                },
                 self.fmtsec(now),
             ),
         )
