@@ -16,8 +16,8 @@ DELINE_SCREENSHOT = f"{DELINE_BASE}/tools/screenshot"
 DELINE_PPCOUPLE = f"{DELINE_BASE}/random/ppcouple"
 
 # ── Ferdev APIs ──────────────────────────────────────────────────────
-FERDEV_ANIMEQUOTE = "https://api.ferdev.my.id/random/animequote"
-FERDEV_APIKEY = "key_iOPE5w"
+FERDEV_ANIMEQUOTE = "https://api.ferdev.me/random/animequote"
+FERDEV_APIKEY = "fdv_fnDur2gG2m4dq2uBPzf-nw"
 FERDEV_YTMP3 = "https://api.ferdev.my.id/downloader/ytmp3"
 
 # ── Sanka Vollerei APIs ──────────────────────────────────────────────
