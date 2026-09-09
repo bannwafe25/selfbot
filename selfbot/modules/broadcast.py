@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import re
 
 from pyrogram import enums, filters
 from pyrogram.errors import FloodWait, RPCError
@@ -7,6 +8,17 @@ from pyrogram.types import Message
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
+
+
+bc_pattern = re.compile(
+    r"^bc\s+(groups|all)$",
+    re.IGNORECASE,
+)
+
+blacklist_pattern = re.compile(
+    r"^(addbl|delbl)(?:\s+(-?\d+|all))?$",
+    re.IGNORECASE,
+)
 
 
 class Broadcast(Module):
@@ -20,11 +32,11 @@ class Broadcast(Module):
         "e.g.": "reply pesan, lalu ketik: bc groups",
     }
 
-    # =========================
+    # =========================================================
     # DATABASE BLACKLIST
-    # =========================
+    # =========================================================
 
-    async def get_blacklist(self):
+    async def get_blacklist(self) -> set[int]:
         doc = await self.client.db.broadcast_blacklist.find_one(
             {"_id": self.client.me.id}
         )
@@ -34,7 +46,7 @@ class Broadcast(Module):
 
         return set(doc.get("chat_ids", []))
 
-    async def save_blacklist(self, blacklist):
+    async def save_blacklist(self, blacklist: set[int]) -> None:
         await self.client.db.broadcast_blacklist.update_one(
             {"_id": self.client.me.id},
             {
@@ -45,18 +57,26 @@ class Broadcast(Module):
             upsert=True,
         )
 
-    # =========================
+    # =========================================================
     # BROADCAST
-    # =========================
+    # =========================================================
 
     @handler(
-        filters.regex(r"^bc\s+(groups|all)$") & reply,
+        filters.regex(bc_pattern) & reply,
         1,
     )
     async def on_message_out(self, event: Message) -> None:
-        text = event.text or event.caption or ""
-        mode = text.strip().split()[-1].lower()
+        content = str(event.content or "").strip()
+
+        match = bc_pattern.match(content)
+        if not match:
+            return
+
+        mode = match.group(1).lower()
         rep = event.reply_to_message
+
+        if not rep:
+            return
 
         msg = await self.respond(
             event,
@@ -72,23 +92,23 @@ class Broadcast(Module):
             chat = dialog.chat
             chat_id = chat.id
 
-            # Skip akun sendiri
+            # Jangan kirim ke akun sendiri
             if chat_id == event._client.me.id:
                 continue
 
-            # Skip blacklist
+            # Jangan kirim ke blacklist
             if chat_id in blacklist:
                 continue
 
             if mode == "groups":
-                if chat.type in (
+                if chat.type not in (
                     enums.ChatType.GROUP,
                     enums.ChatType.SUPERGROUP,
                     enums.ChatType.CHANNEL,
                 ):
-                    targets.append(dialog)
-            else:
-                targets.append(dialog)
+                    continue
+
+            targets.append(dialog)
 
         total = len(targets)
         ok = 0
@@ -135,40 +155,31 @@ class Broadcast(Module):
             f"  <code>Waktu </code> : <code>{dur:.1f}s</code>"
         )
 
-    # =========================
+    # =========================================================
     # ADD / DELETE BLACKLIST
-    # =========================
+    # =========================================================
 
     @handler(
-        filters.regex(r"^(?:addbl|delbl)(?:\s+(?:-?\d+|all))?$"),
+        filters.regex(blacklist_pattern),
         1,
     )
     async def blacklist_cmd(self, event: Message) -> None:
-        text = event.text or event.caption or ""
+        content = str(event.content or "").strip()
 
-        # Normalisasi
-        parts = text.strip().split()
-
-        if not parts:
+        match = blacklist_pattern.match(content)
+        if not match:
             return
 
-        command = parts[0].lower()
+        command = match.group(1).lower()
+        value = match.group(2)
 
-        # =========================
+        # =====================================================
         # ADD BLACKLIST
-        # =========================
+        # =====================================================
 
         if command == "addbl":
-            if len(parts) > 1:
-                try:
-                    chat_id = int(parts[1])
-                except ValueError:
-                    await self.respond(
-                        event,
-                        "<code>ID chat tidak valid.</code>",
-                        revoke=3,
-                    )
-                    return
+            if value and value.lower() != "all":
+                chat_id = int(value)
             else:
                 chat_id = event.chat.id
 
@@ -183,52 +194,48 @@ class Broadcast(Module):
                 return
 
             blacklist.add(chat_id)
+
             await self.save_blacklist(blacklist)
 
             await self.respond(
                 event,
-                f"🚫 <b>Blacklist ditambahkan</b>\n"
-                f"<code>{chat_id}</code>\n\n"
-                f"Total blacklist: <code>{len(blacklist)}</code>",
+                (
+                    "🚫 <b>Blacklist ditambahkan</b>\n"
+                    f"<code>{chat_id}</code>\n\n"
+                    f"Total blacklist: <code>{len(blacklist)}</code>"
+                ),
                 revoke=3,
             )
             return
 
-        # =========================
+        # =====================================================
         # DELETE BLACKLIST
-        # =========================
+        # =====================================================
 
         if command == "delbl":
             blacklist = await self.get_blacklist()
 
             # delbl all
-            if len(parts) > 1 and parts[1].lower() == "all":
+            if value and value.lower() == "all":
                 total = len(blacklist)
 
                 await self.save_blacklist(set())
 
                 await self.respond(
                     event,
-                    f"✅ <b>Semua blacklist dihapus</b>\n"
-                    f"<code>{total}</code> chat",
+                    (
+                        "✅ <b>Semua blacklist dihapus</b>\n"
+                        f"<code>{total}</code> chat"
+                    ),
                     revoke=3,
                 )
                 return
 
-            # delbl <id>
-            if len(parts) > 1:
-                try:
-                    chat_id = int(parts[1])
-                except ValueError:
-                    await self.respond(
-                        event,
-                        "<code>ID chat tidak valid.</code>",
-                        revoke=3,
-                    )
-                    return
-            else:
-                # delbl tanpa ID = chat sekarang
+            # delbl tanpa ID = chat sekarang
+            if not value:
                 chat_id = event.chat.id
+            else:
+                chat_id = int(value)
 
             if chat_id not in blacklist:
                 await self.respond(
@@ -239,12 +246,15 @@ class Broadcast(Module):
                 return
 
             blacklist.remove(chat_id)
+
             await self.save_blacklist(blacklist)
 
             await self.respond(
                 event,
-                f"✅ <b>Blacklist dihapus</b>\n"
-                f"<code>{chat_id}</code>\n\n"
-                f"Sisa blacklist: <code>{len(blacklist)}</code>",
+                (
+                    "✅ <b>Blacklist dihapus</b>\n"
+                    f"<code>{chat_id}</code>\n\n"
+                    f"Sisa blacklist: <code>{len(blacklist)}</code>"
+                ),
                 revoke=3,
             )
