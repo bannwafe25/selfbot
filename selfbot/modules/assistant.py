@@ -3,6 +3,8 @@ import html
 import time
 from collections import defaultdict, deque
 
+from pyrogram import filters
+
 from selfbot.listener import handler
 from selfbot.module import Module
 
@@ -22,6 +24,7 @@ class Assistant(Module):
         self.api_key = None
         self.model = self.DEFAULT_MODEL
 
+        # History dipisahkan berdasarkan chat ID.
         self.history = defaultdict(
             lambda: deque(
                 maxlen=self.MAX_HISTORY
@@ -31,6 +34,10 @@ class Assistant(Module):
         self.lock = asyncio.Lock()
 
     async def on_starting(self):
+        """
+        Load konfigurasi AI ketika module dimulai.
+        """
+
         self.api_key = (
             await self.getvar("AI_API_KEY")
             or await self.getvar("API_SERVER_KEY")
@@ -51,15 +58,31 @@ class Assistant(Module):
                 "AI_API_KEY / API_SERVER_KEY belum tersedia."
             )
 
-        if not getattr(self.client, "assistant", None):
+        if not getattr(
+            self.client,
+            "assistant",
+            None,
+        ):
             self.log.warning(
                 "Telegram Assistant account belum aktif."
             )
 
     def _chat_id(self, message):
-        chat = getattr(message, "chat", None)
+        """
+        Mendapatkan chat ID dari message.
+        """
 
-        if chat and getattr(chat, "id", None):
+        chat = getattr(
+            message,
+            "chat",
+            None,
+        )
+
+        if chat and getattr(
+            chat,
+            "id",
+            None,
+        ):
             return str(chat.id)
 
         return str(
@@ -71,6 +94,10 @@ class Assistant(Module):
         )
 
     async def _reply_text(self, message):
+        """
+        Mengambil text/caption dari pesan yang direply.
+        """
+
         reply = getattr(
             message,
             "reply_to_message",
@@ -96,9 +123,15 @@ class Assistant(Module):
         if not text:
             return None
 
-        return str(text)[:self.MAX_PROMPT_LENGTH]
+        return str(text)[
+            :self.MAX_PROMPT_LENGTH
+        ]
 
     async def _ask(self, messages):
+        """
+        Request ke OpenAI-compatible API.
+        """
+
         if not self.api_key:
             raise RuntimeError(
                 "API key AI belum dikonfigurasi."
@@ -129,10 +162,12 @@ class Assistant(Module):
         if response.status_code != 200:
             try:
                 data = response.json()
+
                 error = data.get(
                     "error",
                     data,
                 )
+
             except Exception:
                 error = response.text
 
@@ -143,7 +178,9 @@ class Assistant(Module):
 
         data = response.json()
 
-        choices = data.get("choices")
+        choices = data.get(
+            "choices"
+        )
 
         if not choices:
             raise RuntimeError(
@@ -156,29 +193,97 @@ class Assistant(Module):
             .get("content")
         )
 
-        if isinstance(answer, list):
+        # Beberapa API mengembalikan content
+        # sebagai list.
+        if isinstance(
+            answer,
+            list,
+        ):
             parts = []
 
             for item in answer:
-                if isinstance(item, dict):
-                    text = item.get("text")
+                if isinstance(
+                    item,
+                    dict,
+                ):
+                    text = item.get(
+                        "text"
+                    )
 
                     if text:
                         parts.append(
                             str(text)
                         )
 
-            answer = "\n".join(parts)
+            answer = "\n".join(
+                parts
+            )
 
         if not answer:
             raise RuntimeError(
                 "Jawaban AI kosong."
             )
 
-        return str(answer).strip()
+        return str(
+            answer
+        ).strip()
+
+    async def _send_answer(
+        self,
+        chat_id,
+        answer,
+        reply_to_message_id=None,
+    ):
+        """
+        Mengirim jawaban menggunakan akun Assistant.
+        """
+
+        assistant = getattr(
+            self.client,
+            "assistant",
+            None,
+        )
+
+        if not assistant:
+            raise RuntimeError(
+                "Telegram Assistant account belum aktif."
+            )
+
+        kwargs = {
+            "chat_id": int(chat_id),
+            "text": answer,
+        }
+
+        # Kalau tersedia message ID,
+        # kirim sebagai reply.
+        if reply_to_message_id:
+            kwargs[
+                "reply_to_message_id"
+            ] = reply_to_message_id
+
+        try:
+            return await assistant.send_message(
+                **kwargs
+            )
+
+        except TypeError:
+            # Fallback kalau versi Pyrogram/
+            # client Assistant tidak menerima
+            # reply_to_message_id.
+            kwargs.pop(
+                "reply_to_message_id",
+                None,
+            )
+
+            return await assistant.send_message(
+                **kwargs
+            )
 
     @handler(
-        r"^(?:ai|assistant)(?:\s+([\s\S]+))?$",
+        filters.regex(
+            r"^(?:ai|assistant)(?:\s+([\s\S]+))?$"
+        ),
+        1,
     )
     async def ai(
         self,
@@ -187,8 +292,19 @@ class Assistant(Module):
         match,
     ):
         """
+        Penggunaan:
+
         .ai pertanyaan
         .assistant pertanyaan
+
+        Reply pesan:
+
+        .ai
+        .assistant
+
+        Reply + pertanyaan:
+
+        .ai jelaskan pesan ini
         """
 
         if not getattr(
@@ -203,8 +319,32 @@ class Assistant(Module):
             )
             return
 
-        prompt = match.group(1)
+        prompt = (
+            match.group(1)
+            if match
+            else None
+        )
 
+        if prompt:
+            prompt = str(
+                prompt
+            ).strip()
+
+        reply_context = await self._reply_text(
+            message
+        )
+
+        # Kalau tidak ada prompt tetapi
+        # message merupakan reply, gunakan
+        # pesan yang direply sebagai prompt.
+        if not prompt and reply_context:
+            prompt = (
+                "Tolong jawab atau jelaskan "
+                "pesan berikut:\n\n"
+                f"{reply_context}"
+            )
+
+        # Tidak ada prompt dan tidak ada reply.
         if not prompt:
             await message.edit(
                 "<b>🤖 AI Assistant</b>\n\n"
@@ -215,21 +355,24 @@ class Assistant(Module):
             )
             return
 
-        prompt = str(prompt).strip()
-
         if len(prompt) > self.MAX_PROMPT_LENGTH:
             prompt = (
-                prompt[:self.MAX_PROMPT_LENGTH]
+                prompt[
+                    :self.MAX_PROMPT_LENGTH
+                ]
                 + "\n...[dipotong]"
             )
 
-        chat_id = self._chat_id(message)
-
-        reply_context = await self._reply_text(
-            message
-        )
-
-        if reply_context:
+        # Kalau user memberikan pertanyaan
+        # sambil mereply pesan, gabungkan context.
+        if (
+            reply_context
+            and prompt
+            and not prompt.startswith(
+                "Tolong jawab atau jelaskan "
+                "pesan berikut:"
+            )
+        ):
             prompt = (
                 "Pesan yang direply:\n"
                 f"{reply_context}\n\n"
@@ -237,13 +380,20 @@ class Assistant(Module):
                 f"{prompt}"
             )
 
+        chat_id = self._chat_id(
+            message
+        )
+
         system_prompt = (
             "Kamu adalah AI Assistant Telegram. "
             "Jawab dengan jelas, membantu, dan langsung. "
             "Gunakan bahasa yang sama dengan pengguna. "
-            "Jangan memberikan jawaban yang tidak perlu."
+            "Jangan memberikan jawaban yang tidak perlu. "
+            "Jika pengguna menggunakan bahasa Indonesia, "
+            "jawab dalam bahasa Indonesia."
         )
 
+        # Ambil history.
         async with self.lock:
             previous = list(
                 self.history[chat_id]
@@ -256,7 +406,9 @@ class Assistant(Module):
             }
         ]
 
-        messages.extend(previous)
+        messages.extend(
+            previous
+        )
 
         messages.append(
             {
@@ -281,32 +433,47 @@ class Assistant(Module):
                 - started
             )
 
+            # Simpan history setelah AI
+            # berhasil memberikan jawaban.
             async with self.lock:
-                self.history[chat_id].append(
+                self.history[
+                    chat_id
+                ].append(
                     {
                         "role": "user",
                         "content": prompt,
                     }
                 )
 
-                self.history[chat_id].append(
+                self.history[
+                    chat_id
+                ].append(
                     {
                         "role": "assistant",
                         "content": answer,
                     }
                 )
 
-            # Kirim jawaban menggunakan AKUN 2.
-            await self.client.assistant.send_message(
-                chat_id=int(chat_id),
-                text=answer,
+            # ID pesan asli untuk reply.
+            message_id = getattr(
+                message,
+                "id",
+                None,
+            )
+
+            # Kirim melalui akun Assistant.
+            await self._send_answer(
+                chat_id=chat_id,
+                answer=answer,
+                reply_to_message_id=message_id,
             )
 
             await message.edit(
                 "✅ <b>AI Assistant</b>\n\n"
                 "Jawaban sudah dikirim oleh "
                 "<b>akun Assistant</b>.\n\n"
-                f"⏱ {elapsed:.1f}s"
+                f"🤖 <code>{self.model}</code>\n"
+                f"⏱ <code>{elapsed:.1f}s</code>"
             )
 
         except Exception as e:
@@ -330,7 +497,10 @@ class Assistant(Module):
             )
 
     @handler(
-        r"^(?:aiclear|aiclearall)$",
+        filters.regex(
+            r"^(?:aiclear)$"
+        ),
+        1,
     )
     async def clear(
         self,
@@ -338,14 +508,66 @@ class Assistant(Module):
         message,
         match,
     ):
-        chat_id = self._chat_id(message)
+        """
+        .aiclear
+
+        Membersihkan history chat saat ini.
+        """
+
+        chat_id = self._chat_id(
+            message
+        )
 
         async with self.lock:
+            existed = (
+                chat_id
+                in self.history
+            )
+
             self.history.pop(
                 chat_id,
                 None,
             )
 
+        if existed:
+            await message.edit(
+                "🧹 <b>AI history chat ini "
+                "berhasil dibersihkan.</b>"
+            )
+        else:
+            await message.edit(
+                "🧹 <b>Tidak ada AI history "
+                "di chat ini.</b>"
+            )
+
+    @handler(
+        filters.regex(
+            r"^(?:aiclearall)$"
+        ),
+        1,
+    )
+    async def clear_all(
+        self,
+        client,
+        message,
+        match,
+    ):
+        """
+        .aiclearall
+
+        Membersihkan seluruh history AI
+        yang tersimpan di memory.
+        """
+
+        async with self.lock:
+            count = len(
+                self.history
+            )
+
+            self.history.clear()
+
         await message.edit(
-            "🧹 <b>AI history dibersihkan.</b>"
+            "🧹 <b>Semua AI history "
+            "berhasil dibersihkan.</b>\n\n"
+            f"Chat dibersihkan: <code>{count}</code>"
         )
