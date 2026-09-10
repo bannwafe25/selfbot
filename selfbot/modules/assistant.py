@@ -16,6 +16,12 @@ logger = logging.getLogger(__name__)
 class Assistant(Module):
     name = "AI Assistant"
 
+    cmds = "ai|assistant {query}"
+    desc = {
+        "query": "Pertanyaan untuk AI. Bisa juga reply pesan lalu gunakan ai/assistant.",
+        "e.g.": "ai jelaskan cara kerja Python",
+    }
+
     API_URL = "https://www.zpkece.cloud/v1/chat/completions"
     DEFAULT_MODEL = "zp/deepseek/deepseek-v4-flash"
 
@@ -33,9 +39,7 @@ class Assistant(Module):
         self.model = self.DEFAULT_MODEL
 
         self.history = defaultdict(
-            lambda: deque(
-                maxlen=self.MAX_HISTORY
-            )
+            lambda: deque(maxlen=self.MAX_HISTORY)
         )
 
         self.lock = asyncio.Lock()
@@ -61,27 +65,15 @@ class Assistant(Module):
                 "AI_API_KEY / API_SERVER_KEY belum tersedia."
             )
 
-        if not getattr(
-            self.client,
-            "assistant",
-            None,
-        ):
+        if not getattr(self.client, "assistant", None):
             logger.warning(
                 "Telegram Assistant account belum aktif."
             )
 
     def _chat_id(self, message):
-        chat = getattr(
-            message,
-            "chat",
-            None,
-        )
+        chat = getattr(message, "chat", None)
 
-        if chat and getattr(
-            chat,
-            "id",
-            None,
-        ):
+        if chat and getattr(chat, "id", None):
             return str(chat.id)
 
         return str(
@@ -118,9 +110,7 @@ class Assistant(Module):
         if not text:
             return None
 
-        return str(text)[
-            :self.MAX_PROMPT_LENGTH
-        ]
+        return str(text)[:self.MAX_PROMPT_LENGTH]
 
     async def _ask(self, messages):
         if not self.api_key:
@@ -136,9 +126,7 @@ class Assistant(Module):
         }
 
         headers = {
-            "Authorization": (
-                f"Bearer {self.api_key}"
-            ),
+            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
@@ -153,25 +141,17 @@ class Assistant(Module):
         if response.status_code != 200:
             try:
                 data = response.json()
-
-                error = data.get(
-                    "error",
-                    data,
-                )
-
+                error = data.get("error", data)
             except Exception:
                 error = response.text
 
             raise RuntimeError(
-                f"HTTP {response.status_code}: "
-                f"{error}"
+                f"HTTP {response.status_code}: {error}"
             )
 
         data = response.json()
 
-        choices = data.get(
-            "choices"
-        )
+        choices = data.get("choices")
 
         if not choices:
             raise RuntimeError(
@@ -184,38 +164,24 @@ class Assistant(Module):
             .get("content")
         )
 
-        if isinstance(
-            answer,
-            list,
-        ):
+        if isinstance(answer, list):
             parts = []
 
             for item in answer:
-                if isinstance(
-                    item,
-                    dict,
-                ):
-                    text = item.get(
-                        "text"
-                    )
+                if isinstance(item, dict):
+                    text = item.get("text")
 
                     if text:
-                        parts.append(
-                            str(text)
-                        )
+                        parts.append(str(text))
 
-            answer = "\n".join(
-                parts
-            )
+            answer = "\n".join(parts)
 
         if not answer:
             raise RuntimeError(
                 "Jawaban AI kosong."
             )
 
-        return str(
-            answer
-        ).strip()
+        return str(answer).strip()
 
     async def _send_answer(
         self,
@@ -240,9 +206,9 @@ class Assistant(Module):
         }
 
         if reply_to_message_id:
-            kwargs[
-                "reply_to_message_id"
-            ] = reply_to_message_id
+            kwargs["reply_to_message_id"] = (
+                reply_to_message_id
+            )
 
         try:
             return await assistant.send_message(
@@ -297,9 +263,7 @@ class Assistant(Module):
             prompt = match.group(1)
 
         if prompt:
-            prompt = str(
-                prompt
-            ).strip()
+            prompt = str(prompt).strip()
 
         reply_context = await self._reply_text(
             message
@@ -324,9 +288,7 @@ class Assistant(Module):
 
         if len(prompt) > self.MAX_PROMPT_LENGTH:
             prompt = (
-                prompt[
-                    :self.MAX_PROMPT_LENGTH
-                ]
+                prompt[:self.MAX_PROMPT_LENGTH]
                 + "\n...[dipotong]"
             )
 
@@ -344,9 +306,7 @@ class Assistant(Module):
                 f"{prompt}"
             )
 
-        chat_id = self._chat_id(
-            message
-        )
+        chat_id = self._chat_id(message)
 
         system_prompt = (
             "Kamu adalah AI Assistant Telegram. "
@@ -367,9 +327,7 @@ class Assistant(Module):
             }
         ]
 
-        messages.extend(
-            previous
-        )
+        messages.extend(previous)
 
         messages.append(
             {
@@ -395,18 +353,14 @@ class Assistant(Module):
             )
 
             async with self.lock:
-                self.history[
-                    chat_id
-                ].append(
+                self.history[chat_id].append(
                     {
                         "role": "user",
                         "content": prompt,
                     }
                 )
 
-                self.history[
-                    chat_id
-                ].append(
+                self.history[chat_id].append(
                     {
                         "role": "assistant",
                         "content": answer,
@@ -438,15 +392,10 @@ class Assistant(Module):
                 "AI Assistant error"
             )
 
-            error = html.escape(
-                str(e)
-            )
+            error = html.escape(str(e))
 
             if len(error) > 1500:
-                error = (
-                    error[:1500]
-                    + "..."
-                )
+                error = error[:1500] + "..."
 
             await message.edit(
                 "❌ <b>AI Assistant Error</b>\n\n"
@@ -463,15 +412,10 @@ class Assistant(Module):
         message,
         match,
     ):
-        chat_id = self._chat_id(
-            message
-        )
+        chat_id = self._chat_id(message)
 
         async with self.lock:
-            existed = (
-                chat_id
-                in self.history
-            )
+            existed = chat_id in self.history
 
             self.history.pop(
                 chat_id,
@@ -500,10 +444,7 @@ class Assistant(Module):
         match,
     ):
         async with self.lock:
-            count = len(
-                self.history
-            )
-
+            count = len(self.history)
             self.history.clear()
 
         await message.edit(
