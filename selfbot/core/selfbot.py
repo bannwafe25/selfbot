@@ -16,14 +16,25 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
         super().__init__()
 
     @classmethod
-    async def launch(cls, config: dict, loop: asyncio.AbstractEventLoop) -> Selfbot:
+    async def launch(
+        cls,
+        config: dict,
+        loop: asyncio.AbstractEventLoop,
+    ) -> Selfbot:
+
         selfbot = cls(config)
+
         try:
             selfbot.http = AsyncClient(
-                http2=True, timeout=Timeout(timeout=None), follow_redirects=True
+                http2=True,
+                timeout=Timeout(timeout=None),
+                follow_redirects=True,
             )
+
             selfbot.loop = loop
+
             await selfbot.run()
+
         finally:
             await selfbot.stop()
 
@@ -33,17 +44,31 @@ class Selfbot(Database, Dispatcher, Extender, Telegram):
         try:
             tasks = [
                 self.dispatch("stopping"),
-                self.http.aclose()
+                self.http.aclose(),
             ]
+
             if getattr(self, "app", None):
                 tasks.append(self.app.stop())
+
+            if getattr(self, "assistant", None):
+                tasks.append(self.assistant.stop())
+
             if getattr(self, "bot", None):
                 tasks.append(self.bot.stop())
 
-            await asyncio.gather(*tasks, return_exceptions=True)
+            await asyncio.gather(
+                *tasks,
+                return_exceptions=True,
+            )
+
             await self.close()
+
         except Exception as e:
-            self.logger.error(f"{e.__class__.__name__}: {e}")
+            self.logger.error(
+                f"{e.__class__.__name__}: {e}"
+            )
             raise
 
-        self.logger.info(f"{self.__class__.__name__} Stopped")
+        self.logger.info(
+            f"{self.__class__.__name__} Stopped"
+        )
