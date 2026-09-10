@@ -9,115 +9,44 @@ from selfbot.listener import handler
 from selfbot.module import Module
 
 
+pattern = re.compile(
+    r"^(?:id|cinfo(?:\s+.+)?)$",
+    flags=re.IGNORECASE | re.DOTALL,
+)
+
+
 class ID(Module):
     name = "ID"
     cmds = "id | cinfo {chat}?"
     desc = {
-        "Info": "Show IDs for the current chat/message and detailed chat info.",
-        "chat": "Optional Chat ID or Username.",
+        "Info": "Show IDs for the current chat/message and detailed chat information.",
+        "chat": "Optional. Chat ID or username for cinfo.",
         "e.g.": "id\ncinfo -1001129887931",
     }
 
-    ID_PATTERN = re.compile(
-        r"^id$",
-        re.IGNORECASE,
-    )
+    @handler(filters.regex(pattern), 1)
+    async def on_message_out(self, event: Message) -> None:
+        content = (event.content or "").strip()
 
-    CINFO_PATTERN = re.compile(
-        r"^cinfo(?:\s+(.+))?$",
-        re.IGNORECASE,
-    )
-
-    # =========================================================
-    # CINFO
-    # =========================================================
-
-    @handler(filters.regex(CINFO_PATTERN), 1)
-    async def on_cinfo_cmd(self, event: Message) -> None:
-        match = self.CINFO_PATTERN.match(
-            str(event.content or "").strip()
-        )
-
-        if not match:
+        if re.fullmatch(r"id", content, flags=re.IGNORECASE):
+            await self.id_cmd(event)
             return
 
-        chat_req = match.group(1)
-
-        if chat_req:
-            chat_req = chat_req.strip()
-
-            if chat_req.lstrip("-").isdigit():
-                chat_req = int(chat_req)
-        else:
-            chat_req = event.chat.id
-
-        await self.respond(
-            event,
-            "<code>Fetching chat information...</code>",
+        match = re.fullmatch(
+            r"cinfo(?:\s+(.+))?",
+            content,
+            flags=re.IGNORECASE | re.DOTALL,
         )
 
-        try:
-            chat: Chat = await event._client.get_chat(chat_req)
-
-        except Exception as e:
-            await self.respond(
-                event,
-                f"<b>Error:</b> <code>{html.escape(str(e))}</code>",
-            )
+        if match:
+            await self.cinfo_cmd(event, match.group(1))
             return
 
-        lines = [
-            "<b>Chat Information</b>",
-            self._kv("ID", chat.id),
-            self._kv(
-                "Title",
-                chat.title or chat.first_name or "Unknown",
-            ),
-        ]
-
-        if chat.username:
-            lines.append(
-                self._kv("Username", f"@{chat.username}")
-            )
-
-        if chat.members_count:
-            lines.append(
-                self._kv("Members", chat.members_count)
-            )
-
-        creation_date = await self._get_creation_date(
-            event._client,
-            chat,
-        )
-
-        if creation_date:
-            lines.append(
-                self._kv("Created", creation_date)
-            )
-
-        if chat.type in (
-            enums.ChatType.GROUP,
-            enums.ChatType.SUPERGROUP,
-            enums.ChatType.CHANNEL,
-        ):
-            admin_lines = await self._get_admin_gban_lines(
-                event._client,
-                chat,
-            )
-
-            if admin_lines:
-                lines.append("")
-                lines.append("<b>Admins</b>")
-                lines.extend(admin_lines)
-
-        await self._send_result(event, lines)
-
-    # =========================================================
+    # =========================
     # ID
-    # =========================================================
+    # =========================
 
-    @handler(filters.regex(ID_PATTERN), 2)
-    async def on_id_cmd(self, event: Message) -> None:
+    async def id_cmd(self, event: Message) -> None:
         await self.respond(
             event,
             "<code>Collecting IDs...</code>",
@@ -126,13 +55,16 @@ class ID(Module):
         lines = [
             "<b>ID Information</b>",
             self._kv("Chat ID", event.chat.id),
-            self._kv("Message ID", event.id),
         ]
 
         if getattr(event.chat, "dc_id", None):
             lines.append(
                 self._kv("Chat DC", event.chat.dc_id)
             )
+
+        lines.append(
+            self._kv("Message ID", event.id)
+        )
 
         self._append_user_chat_info(
             lines,
@@ -146,7 +78,6 @@ class ID(Module):
             replied = event.reply_to_message
 
             lines.append("")
-
             lines.append(
                 self._kv("Replied Msg ID", replied.id)
             )
@@ -166,9 +97,135 @@ class ID(Module):
 
         await self._send_result(event, lines)
 
-    # =========================================================
+    # =========================
+    # CINFO
+    # =========================
+
+    async def cinfo_cmd(
+        self,
+        event: Message,
+        chat_arg: str | None = None,
+    ) -> None:
+        await self.respond(
+            event,
+            "<code>Fetching chat information...</code>",
+        )
+
+        chat_req = (
+            chat_arg.strip()
+            if chat_arg and chat_arg.strip()
+            else event.chat.id
+        )
+
+        if isinstance(chat_req, str):
+            if chat_req.lstrip("-").isdigit():
+                chat_req = int(chat_req)
+
+        try:
+            chat: Chat = await event._client.get_chat(chat_req)
+
+        except Exception as e:
+            return await self.respond(
+                event,
+                (
+                    "<b>Error:</b>\n"
+                    f"<code>{html.escape(str(e))}</code>"
+                ),
+            )
+
+        # Save chat information if database collection exists.
+        if (
+            hasattr(self.client, "db")
+            and hasattr(self.client.db, "chats")
+        ):
+            try:
+                await self.client.db.chats.update_one(
+                    {"_id": chat.id},
+                    {
+                        "$set": {
+                            "id": chat.id,
+                            "title": (
+                                chat.title
+                                or chat.first_name
+                                or "Unknown"
+                            ),
+                            "username": chat.username,
+                            "type": str(chat.type),
+                        }
+                    },
+                    upsert=True,
+                )
+            except Exception as e:
+                self.logger.debug(
+                    f"Failed to save chat info: {e}"
+                )
+
+        lines = [
+            "<b>Chat Information</b>",
+            self._kv("ID", chat.id),
+            self._kv("Type", chat.type),
+            self._kv(
+                "Title",
+                chat.title
+                or chat.first_name
+                or "Unknown",
+            ),
+        ]
+
+        if chat.username:
+            lines.append(
+                self._kv(
+                    "Username",
+                    f"@{chat.username}",
+                )
+            )
+
+        if getattr(chat, "dc_id", None):
+            lines.append(
+                self._kv("DC", chat.dc_id)
+            )
+
+        if getattr(chat, "members_count", None):
+            lines.append(
+                self._kv(
+                    "Members",
+                    chat.members_count,
+                )
+            )
+
+        creation_date = await self._get_creation_date(
+            event._client,
+            chat,
+        )
+
+        if creation_date:
+            lines.append(
+                self._kv(
+                    "Created",
+                    creation_date,
+                )
+            )
+
+        if chat.type in (
+            enums.ChatType.GROUP,
+            enums.ChatType.SUPERGROUP,
+            enums.ChatType.CHANNEL,
+        ):
+            admin_lines = await self._get_admin_gban_lines(
+                event._client,
+                chat,
+            )
+
+            if admin_lines:
+                lines.append("")
+                lines.append("<b>Admins</b>")
+                lines.extend(admin_lines)
+
+        await self._send_result(event, lines)
+
+    # =========================
     # HELPERS
-    # =========================================================
+    # =========================
 
     async def _send_result(
         self,
@@ -180,8 +237,10 @@ class ID(Module):
         now = datetime.datetime.now(datetime.UTC)
 
         text += (
-            f"\n\n"
-            f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
+            "\n\n"
+            f"<b><blockquote>"
+            f"{self.fmtsec(now)}"
+            f"</blockquote></b>"
         )
 
         await self.respond(event, text)
@@ -194,12 +253,13 @@ class ID(Module):
         if value in (None, ""):
             value = "-"
 
-        value = html.escape(str(value))
+        return (
+            f"<b>{html.escape(str(key))}:</b> "
+            f"<code>{html.escape(str(value))}</code>"
+        )
 
-        return f"<b>{key}:</b> <code>{value}</code>"
-
+    @staticmethod
     async def _get_creation_date(
-        self,
         client,
         chat: Chat,
     ) -> str:
@@ -248,12 +308,15 @@ class ID(Module):
         prefix = "."
 
         if hasattr(self.client, "config"):
-            cfg_prefix = self.client.config.get("prefix")
+            cfg_prefix = self.client.config.get(
+                "prefix",
+                ".",
+            )
 
-            if isinstance(cfg_prefix, list) and cfg_prefix:
-                prefix = cfg_prefix[0]
-
-            elif cfg_prefix:
+            if isinstance(cfg_prefix, list):
+                if cfg_prefix:
+                    prefix = str(cfg_prefix[0])
+            else:
                 prefix = str(cfg_prefix)
 
         try:
@@ -261,29 +324,43 @@ class ID(Module):
                 chat.id,
                 filter=enums.ChatMembersFilter.ADMINISTRATORS,
             ):
-                if member.status == enums.ChatMemberStatus.OWNER:
+                if not member.user:
+                    continue
+
+                if (
+                    member.status
+                    == enums.ChatMemberStatus.OWNER
+                ):
                     lines.append(
-                        f'<code>{prefix}gban '
-                        f'{member.user.id} '
-                        f'"Spamadd[0x0 {chat.id}]"</code>'
+                        (
+                            f'<code>{prefix}gban '
+                            f'{member.user.id} '
+                            f'"Spamadd[0x0 {chat.id}]"'
+                            f"</code>"
+                        )
                     )
 
-                elif member.user and not member.user.is_bot:
+                elif not member.user.is_bot:
                     admins_ids.append(
                         str(member.user.id)
                     )
 
             if admins_ids:
                 lines.append(
-                    f'<code>{prefix}gban '
-                    f'{" ".join(admins_ids)} '
-                    f'"Spamadd[0x1 {chat.id}]"</code>'
+                    (
+                        f'<code>{prefix}gban '
+                        f'{" ".join(admins_ids)} '
+                        f'"Spamadd[0x1 {chat.id}]"'
+                        f"</code>"
+                    )
                 )
 
         except Exception as e:
             lines.append(
-                "<i>Could not fetch admins: "
-                f"{html.escape(str(e))}</i>"
+                (
+                    "<i>Could not fetch admins: "
+                    f"{html.escape(str(e))}</i>"
+                )
             )
 
         return lines
@@ -348,6 +425,7 @@ class ID(Module):
             return
 
         if message.forward_from_message_id:
+            lines.append("")
             lines.append(
                 self._kv(
                     "Forwarded Msg ID",
@@ -421,44 +499,40 @@ class ID(Module):
             )
 
         if getattr(origin, "sender_user", None):
+            user = origin.sender_user
+
             lines.append(
                 self._kv(
                     "Forwarded User ID",
-                    origin.sender_user.id,
+                    user.id,
                 )
             )
 
-            if getattr(
-                origin.sender_user,
-                "dc_id",
-                None,
-            ):
+            if getattr(user, "dc_id", None):
                 lines.append(
                     self._kv(
                         "Forwarded User DC",
-                        origin.sender_user.dc_id,
+                        user.dc_id,
                     )
                 )
 
             return
 
         if getattr(origin, "sender_chat", None):
+            chat = origin.sender_chat
+
             lines.append(
                 self._kv(
                     "Forwarded Chat ID",
-                    origin.sender_chat.id,
+                    chat.id,
                 )
             )
 
-            if getattr(
-                origin.sender_chat,
-                "dc_id",
-                None,
-            ):
+            if getattr(chat, "dc_id", None):
                 lines.append(
                     self._kv(
                         "Forwarded Chat DC",
-                        origin.sender_chat.dc_id,
+                        chat.dc_id,
                     )
                 )
 
@@ -476,4 +550,4 @@ class ID(Module):
                 "Forwarded From",
                 sender_name or "Hidden user",
             )
-        )
+        ).
