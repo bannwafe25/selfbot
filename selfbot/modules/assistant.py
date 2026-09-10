@@ -11,7 +11,7 @@ class Assistant(Module):
     name = "AI Assistant"
 
     API_URL = "https://www.zpkece.cloud/v1/chat/completions"
-    DEFAULT_MODEL = "zp/qwen/qwen3.5-flash:free"
+    DEFAULT_MODEL = "zp/deepseek/deepseek-v4-flash"
 
     MAX_HISTORY = 12
     MAX_PROMPT_LENGTH = 12000
@@ -179,7 +179,6 @@ class Assistant(Module):
 
     @handler(
         r"^(?:ai|assistant)(?:\s+([\s\S]+))?$",
-        outgoing=True,
     )
     async def ai(
         self,
@@ -332,7 +331,6 @@ class Assistant(Module):
 
     @handler(
         r"^(?:aiclear|aiclearall)$",
-        outgoing=True,
     )
     async def clear(
         self,
