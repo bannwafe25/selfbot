@@ -1,5 +1,6 @@
 import asyncio
 import html
+import logging
 import time
 from collections import defaultdict, deque
 
@@ -7,6 +8,9 @@ from pyrogram import filters
 
 from selfbot.listener import handler
 from selfbot.module import Module
+
+
+logger = logging.getLogger(__name__)
 
 
 class Assistant(Module):
@@ -24,7 +28,6 @@ class Assistant(Module):
         self.api_key = None
         self.model = self.DEFAULT_MODEL
 
-        # History dipisahkan berdasarkan chat ID.
         self.history = defaultdict(
             lambda: deque(
                 maxlen=self.MAX_HISTORY
@@ -34,10 +37,6 @@ class Assistant(Module):
         self.lock = asyncio.Lock()
 
     async def on_starting(self):
-        """
-        Load konfigurasi AI ketika module dimulai.
-        """
-
         self.api_key = (
             await self.getvar("AI_API_KEY")
             or await self.getvar("API_SERVER_KEY")
@@ -49,12 +48,12 @@ class Assistant(Module):
         )
 
         if self.api_key:
-            self.log.info(
+            logger.info(
                 "AI Assistant ready | model=%s",
                 self.model,
             )
         else:
-            self.log.warning(
+            logger.warning(
                 "AI_API_KEY / API_SERVER_KEY belum tersedia."
             )
 
@@ -63,15 +62,11 @@ class Assistant(Module):
             "assistant",
             None,
         ):
-            self.log.warning(
+            logger.warning(
                 "Telegram Assistant account belum aktif."
             )
 
     def _chat_id(self, message):
-        """
-        Mendapatkan chat ID dari message.
-        """
-
         chat = getattr(
             message,
             "chat",
@@ -94,10 +89,6 @@ class Assistant(Module):
         )
 
     async def _reply_text(self, message):
-        """
-        Mengambil text/caption dari pesan yang direply.
-        """
-
         reply = getattr(
             message,
             "reply_to_message",
@@ -128,10 +119,6 @@ class Assistant(Module):
         ]
 
     async def _ask(self, messages):
-        """
-        Request ke OpenAI-compatible API.
-        """
-
         if not self.api_key:
             raise RuntimeError(
                 "API key AI belum dikonfigurasi."
@@ -193,8 +180,6 @@ class Assistant(Module):
             .get("content")
         )
 
-        # Beberapa API mengembalikan content
-        # sebagai list.
         if isinstance(
             answer,
             list,
@@ -234,10 +219,6 @@ class Assistant(Module):
         answer,
         reply_to_message_id=None,
     ):
-        """
-        Mengirim jawaban menggunakan akun Assistant.
-        """
-
         assistant = getattr(
             self.client,
             "assistant",
@@ -254,8 +235,6 @@ class Assistant(Module):
             "text": answer,
         }
 
-        # Kalau tersedia message ID,
-        # kirim sebagai reply.
         if reply_to_message_id:
             kwargs[
                 "reply_to_message_id"
@@ -267,9 +246,6 @@ class Assistant(Module):
             )
 
         except TypeError:
-            # Fallback kalau versi Pyrogram/
-            # client Assistant tidak menerima
-            # reply_to_message_id.
             kwargs.pop(
                 "reply_to_message_id",
                 None,
@@ -292,8 +268,6 @@ class Assistant(Module):
         match,
     ):
         """
-        Penggunaan:
-
         .ai pertanyaan
         .assistant pertanyaan
 
@@ -301,10 +275,6 @@ class Assistant(Module):
 
         .ai
         .assistant
-
-        Reply + pertanyaan:
-
-        .ai jelaskan pesan ini
         """
 
         if not getattr(
@@ -334,9 +304,7 @@ class Assistant(Module):
             message
         )
 
-        # Kalau tidak ada prompt tetapi
-        # message merupakan reply, gunakan
-        # pesan yang direply sebagai prompt.
+        # .ai pada pesan reply tanpa prompt.
         if not prompt and reply_context:
             prompt = (
                 "Tolong jawab atau jelaskan "
@@ -344,7 +312,6 @@ class Assistant(Module):
                 f"{reply_context}"
             )
 
-        # Tidak ada prompt dan tidak ada reply.
         if not prompt:
             await message.edit(
                 "<b>🤖 AI Assistant</b>\n\n"
@@ -363,11 +330,9 @@ class Assistant(Module):
                 + "\n...[dipotong]"
             )
 
-        # Kalau user memberikan pertanyaan
-        # sambil mereply pesan, gabungkan context.
+        # Reply + pertanyaan.
         if (
             reply_context
-            and prompt
             and not prompt.startswith(
                 "Tolong jawab atau jelaskan "
                 "pesan berikut:"
@@ -393,7 +358,6 @@ class Assistant(Module):
             "jawab dalam bahasa Indonesia."
         )
 
-        # Ambil history.
         async with self.lock:
             previous = list(
                 self.history[chat_id]
@@ -433,8 +397,6 @@ class Assistant(Module):
                 - started
             )
 
-            # Simpan history setelah AI
-            # berhasil memberikan jawaban.
             async with self.lock:
                 self.history[
                     chat_id
@@ -454,14 +416,12 @@ class Assistant(Module):
                     }
                 )
 
-            # ID pesan asli untuk reply.
             message_id = getattr(
                 message,
                 "id",
                 None,
             )
 
-            # Kirim melalui akun Assistant.
             await self._send_answer(
                 chat_id=chat_id,
                 answer=answer,
@@ -472,12 +432,12 @@ class Assistant(Module):
                 "✅ <b>AI Assistant</b>\n\n"
                 "Jawaban sudah dikirim oleh "
                 "<b>akun Assistant</b>.\n\n"
-                f"🤖 <code>{self.model}</code>\n"
+                f"🤖 <code>{html.escape(self.model)}</code>\n"
                 f"⏱ <code>{elapsed:.1f}s</code>"
             )
 
         except Exception as e:
-            self.log.exception(
+            logger.exception(
                 "AI Assistant error"
             )
 
@@ -498,7 +458,7 @@ class Assistant(Module):
 
     @handler(
         filters.regex(
-            r"^(?:aiclear)$"
+            r"^aiclear$"
         ),
         1,
     )
@@ -508,12 +468,6 @@ class Assistant(Module):
         message,
         match,
     ):
-        """
-        .aiclear
-
-        Membersihkan history chat saat ini.
-        """
-
         chat_id = self._chat_id(
             message
         )
@@ -542,7 +496,7 @@ class Assistant(Module):
 
     @handler(
         filters.regex(
-            r"^(?:aiclearall)$"
+            r"^aiclearall$"
         ),
         1,
     )
@@ -552,13 +506,6 @@ class Assistant(Module):
         message,
         match,
     ):
-        """
-        .aiclearall
-
-        Membersihkan seluruh history AI
-        yang tersimpan di memory.
-        """
-
         async with self.lock:
             count = len(
                 self.history
