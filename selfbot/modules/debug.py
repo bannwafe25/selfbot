@@ -125,7 +125,7 @@ class Debug(Module):
         )
         await self.execute(cmd, msg)
 
-    @handler(filters.private & filters.self_destruct, 2)
+    @handler(filters.private & filters.self_destruction, 2)
     async def on_message_in(self, event: Message) -> None:
         func = getattr(self.client.bot, f"send_{event.media.value}")
         args, media = (func.__annotations__, getattr(event, event.media.value))
