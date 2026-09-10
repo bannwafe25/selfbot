@@ -22,6 +22,10 @@ class Assistant(Module):
     MAX_HISTORY = 12
     MAX_PROMPT_LENGTH = 12000
 
+    AI_PATTERN = r"^(?:ai|assistant)(?:\s+([\s\S]+))?$"
+    CLEAR_PATTERN = r"^aiclear$"
+    CLEAR_ALL_PATTERN = r"^aiclearall$"
+
     def __init__(self, client):
         super().__init__(client)
 
@@ -89,24 +93,24 @@ class Assistant(Module):
         )
 
     async def _reply_text(self, message):
-        reply = getattr(
+        reply_message = getattr(
             message,
             "reply_to_message",
             None,
         )
 
-        if not reply:
+        if not reply_message:
             return None
 
         text = getattr(
-            reply,
+            reply_message,
             "text",
             None,
         )
 
         if not text:
             text = getattr(
-                reply,
+                reply_message,
                 "caption",
                 None,
             )
@@ -256,9 +260,7 @@ class Assistant(Module):
             )
 
     @handler(
-        filters.regex(
-            r"^(?:ai|assistant)(?:\s+([\s\S]+))?$"
-        ),
+        filters.regex(AI_PATTERN),
         1,
     )
     async def ai(
@@ -289,11 +291,10 @@ class Assistant(Module):
             )
             return
 
-        prompt = (
-            match.group(1)
-            if match
-            else None
-        )
+        prompt = None
+
+        if match:
+            prompt = match.group(1)
 
         if prompt:
             prompt = str(
@@ -304,7 +305,6 @@ class Assistant(Module):
             message
         )
 
-        # .ai pada pesan reply tanpa prompt.
         if not prompt and reply_context:
             prompt = (
                 "Tolong jawab atau jelaskan "
@@ -330,7 +330,6 @@ class Assistant(Module):
                 + "\n...[dipotong]"
             )
 
-        # Reply + pertanyaan.
         if (
             reply_context
             and not prompt.startswith(
@@ -353,9 +352,7 @@ class Assistant(Module):
             "Kamu adalah AI Assistant Telegram. "
             "Jawab dengan jelas, membantu, dan langsung. "
             "Gunakan bahasa yang sama dengan pengguna. "
-            "Jangan memberikan jawaban yang tidak perlu. "
-            "Jika pengguna menggunakan bahasa Indonesia, "
-            "jawab dalam bahasa Indonesia."
+            "Jangan memberikan jawaban yang tidak perlu."
         )
 
         async with self.lock:
@@ -457,9 +454,7 @@ class Assistant(Module):
             )
 
     @handler(
-        filters.regex(
-            r"^aiclear$"
-        ),
+        filters.regex(CLEAR_PATTERN),
         1,
     )
     async def clear(
@@ -495,9 +490,7 @@ class Assistant(Module):
             )
 
     @handler(
-        filters.regex(
-            r"^aiclearall$"
-        ),
+        filters.regex(CLEAR_ALL_PATTERN),
         1,
     )
     async def clear_all(
