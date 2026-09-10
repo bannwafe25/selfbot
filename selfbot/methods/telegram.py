@@ -4,7 +4,6 @@ import struct
 from pyrogram import Client, filters
 from pyrogram.enums import ButtonStyle
 from pyrogram.types import (
-    CopyTextButton,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     InlineQuery,
@@ -195,7 +194,7 @@ class Telegram:
                 if 2 < length < 6:
                     k, v = i[1], i[2]
                     if k == "copy":
-                        kwargs["copy_text"] = CopyTextButton(text=v)
+                        kwargs["copy_text"] = v
                     elif k == "data":
                         kwargs["callback_data"] = v
                     elif k == "link":
