@@ -1,255 +1,363 @@
 import asyncio
-import base64
 import collections
 import datetime
 import html
 import re
 
-from google import genai
-from google.genai import types
 from pyrogram import filters
-from pyrogram.enums import MessageMediaType, ParseMode
-from pyrogram.types import ChosenInlineResult, InlineQuery, Message, Sticker, Update
+from pyrogram.enums import ParseMode
+from pyrogram.types import Message, Update
 
 from selfbot.listener import handler
 from selfbot.module import Module
 
-pattern = re.compile(r"^(?:(.+?)\s)?\!\?(?:\s-i)?$", flags=re.DOTALL)
 
-MODELS = [
-    "gemini-3-pro-preview",
-    "gemini-3-flash-preview",
-    "gemini-2.5-pro",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-2.5-flash-preview-09-25",
-    "gemini-2.5-flash-lite-preview-09-25",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-2.0-flash-001",
-    "gemini-2.0-flash-lite-001",
-]
+pattern = re.compile(
+    r"^(?:(.+?)\s)?\!\?(?:\s-i)?$",
+    flags=re.DOTALL,
+)
 
 
 class GenAI(Module):
-    name = "Google Gemini"
-    cmds = "{query} {infix} {suffix}?"
+    name = "AI Assistant"
+
+    cmds = "{query} !?"
     desc = {
-        "query": "String or <Reply or Quote>",
-        "infix": "!?",
-        "suffix": "-i (Ignore)",
-        "?": "Optional",
+        "query": "String or <Reply>",
+        "!?": "Ask AI",
         "e.g.": "Hello, World! !?",
     }
 
+    API_URL = "https://www.zpkece.cloud/v1/chat/completions"
+    DEFAULT_MODEL = "zp/deepseek/deepseek-v4-flash"
+
+    MAX_HISTORY = 12
+    MAX_PROMPT_LENGTH = 12000
+
     async def on_starting(self) -> None:
-        api_key = await self.getvar("GEMINI_API_KEY")
-        if not api_key:
-            self.logger.error("GEMINI_API_KEY not configured")
-            self.client.unload(self)
-            return
-
-        try:
-            self.google = genai.Client(api_key=api_key)
-        except Exception as e:
-            self.logger.error(f"{e.__class__.__name__}: {e}")
-            self.client.unload(self)
-            return
-
-        self.models = collections.deque(MODELS)
-        self.history = collections.deque(maxlen=16)
-        self.lock = asyncio.Lock()
-
-    async def on_started(self) -> None:
-        self.client.config.pop("GEMINI_API_KEY", None)
-
-    @handler(filters.regex(pattern), 1)
-    async def on_message_out(self, event: Message) -> None:
-        await self.execute(event)
-
-    @handler(filters.command("start"), 2)
-    async def on_message_bot(self, event: Message) -> None:
-        if (
-            len(event.content.split()) == 2
-            and event.content.split()[1].strip() == "clear"
-        ):
-            resp = await event.reply_sticker(
-                self.client.config["STICKER_FILE_ID"],
-                reply_markup=self.ikm(("...", "switch_inline_query", "")),
-            )
-            async with self.lock:
-                self.history.clear()
-            await asyncio.gather(event.delete(), resp.delete())
-
-    @handler(filters.regex(pattern), 3)
-    async def on_inline_query(self, event: InlineQuery) -> None:
-        await self.answer(
-            event, switch_pm_text="Clear Conversation", switch_pm_parameter="clear"
+        self.api_key = (
+            await self.getvar("AI_API_KEY")
+            or await self.getvar("API_SERVER_KEY")
         )
 
-    @handler(filters.regex(pattern), 4)
-    async def on_inline_result(self, event: ChosenInlineResult) -> None:
+        if not self.api_key:
+            self.logger.error(
+                "AI_API_KEY / API_SERVER_KEY not configured"
+            )
+            self.client.unload(self)
+            return
+
+        self.model = (
+            await self.getvar("AI_MODEL")
+            or self.DEFAULT_MODEL
+        )
+
+        self.history = collections.defaultdict(
+            lambda: collections.deque(
+                maxlen=self.MAX_HISTORY
+            )
+        )
+
+        self.lock = asyncio.Lock()
+
+        self.logger.info(
+            "AI Assistant ready | model=%s",
+            self.model,
+        )
+
+    async def on_started(self) -> None:
+        pass
+
+    def _chat_id(self, event: Message) -> str:
+        if event.chat and event.chat.id:
+            return str(event.chat.id)
+
+        return str(
+            getattr(
+                event,
+                "chat_id",
+                "unknown",
+            )
+        )
+
+    def _reply_text(self, event: Message):
+        reply = getattr(
+            event,
+            "reply_to_message",
+            None,
+        )
+
+        if not reply:
+            return None
+
+        text = getattr(
+            reply,
+            "text",
+            None,
+        )
+
+        if not text:
+            text = getattr(
+                reply,
+                "caption",
+                None,
+            )
+
+        if not text:
+            text = getattr(
+                reply,
+                "content",
+                None,
+            )
+
+        if not text:
+            return None
+
+        return str(text)[
+            :self.MAX_PROMPT_LENGTH
+        ]
+
+    async def ask(self, messages):
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": 0.7,
+            "stream": False,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        response = await self.client.http.post(
+            self.API_URL,
+            headers=headers,
+            json=payload,
+            timeout=120,
+        )
+
+        if response.status_code != 200:
+            try:
+                data = response.json()
+                error = data.get(
+                    "error",
+                    data,
+                )
+            except Exception:
+                error = response.text
+
+            raise RuntimeError(
+                f"HTTP {response.status_code}: {error}"
+            )
+
+        data = response.json()
+
+        choices = data.get("choices")
+
+        if not choices:
+            raise RuntimeError(
+                "API tidak mengembalikan choices."
+            )
+
+        answer = (
+            choices[0]
+            .get("message", {})
+            .get("content")
+        )
+
+        if isinstance(answer, list):
+            parts = []
+
+            for item in answer:
+                if isinstance(item, dict):
+                    text = item.get("text")
+
+                    if text:
+                        parts.append(
+                            str(text)
+                        )
+
+            answer = "\n".join(parts)
+
+        if not answer:
+            raise RuntimeError(
+                "Jawaban AI kosong."
+            )
+
+        return str(answer).strip()
+
+    @handler(
+        filters.regex(pattern),
+        1,
+    )
+    async def on_message_out(
+        self,
+        event: Message,
+    ) -> None:
         await self.execute(event)
 
-    async def gemini(self, attempt: int = 0) -> str:
-        if attempt >= len(self.models):
-            return "**Error**:\n  `Rate Limited`"
-
-        model = self.models[0]
-        try:
-            response = await asyncio.to_thread(
-                self.google.models.generate_content,
-                model=model,
-                contents=list(self.history),
-                config=types.GenerateContentConfig(
-                    tools=[types.Tool(google_search=types.GoogleSearch())],
-                ),
+    async def execute(
+        self,
+        event: Update,
+    ) -> None:
+        text = str(
+            getattr(
+                event,
+                "content",
+                "",
             )
-        except Exception:
-            self.models.rotate(-1)
-            return await self.gemini(attempt + 1)
+        )
 
-        try:
-            if not response.candidates:
-                self.history.pop()
-                return "**Error**:\n  `Empty Response`"
+        match = pattern.match(text)
 
-            candidate = response.candidates[0]
-            if not candidate.content or not candidate.content.parts:
-                self.history.pop()
-                return "**Error**:\n  `Empty Content`"
+        if not match:
+            return
 
-            text = ""
-            for part in candidate.content.parts:
-                if hasattr(part, "text") and part.text:
-                    text += part.text
-            if not text:
-                self.history.pop()
-                return "**Error**:\n  `Empty Text`"
-        except Exception as e:
-            self.history.pop()
-            return f"**{e.__class__.__name__}**:\n  `{e}`"
+        query = match.group(1)
 
-        self.history.append(candidate.content)
-        return text
-
-    async def execute(self, event: Update) -> None:
-        if isinstance(event, ChosenInlineResult):
-            text = event.query
-        else:
-            text = event.content
-
-        (query,) = pattern.match(text).groups()
         if query:
-            await self.respond(event, f"`{query}`", parse_mode=ParseMode.MARKDOWN)
-        else:
-            if isinstance(event, ChosenInlineResult):
-                await self.respond(
-                    event,
-                    "<code>Give a Query with Suffix '!?'</code>",
-                    reply_markup=self.ikm(("Close", "data", b"0")),
-                    revoke=2.5,
-                )
-                return
+            query = query.strip()
 
-            await self.respond(event, "<code>...</code>")
-
-        parts = []
-        if query:
-            parts.append(types.Part(text=query))
+        reply_text = None
 
         if isinstance(event, Message):
-            if event.quote and event.quote.text:
-                parts.append(types.Part(text=event.quote.text))
-            elif event.reply_to_message and event.reply_to_message.media:
-                if event.reply_to_message.media in (
-                    MessageMediaType.ANIMATION,
-                    MessageMediaType.AUDIO,
-                    MessageMediaType.DOCUMENT,
-                    MessageMediaType.PHOTO,
-                    MessageMediaType.STICKER,
-                    MessageMediaType.VIDEO,
-                    MessageMediaType.VOICE,
-                ):
-                    rep = event.reply_to_message
-                    obj = getattr(rep, rep.media.value)
-                    if obj.file_size > 32 * (1024**2):
-                        await self.respond(
-                            event,
-                            "<code>Exceeded Size (Limit: 32 MB)</code>",
-                            revoke=2.5,
-                        )
-                        return
+            reply_text = self._reply_text(event)
 
-                    mime = getattr(obj, "mime_type", "image/jpeg").lower().strip()
-                    if isinstance(obj, Sticker) and obj.is_animated:
-                        rep, mime = obj.thumbs[0].file_id, "image/jpeg"
-                    elif mime.startswith("text"):
-                        mime = "text/plain"
-
-                    if not (
-                        mime.startswith(("audio", "image", "text", "video"))
-                        or mime == "application/pdf"
-                    ):
-                        await self.respond(
-                            event,
-                            f"<code>Unsupported '{obj.mime_type}' MIME Type</code>",
-                            revoke=2.5,
-                        )
-                        return
-
-                    raw_data = (
-                        await event._client.download_media(rep, in_memory=True)
-                    ).getvalue()
-                    parts.append(
-                        types.Part(
-                            inline_data=types.Blob(
-                                mime_type=mime,
-                                data=raw_data,
-                            )
-                        )
-                    )
-                    if not query:
-                        parts.append(types.Part(text="Analyze"))
-                elif event.reply_to_message.media == MessageMediaType.WEB_PAGE:
-                    parts.append(types.Part(text=event.reply_to_message.content))
-                else:
-                    await self.respond(
-                        event,
-                        f"<code>Unsupported {html.escape(f'<{event.reply_to_message.media}>')}</code>",
-                        revoke=2.5,
-                    )
-                    return
-            elif (
-                event.reply_to_message
-                and event.reply_to_message.content
-                and not event.content.endswith("-i")
-            ):
-                parts.append(types.Part(text=event.reply_to_message.content))
-            elif not query:
-                await self.respond(
-                    event,
-                    f"<code>Give a Query or {html.escape('<Reply or Quote>')}</code>",
-                    revoke=2.5,
+        if query:
+            if reply_text:
+                prompt = (
+                    "Pesan yang direply:\n"
+                    f"{reply_text}\n\n"
+                    "Pertanyaan pengguna:\n"
+                    f"{query}"
                 )
-                return
+            else:
+                prompt = query
 
-        ikb = [("Close", "data", b"0")]
-        now = datetime.datetime.now(datetime.UTC)
-        async with self.lock:
-            self.history.append(
-                types.Content(role="user", parts=parts)
+        elif reply_text:
+            prompt = (
+                "Tolong jawab atau jelaskan "
+                "pesan berikut:\n\n"
+                f"{reply_text}"
             )
-            res = await self.gemini()
-            rtt = self.fmtsec(now)
 
-            # Truncate if too long for Telegram (4096 char limit)
-            if len(res) > 3500:
-                res = f"{res[:3500]}..."
+        else:
+            await self.respond(
+                event,
+                "<code>Give a Query or Reply a message with !?</code>",
+                revoke=5,
+            )
+            return
+
+        if len(prompt) > self.MAX_PROMPT_LENGTH:
+            prompt = (
+                prompt[
+                    :self.MAX_PROMPT_LENGTH
+                ]
+                + "\n...[dipotong]"
+            )
+
+        chat_id = self._chat_id(event)
+
+        system_prompt = (
+            "Kamu adalah AI Assistant Telegram. "
+            "Jawab dengan jelas, membantu, dan langsung. "
+            "Gunakan bahasa yang sama dengan pengguna. "
+            "Jangan memberikan jawaban yang tidak perlu."
+        )
+
+        async with self.lock:
+            previous = list(
+                self.history[chat_id]
+            )
+
+        messages = [
+            {
+                "role": "system",
+                "content": system_prompt,
+            }
+        ]
+
+        messages.extend(previous)
+
+        messages.append(
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        )
+
+        now = datetime.datetime.now(
+            datetime.UTC
+        )
+
+        try:
+            await self.respond(
+                event,
+                "<code>...</code>",
+            )
+
+            answer = await self.ask(
+                messages
+            )
+
+            elapsed = self.fmtsec(now)
+
+            async with self.lock:
+                self.history[chat_id].append(
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                )
+
+                self.history[chat_id].append(
+                    {
+                        "role": "assistant",
+                        "content": answer,
+                    }
+                )
+
+            # Telegram message limit.
+            if len(answer) > 3500:
+                answer = (
+                    answer[:3500]
+                    + "..."
+                )
 
             await self.respond(
                 event,
-                f"**{query if query else ''}**\n\n{res}\n\n> **{rtt}**",
+                (
+                    f"{answer}\n\n"
+                    f"> **{elapsed}**"
+                ),
                 parse_mode=ParseMode.MARKDOWN,
-                reply_markup=self.ikm(ikb),
+                reply_markup=self.ikm(
+                    ("Close", "data", b"0")
+                ),
+            )
+
+        except Exception as e:
+            self.logger.exception(
+                "AI API error"
+            )
+
+            error = html.escape(
+                str(e)
+            )
+
+            if len(error) > 1500:
+                error = (
+                    error[:1500]
+                    + "..."
+                )
+
+            await self.respond(
+                event,
+                (
+                    "❌ <b>AI Error</b>\n\n"
+                    f"<code>{error}</code>"
+                ),
             )
