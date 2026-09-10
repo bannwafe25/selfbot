@@ -89,7 +89,7 @@ class Restart(Module):
                     upsert=True,
                 ),
             )
-            os.execv(sys.argv[0], sys.argv)
+            os.execv(sys.executable, [sys.executable, "-m", "selfbot"])
 
         except Exception as e:
             await self.respond(
