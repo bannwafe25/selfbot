@@ -44,7 +44,6 @@ from selfbot.storage import MongoStorage
 class Telegram(abc.ABC):
     def __init__(self, **kwargs) -> None:
         self.app = None
-        self.assistant = None
         self.bot = None
         self.handlers = {}
         self.__idle__ = None
@@ -55,28 +54,21 @@ class Telegram(abc.ABC):
             raise RuntimeError(f"{self.__class__.__name__} Running")
 
         await self.initdb()
-
         cursor = self.db.restart_msgs.find()
         rows = []
-
         async for row in cursor:
             rows.append(row)
-
         self.logger.info(f"Starting {self.__class__.__name__}...")
-
         try:
             await self.start()
-
             for row in rows:
                 name, chat_id, message_id = (
                     row["name"],
                     row["chat_id"],
                     row["message_id"],
                 )
-
                 if name == "app":
                     await self.app.delete_messages(chat_id, message_id)
-
                 elif name == "bot":
                     with contextlib.suppress(MessageDeleteForbidden):
                         await self.bot.delete_messages(chat_id, message_id)
@@ -89,17 +81,13 @@ class Telegram(abc.ABC):
                         KeyboardButton(
                             "Owned Groups",
                             request_chat=KeyboardButtonRequestChat(
-                                10,
-                                chat_is_channel=False,
-                                chat_is_created=True,
+                                10, chat_is_channel=False, chat_is_created=True
                             ),
                         ),
                         KeyboardButton(
                             "Owned Channels",
                             request_chat=KeyboardButtonRequestChat(
-                                11,
-                                chat_is_channel=True,
-                                chat_is_created=True,
+                                11, chat_is_channel=True, chat_is_created=True
                             ),
                         ),
                     ],
@@ -127,15 +115,13 @@ class Telegram(abc.ABC):
                         KeyboardButton(
                             "Peer Groups",
                             request_chat=KeyboardButtonRequestChat(
-                                30,
-                                chat_is_channel=False,
+                                30, chat_is_channel=False
                             ),
                         ),
                         KeyboardButton(
                             "Peer Channels",
                             request_chat=KeyboardButtonRequestChat(
-                                31,
-                                chat_is_channel=True,
+                                31, chat_is_channel=True
                             ),
                         ),
                     ],
@@ -150,25 +136,17 @@ class Telegram(abc.ABC):
                 resize_keyboard=True,
                 input_field_placeholder=f"Selfbot {__version__}",
             )
-
             new = await self.bot.send_sticker(
                 self.app.me.id,
                 self.config["STICKER_FILE_ID"],
                 disable_notification=True,
                 reply_markup=rkm,
             )
-
             await self.db.restart_msgs.update_one(
                 {"name": "bot"},
-                {
-                    "$set": {
-                        "chat_id": new.chat.id,
-                        "message_id": new.id,
-                    }
-                },
-                upsert=True,
+                {"$set": {"chat_id": new.chat.id, "message_id": new.id}},
+                upsert=True
             )
-
         except Exception as e:
             self.logger.error(f"{e.__class__.__name__}: {e}")
             raise
@@ -180,20 +158,11 @@ class Telegram(abc.ABC):
         if self.__idle__ and not self.__idle__.is_set():
             raise RuntimeError(f"{self.__class__.__name__} Started")
 
-        # =========================
-        # AKUN UTAMA
-        # =========================
         self.app = self.build(
-            "app",
-            updates=(
-                UpdateNewChannelMessage,
-                UpdateNewMessage,
-            ),
+            "app", updates=(UpdateNewChannelMessage, UpdateNewMessage)
         )
-
         try:
             await self.app.start()
-
         except RPCError as e:
             if isinstance(e, FloodWait):
                 self.logger.warning(f"{e.__class__.__name__}: {e}")
@@ -203,55 +172,6 @@ class Telegram(abc.ABC):
 
             raise
 
-        # =========================
-        # AKUN ASSISTANT / AKUN 2
-        # =========================
-        assistant_session = self.config.get(
-            "ASSISTANT_SESSION_STRING"
-        )
-
-        if assistant_session:
-            self.assistant = self.build(
-                "assistant",
-                session_string=assistant_session,
-                updates=(
-                    UpdateNewChannelMessage,
-                    UpdateNewMessage,
-                ),
-            )
-
-            try:
-                await self.assistant.start()
-
-                self.logger.info(
-                    "Assistant account started: @%s",
-                    getattr(self.assistant.me, "username", None),
-                )
-
-            except RPCError as e:
-                if isinstance(e, FloodWait):
-                    self.logger.warning(
-                        f"{e.__class__.__name__}: {e}"
-                    )
-                else:
-                    self.logger.error(
-                        f"Assistant: {e.__class__.__name__}: {e}"
-                    )
-
-                    with contextlib.suppress(Exception):
-                        await self.assistant.storage.delete()
-
-                raise
-
-        else:
-            self.logger.warning(
-                "ASSISTANT_SESSION_STRING belum diatur. "
-                "AI Assistant account tidak aktif."
-            )
-
-        # =========================
-        # BOT
-        # =========================
         self.bot = self.build(
             "bot",
             updates=(
@@ -262,10 +182,8 @@ class Telegram(abc.ABC):
             ),
             bot_token=self.config.get("BOT_TOKEN"),
         )
-
         try:
             await self.bot.start()
-
         except RPCError as e:
             if isinstance(e, FloodWait):
                 self.logger.warning(f"{e.__class__.__name__}: {e}")
@@ -276,25 +194,14 @@ class Telegram(abc.ABC):
             raise
 
         self.config.pop("BOT_TOKEN", None)
-
         await asyncio.gather(
-            self.app.resolve_peer(self.bot.me.username),
-            asyncio.to_thread(self.loads),
+            self.app.resolve_peer(self.bot.me.username), asyncio.to_thread(self.loads)
         )
-
         try:
-            await self.bot.send_chat_action(
-                self.app.me.id,
-                ChatAction.TYPING,
-            )
-
+            await self.bot.send_chat_action(self.app.me.id, ChatAction.TYPING)
         except PeerIdInvalid:
-            msg = await self.app.send_message(
-                self.bot.me.id,
-                "/start",
-            )
+            msg = await self.app.send_message(self.bot.me.id, "/start")
             await msg.delete()
-
         except UserIsBlocked:
             await self.app.unblock_user(self.bot.me.id)
 
@@ -305,11 +212,7 @@ class Telegram(abc.ABC):
         if self.__idle__ and not self.__idle__.is_set():
             raise RuntimeError(f"{self.__class__.__name__} Idling")
 
-        signames = (
-            signal.SIGINT,
-            signal.SIGTERM,
-            signal.SIGABRT,
-        )
+        signames = (signal.SIGINT, signal.SIGTERM, signal.SIGABRT)
 
         def sighandler(signum: int) -> None:
             if self.__idle__:
@@ -317,15 +220,12 @@ class Telegram(abc.ABC):
 
         for signame in signames:
             self.loop.add_signal_handler(
-                signame,
-                functools.partial(sighandler, signame),
+                signame, functools.partial(sighandler, signame)
             )
 
         self.__idle__ = asyncio.Event()
-
         try:
             await self.__idle__.wait()
-
         finally:
             for signame in signames:
                 with contextlib.suppress(Exception):
@@ -333,121 +233,47 @@ class Telegram(abc.ABC):
 
     def updates(self) -> None:
         fltapp = flt.user(self.app.me.id)
-
         events = {
-            self.app.name: (
-                self.app,
-                MessageHandler,
-                flt.incoming,
-                -1,
-            ),
-
+            self.app.name: (self.app, MessageHandler, flt.incoming, -1),
             "message_in": (
                 self.app,
                 MessageHandler,
-                (
-                    flt.mentioned
-                    | (flt.incoming & flt.private)
-                )
-                & (
-                    ~flt.me
-                    & ~flt.bot
-                    & ~flt.via_bot
-                    & ~flt.service
-                ),
+                (flt.mentioned | (flt.incoming & flt.private))
+                & (~flt.me & ~flt.bot & ~flt.via_bot & ~flt.service),
                 -1,
             ),
-
             "message_out": (
                 self.app,
                 MessageHandler,
-                (flt.me & (flt.text | flt.caption))
-                & ~flt.via_bot,
+                (flt.me & (flt.text | flt.caption)) & ~flt.via_bot,
                 -1,
             ),
-
-            self.bot.name: (
-                self.bot,
-                MessageHandler,
-                flt.incoming,
-                -1,
-            ),
-
-            "message_bot": (
-                self.bot,
-                MessageHandler,
-                fltapp,
-                -1,
-            ),
-
-            "inline_query": (
-                self.bot,
-                InlineQueryHandler,
-                fltapp,
-                -1,
-            ),
-
-            "inline_result": (
-                self.bot,
-                ChosenInlineResultHandler,
-                fltapp,
-                -1,
-            ),
-
-            "inline_callback": (
-                self.bot,
-                CallbackQueryHandler,
-                fltapp,
-                -1,
-            ),
+            self.bot.name: (self.bot, MessageHandler, flt.incoming, -1),
+            "message_bot": (self.bot, MessageHandler, fltapp, -1),
+            "inline_query": (self.bot, InlineQueryHandler, fltapp, -1),
+            "inline_result": (self.bot, ChosenInlineResultHandler, fltapp, -1),
+            "inline_callback": (self.bot, CallbackQueryHandler, fltapp, -1),
         }
-
-        for name, (
-            client,
-            handler,
-            filters,
-            group,
-        ) in events.items():
-
+        for name, (client, handler, filters, group) in events.items():
             if name in self.handlers:
-                client.remove_handler(
-                    *self.handlers.pop(name)
-                )
+                client.remove_handler(*self.handlers.pop(name))
 
             if name in self.listeners and self.listeners[name]:
 
-                async def callback(
-                    _,
-                    event: Update,
-                    bound=name,
-                ) -> None:
-                    asyncio.create_task(
-                        self.dispatch(bound, event)
-                    )
+                async def callback(_, event: Update, bound=name) -> None:
+                    asyncio.create_task(self.dispatch(bound, event))
 
-                dispatcher = (
-                    handler(callback, filters),
-                    group,
-                )
-
+                dispatcher = (handler(callback, filters), group)
                 try:
                     client.add_handler(*dispatcher)
-
                 finally:
                     self.handlers[name] = dispatcher
 
-    def build(
-        self,
-        name: str,
-        updates: tuple = (),
-        *args,
-        **kwargs,
-    ) -> Client:
-
+    def build(self, name: str, updates: tuple = (), *args, **kwargs) -> Client:
         client = Client(
             name=name,
-            api_id=2496,
-            api_hash="8da85b0d5bfe62527e5b244c209159c3",
+            api_id=31019298,
+            api_hash="f80a208b8cd4709c30c26ceacae9e1be",
             app_version="2.2 K",
             device_model="Chrome 143",
             workdir="./selfbot/",
@@ -458,26 +284,17 @@ class Telegram(abc.ABC):
             max_business_user_connection_cache_size=0,
             no_joined_notifications=True,
             client_platform=ClientPlatform.ANDROID,
-            link_preview_options=LinkPreviewOptions(
-                is_disabled=True
-            ),
-            storage_engine=MongoStorage(
-                name,
-                self.db,
-            ),
+            link_preview_options=LinkPreviewOptions(is_disabled=True),
+            storage_engine=MongoStorage(name, self.db),
             *args,
             **kwargs,
         )
-
         if updates:
             client.dispatcher.update_parsers = {
                 k: v
                 for k, v in client.dispatcher.update_parsers.items()
                 if k in updates
             }
-
-            client.workers = len(
-                client.dispatcher.update_parsers
-            )
+            client.workers = len(client.dispatcher.update_parsers)
 
         return client
