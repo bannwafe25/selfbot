@@ -12,20 +12,17 @@ from selfbot.listener import handler
 from selfbot.module import Module
 
 
-pattern = re.compile(
-    r"^(?:(.+?)\s)?\!\?(?:\s-i)?$",
-    flags=re.DOTALL,
-)
+pattern = re.compile(r"^(?:(.+?)\s)?ai(?:\s-i)?$", flags=re.DOTALL | re.IGNORECASE)
 
 
 class GenAI(Module):
     name = "AI Assistant"
 
-    cmds = "{query} !?"
+    cmds = "{query} ai"
     desc = {
         "query": "String or <Reply>",
-        "!?": "Ask AI",
-        "e.g.": "Hello, World! !?",
+        "ai": "Ask AI",
+        "e.g.": "Hello, World! ai",
     }
 
     API_URL = "https://www.zpkece.cloud/v1/chat/completions"
