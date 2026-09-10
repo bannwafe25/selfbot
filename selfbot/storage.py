@@ -201,14 +201,6 @@ class MongoStorage(Storage):
         res = await self._value("is_bot", value)
         return res if value is Object else None
 
-    async def server_address(self, value: object = Object) -> str | None:
-        res = await self._value("server_address", value)
-        return res if value is Object else None
-
-    async def port(self, value: object = Object) -> int | None:
-        res = await self._value("port", value)
-        return res if value is Object else None
-
     async def _value(self, attr: str, value: object = Object) -> object:
         if value is Object:
             doc = await self.db.sessions.find_one({"name": self.name})
