@@ -1,10 +1,8 @@
 import asyncio
 import datetime
-import re
 
 from pyrogram import enums, filters
 from pyrogram.errors import FloodWait, RPCError
-from pyrogram.raw.types import InputRichMessageHTML
 from pyrogram.types import Message
 
 from selfbot.listener import handler, reply
@@ -13,19 +11,16 @@ from selfbot.module import Module
 
 class Broadcast(Module):
     name = "Broadcast"
-    cmds = "gcast {group|all} (-rich)? (reply pesan)"
+    cmds = "gcast {groups|all} (reply pesan)"
     desc = {
         "groups": "Kirim ke semua grup & channel tempat kamu member",
         "all": "Kirim ke semua grup + chat pribadi",
         "e.g.": "reply ke sebuah pesan, lalu ketik: gcast group",
     }
 
-    @handler(filters.regex(r"^gcast\s(group|all)(?:\s(-rich))?$") & reply, 1)
+    @handler(filters.regex(r"^gcast\s( group| all)$".replace(" ", "")) & reply, 1)
     async def on_message_out(self, event: Message) -> None:
-        match = pattern.match(event.text or event.caption or "")
-        if not match:
-            return
-        mode, rich = match.groups()
+        mode = (event.text or event.caption).split()[-1]
         rep = event.reply_to_message
 
         msg = await self.respond(
@@ -36,7 +31,7 @@ class Broadcast(Module):
         now = datetime.datetime.now(datetime.UTC)
         targets = []
 
-        async for dialog in event._client.iter_dialogs():
+        async for dialog in event._client.get_dialogs():
             # ID user sendiri berada di dialog.chat.id
             if dialog.chat.id == event._client.me.id:
                 continue
@@ -57,26 +52,14 @@ class Broadcast(Module):
 
         for i, dialog in enumerate(targets, 1):
             try:
-                if rich:
-                    await event._client.send_rich_message(
-                        dialog.chat.id,
-                        InputRichMessageHTML(html=rep.text or rep.caption or ""),
-                    )
-                else:
-                    await rep.copy(dialog.chat.id)
+                await rep.copy(dialog.chat.id)
                 ok += 1
 
             except FloodWait as e:
                 await asyncio.sleep(e.value)
 
                 try:
-                    if rich:
-                        await event._client.send_rich_message(
-                            dialog.chat.id,
-                            InputRichMessageHTML(html=rep.text or rep.caption or ""),
-                        )
-                    else:
-                        await rep.copy(dialog.chat.id)
+                    await rep.copy(dialog.chat.id)
                     ok += 1
                 except RPCError:
                     fail += 1
