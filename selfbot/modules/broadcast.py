@@ -11,11 +11,11 @@ from selfbot.module import Module
 
 class Broadcast(Module):
     name = "Broadcast"
-    cmds = "bc {groups|all} (reply pesan)"
+    cmds = "gcast {groups|all} (reply pesan)"
     desc = {
         "groups": "Kirim ke semua grup & channel tempat kamu member",
         "all": "Kirim ke semua grup + chat pribadi",
-        "e.g.": "reply ke sebuah pesan, lalu ketik: bc groups",
+        "e.g.": "reply ke sebuah pesan, lalu ketik: gcast group",
     }
 
     @handler(filters.regex(r"^gcast\s( group| all)$".replace(" ", "")) & reply, 1)
