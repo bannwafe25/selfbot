@@ -35,6 +35,11 @@ class Sysinfo(Module):
         await self.respond(event, "<code>Gathering information...</code>")
         now = datetime.datetime.now(datetime.UTC)
         sys_info = await self.get_system_info()
+        if await self.send_rich(
+            event, "🖥️ System Info", list(sys_info.items()),
+            note=self.fmtsec(now), query_prefix="sysinfo",
+        ):
+            return
         await self.respond(event, self.fmtmsg("System Info", sys_info, self.fmtsec(now)))
 
     def get_os_info(self) -> str:

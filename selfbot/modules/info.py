@@ -68,7 +68,15 @@ class Info(Module):
                 )
                 return
 
-            caption, photo_id = await self._format_user_info(user, is_full_mode, event)
+            caption, photo_id, rich_rows = await self._format_user_info(user, is_full_mode, event)
+
+            # Rich table hanya kalau TANPA foto (output teks)
+            if not photo_id:
+                if await self.send_rich(
+                    event, f"👤 User Info — {user.first_name or user.id}", rich_rows,
+                    note=self.fmtsec(now), query_prefix="info",
+                ):
+                    return
             caption += f"\n\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
 
             if photo_id:
@@ -114,7 +122,7 @@ class Info(Module):
 
     async def _format_user_info(
         self, user: User, is_full: bool, message: Message
-    ) -> tuple[str, str | None]:
+    ) -> tuple[str, str | None, list]:
         full_chat_info = None
         try:
             full_chat_info = await message._client.get_chat(user.id)
@@ -297,7 +305,20 @@ class Info(Module):
 
         photo = getattr(full_chat_info, "photo", None) if full_chat_info else None
         photo_id = getattr(photo, "big_file_id", None) if photo else None
-        return "\n".join(lines), photo_id
+
+        # Rich table (tanpa foto) — strip tag HTML dari lines jadi rows
+        import re as _re
+        rich_rows = []
+        for ln in lines:
+            t = _re.sub(r"<[^>]+>", "", ln).replace("• ", "").strip()
+            if not t or t.startswith("Permalink"):
+                continue
+            if ":" in t:
+                k, v = t.split(":", 1)
+                rich_rows.append((k.strip(), v.strip()))
+            else:
+                rich_rows.append((t, ""))
+        return "\n".join(lines), photo_id, rich_rows
 
     @staticmethod
     def _user_link(user: User, text: str | None = None) -> str:

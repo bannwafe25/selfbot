@@ -34,6 +34,17 @@ class Speedtest(Module):
                 )
                 return
 
+            rich_rows = [
+                ("Provider", results.get("isp", "N/A")),
+                ("Server", f"{results.get('server_name', 'N/A')} ({results.get('server_country', 'N/A')})"),
+                ("Ping", f"{results.get('ping', 0):.2f} ms"),
+                ("Download", f"{results.get('download', 0) / 1_000_000:.2f} Mbps"),
+                ("Upload", f"{results.get('upload', 0) / 1_000_000:.2f} Mbps"),
+            ]
+            if await self.send_rich(event, "🌐 Speedtest Results", rich_rows,
+                                    note=self.fmtsec(now), query_prefix="speedtest"):
+                return
+
             await self.respond(
                 event,
                 self.fmtmsg(

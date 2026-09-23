@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import html
 import sys
@@ -5,6 +6,128 @@ import traceback
 
 
 class Format:
+    def _ensure_rich_handler(self, ping_mod, rawfn, IMRichMsg, IBIR):
+        """Pasang handler bersama group -2 di modul Ping (sekali saja)."""
+        if getattr(ping_mod, "_rich_handler", None) is not None:
+            return
+        from pyrogram.raw.types import UpdateBotInlineQuery as _UBIQ
+        from pyrogram.handlers import RawUpdateHandler
+
+        bot = self.client.bot
+
+        async def _shared_answer(_c, update, users, chats):
+            if not isinstance(update, _UBIQ):
+                return
+            q = str(update.query)
+            for mod, payload in getattr(ping_mod, "_rich_route", {}).items():
+                if q.startswith(mod):
+                    p_rich, p_close = payload
+                    try:
+                        await bot.invoke(
+                            rawfn.messages.SetInlineBotResults(
+                                query_id=update.query_id,
+                                results=[
+                                    IBIR(
+                                        id=str(update.query_id),
+                                        type="article",
+                                        title="Result",
+                                        send_message=IMRichMsg(
+                                            rich_message=p_rich,
+                                            reply_markup=p_close,
+                                        ),
+                                    )
+                                ],
+                                cache_time=0,
+                            ),
+                        )
+                    except Exception as exc:
+                        self.logger.warning(f"shared rich {mod} failed: {exc!r}")
+                    return
+
+        ping_mod._rich_route = getattr(ping_mod, "_rich_route", None) or {}
+        ping_mod._rich_handler = RawUpdateHandler(_shared_answer)
+        disp = bot.dispatcher
+        if -2 not in disp.groups:
+            disp.groups[-2] = []
+            disp.groups = dict(sorted(disp.groups.items()))
+        disp.groups[-2].append(ping_mod._rich_handler)
+
+    async def send_rich(
+        self,
+        event,
+        title: str,
+        rows: list,
+        note: str = "",
+        query_prefix: str = "rich",
+    ) -> bool:
+        """Kirim rich table via inline bot. rows = [(param, keterangan), ...].
+        Return True kalau sukses terkirim, False kalau perlu fallback HTML."""
+        import datetime as _dt
+
+        try:
+            bot = self.client.bot
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+            )
+            from pyrogram.types import (
+                InputRichBlockParagraph,
+                InputRichBlockTable,
+                InputRichMessage,
+                RichBlockTableCell,
+                RichTextBold,
+                RichTextItalic,
+            )
+
+            trows = [
+                [
+                    RichBlockTableCell(text="Parameter", is_header=True),
+                    RichBlockTableCell(text="Keterangan", is_header=True),
+                ]
+            ]
+            for k, v in rows:
+                trows.append(
+                    [RichBlockTableCell(text=str(k)), RichBlockTableCell(text=str(v))]
+                )
+
+            blocks = [InputRichBlockParagraph(text=RichTextBold(title)),
+                      InputRichBlockTable(trows, is_bordered=True, is_striped=True, is_compact=True)]
+            if note:
+                blocks.append(InputRichBlockParagraph(text=RichTextItalic(note)))
+
+            rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
+            close_raw = await self.ikm([("Close", "data", b"0")]).write(bot)
+
+            # Daftarkan payload ke handler bersama milik Ping (group -2)
+            # — helper send_rich juga bisa dipasang lebih awal oleh modul lain
+            ping_mod = None
+            try:
+                ping_mod = self.client.modules.get("Ping")
+            except Exception:
+                pass
+            if ping_mod is None:
+                return False
+            self._ensure_rich_handler(ping_mod, rawfn, InputBotInlineMessageRichMessage, InputBotInlineResult)
+            if getattr(ping_mod, "_rich_route", None) is None:
+                ping_mod._rich_route = {}
+            ping_mod._rich_route[query_prefix] = (rich_raw, close_raw)
+
+            now = _dt.datetime.now(_dt.UTC)
+            res = await event._client.get_inline_bot_results(
+                bot.me.id, f"{query_prefix}{now.timestamp()}"
+            )
+            if res.results:
+                await asyncio.gather(
+                    event.reply_inline_bot_result(res.query_id, res.results[0].id),
+                    event.delete(),
+                )
+                return True
+            return False
+        except Exception as e:
+            self.logger.warning(f"send_rich failed, fallback html: {e.__class__.__name__}: {e}")
+            return False
+
     def fmtbar(
         self,
         current: int,
