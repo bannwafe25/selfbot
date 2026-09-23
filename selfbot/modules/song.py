@@ -13,6 +13,11 @@ from selfbot.listener import handler
 from selfbot.module import Module
 from selfbot.apis import DELINE_YTMP3, FERDEV_YTMP3, FERDEV_APIKEY
 
+try:
+    import yt_dlp
+except ImportError:
+    yt_dlp = None
+
 pattern = re.compile(r"^song(?:\s+(-d|--doc|-v|--voice))?\s+(.+)$", re.IGNORECASE)
 yt_id_pattern = re.compile(r'"videoId":"([A-Za-z0-9_-]{11})"')
 
@@ -204,11 +209,90 @@ class Song(Module):
                         file_path.unlink()
 
     async def _fetch_song_data(self, yt_link: str) -> dict:
+        # Local yt-dlp engine first (no API limits). Raises RuntimeError
+        # if yt-dlp is unavailable so callers fall back to remote APIs.
+        if yt_dlp is not None:
+            try:
+                info = await asyncio.get_running_loop().run_in_executor(
+                    None,
+                    lambda: self._ytdlp_extract(yt_link),
+                )
+                return info
+            except Exception as e:
+                self.logger.warning(f"yt-dlp engine failed, fallback to API: {e}")
+        else:
+            self.logger.warning("yt_dlp not installed, using APIs")
+
         try:
             return await self._fetch_song_data_deline(yt_link)
         except Exception as e:
             self.logger.warning(f"Primary API failed, fallback to ferdev: {e}")
+
+        try:
+            return await self._fetch_song_data_cobalt(yt_link)
+        except Exception as e:
+            self.logger.warning(f"Cobalt failed, fallback to ferdev: {e}")
             return await self._fetch_song_data_ferdev(yt_link)
+
+    async def _fetch_song_data_cobalt(self, yt_link: str) -> dict:
+        import json as _json
+
+        resp = await self.client.http.post(
+            "https://co.otomir23.me/",
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+            json={"url": yt_link, "downloadMode": "audio", "audioFormat": "mp3"},
+            timeout=60,
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(f"Cobalt API error: HTTP {resp.status_code}")
+
+        data = _json.loads(resp.text)
+        if data.get("status") != "tunnel" or not data.get("url"):
+            raise RuntimeError(
+                f"Cobalt returned status={data.get('status')}"
+            )
+
+        return {
+            "title": data.get("filename", "").rsplit(".", 1)[0] or "Untitled",
+            "thumbnail": "",
+            "quality": "",
+            "size_label": "",
+            "ext": "mp3",
+            "dlink": data["url"],
+            "duration": 0,
+        }
+
+    def _ytdlp_extract(self, yt_link: str) -> dict:
+        opts = {
+            "format": "bestaudio[ext=m4a]/bestaudio/best",
+            "quiet": True,
+            "no_warnings": True,
+            "noplaylist": True,
+            "skip_download": True,
+            "js_runtimes": {"deno": {"path": "/usr/local/bin/deno"}},
+            "remote_components": ["ejs:github"],
+        }
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(yt_link, download=False)
+
+        audio = [f for f in (info.get("formats") or []) if f.get("acodec") not in (None, "none")]
+        if not audio:
+            raise RuntimeError("No audio stream found by yt-dlp.")
+        best = max(audio, key=lambda f: f.get("abr") or f.get("tbr") or 0)
+        url = best.get("url")
+        if not url:
+            raise RuntimeError("yt-dlp returned no direct URL.")
+
+        size = best.get("filesize") or best.get("filesize_approx") or 0
+        return {
+            "title": info.get("title") or "Untitled",
+            "thumbnail": info.get("thumbnail") or "",
+            "quality": f"{best.get('abr', 0) or ''}kbps".strip("kbps ") or "audio",
+            "size_label": self.fmtbyte(size) if size else "",
+            "ext": best.get("ext") or "m4a",
+            "dlink": url,
+            "duration": int(info.get("duration") or 0),
+        }
 
     async def _fetch_song_data_deline(self, yt_link: str) -> dict:
         resp = await self.client.http.get(
@@ -316,13 +400,28 @@ class Song(Module):
         }
 
     async def _download_file(self, url: str, out_file: Path, timeout: int) -> None:
-        async with self.client.http.stream("GET", url, timeout=timeout) as resp:
-            if resp.status_code != 200:
-                raise RuntimeError(f"Download failed: HTTP {resp.status_code}")
-            with out_file.open("wb") as handle:
-                async for chunk in resp.aiter_bytes(chunk_size=65536):
-                    if chunk:
-                        handle.write(chunk)
+        for attempt in range(3):
+            try:
+                async with self.client.http.stream("GET", url, timeout=timeout) as resp:
+                    if resp.status_code != 200:
+                        raise RuntimeError(f"Download failed: HTTP {resp.status_code}")
+                    with out_file.open("wb") as handle:
+                        async for chunk in resp.aiter_bytes(chunk_size=65536):
+                            if chunk:
+                                handle.write(chunk)
+                if out_file.exists() and out_file.stat().st_size > 0:
+                    return
+                self.logger.warning(f"Download attempt {attempt + 1} empty, retrying...")
+            except Exception as e:
+                self.logger.warning(f"Download attempt {attempt + 1} failed: {e}")
+            await asyncio.sleep(2)
+
+        # Final fallback: plain GET download
+        resp = await self.client.http.get(url, timeout=timeout)
+        if resp.status_code != 200 or not resp.content:
+            raise RuntimeError(f"Download failed: HTTP {resp.status_code}")
+        with out_file.open("wb") as handle:
+            handle.write(resp.content)
 
     async def _search_youtube_url(self, query: str) -> str | None:
         # Primary search via py-yt-search.

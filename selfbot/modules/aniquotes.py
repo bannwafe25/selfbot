@@ -35,7 +35,7 @@ class Aniquotes(Module):
         query = query[:512]
         try:
             result = await event._client.get_inline_bot_results(
-                "@quotafbot", query, chat_id=event.chat.id
+                "@quotafbot", query
             )
             if not result.results:
                 await self.respond(event, "<code>No results returned by @quotafbot.</code>")
@@ -45,9 +45,6 @@ class Aniquotes(Module):
             await event.reply_inline_bot_result(
                 result.query_id,
                 selected.id,
-                reply_parameters=ReplyParameters(
-                    message_id=event.reply_to_message_id or event.id
-                ),
             )
             await event.delete()
         except Exception as e:

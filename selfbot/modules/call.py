@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 import datetime
 import re
 
@@ -92,6 +94,21 @@ class Call(Module):
                 return None
 
     # --------------------------------------------------------
+    # Rich native message (kurigram 2.2.26+)
+    # --------------------------------------------------------
+
+    async def _rich_status(self, event: Message, title: str, lines: list):
+        """
+        Kirim status dengan format HTML bersih.
+        """
+        text = f"<b>{title}</b>"
+        for line in lines:
+            if line:
+                text += f"\n{line}"
+
+        return await self._status(event, text)
+
+    # --------------------------------------------------------
     # Get / start PyTgCalls
     # --------------------------------------------------------
 
@@ -153,11 +170,14 @@ class Call(Module):
 
         else:
             try:
+                if chat_id.lstrip("-").isdigit():
+                    chat_id = int(chat_id)
                 chat = await event._client.get_chat(chat_id)
 
                 chat_id = chat.id
 
             except RPCError as e:
+                self.logger.warning(f"resolve chat failed: {e!r}")
                 await self._status(
                     event,
                     f"❌ {e.__class__.__name__}: {e}"
@@ -165,6 +185,7 @@ class Call(Module):
                 return
 
             except Exception as e:
+                self.logger.warning(f"resolve chat failed: {e!r}")
                 await self._status(
                     event,
                     f"❌ {e.__class__.__name__}: {e}"
@@ -412,17 +433,13 @@ class Call(Module):
         # Final response
         # ----------------------------------------------------
 
-        result = (
-            f"<b>{head}</b>\n"
-            + (
-                "\n".join(extra) + "\n"
-                if extra
-                else ""
-            )
-            + f"<code>{dur:.2f}s</code>"
-        )
+        title = f"{head} ⚡ {dur:.2f}s"
+        lines = list(extra) or [""]
 
-        await self._status(
-            event,
-            result
-        )
+        await self._rich_status(event, title, lines)
+
+        # Auto-delete disabled at user request (Sep 23)
+        # if action in ("join", "leave", "start", "end"):
+        #     await asyncio.sleep(2)
+        #     with contextlib.suppress(Exception):
+        #         await event.delete()

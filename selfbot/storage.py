@@ -27,7 +27,8 @@ def get_input_peer(peer_id: int, access_hash: int, peer_type: str) -> InputPeer:
 
 class MongoStorage(Storage):
     def __init__(self, name: str, db) -> None:
-        super().__init__(name)
+        super().__init__()
+        self.name = name
         self.db = db
 
     async def open(self) -> None:
@@ -41,7 +42,7 @@ class MongoStorage(Storage):
             await self.db.peers.create_index([("name", 1), ("id", 1)], unique=True)
             await self.db.peers.create_index([("name", 1), ("phone_number", 1)])
             await self.db.usernames.create_index(
-                [("name", 1), ("username", 1)], unique=True
+                [("name", 1), ("id", 1)], unique=True
             )
             await self.db.update_state.create_index(
                 [("name", 1), ("id", 1)], unique=True
@@ -68,7 +69,7 @@ class MongoStorage(Storage):
         peer_records = []
         username_records = []
         delete_username_requests = []
-        for p_id, p_access_hash, p_type, p_usernames, p_phone_number in peers:
+        for p_id, p_access_hash, p_type, p_phone_number in peers:
             delete_username_requests.append(DeleteOne({"name": self.name, "id": p_id}))
             peer_records.append(
                 UpdateOne(
@@ -83,15 +84,14 @@ class MongoStorage(Storage):
                     upsert=True,
                 )
             )
-            if p_usernames:
-                for p_username in p_usernames:
-                    username_records.append(
-                        UpdateOne(
-                            {"name": self.name, "username": p_username},
-                            {"$set": {"id": p_id}},
-                            upsert=True,
-                        )
+            if p_phone_number:
+                username_records.append(
+                    UpdateOne(
+                        {"name": self.name, "id": p_id},
+                        {"$set": {"phone_number": p_phone_number}},
+                        upsert=True,
                     )
+                )
 
         if delete_username_requests:
             await self.db.usernames.bulk_write(delete_username_requests, ordered=False)
@@ -199,6 +199,60 @@ class MongoStorage(Storage):
 
     async def is_bot(self, value: object = Object) -> bool | None:
         res = await self._value("is_bot", value)
+        return res if value is Object else None
+
+    async def set_update_state(self, update_state) -> None:
+        from pyrogram.storage.storage import UpdateState
+
+        states = (
+            update_state
+            if isinstance(update_state, (list, tuple))
+            else [update_state]
+        )
+        for st in states:
+            await self.db.update_state.update_one(
+                {"name": self.name, "id": st.id},
+                {"$set": {"pts": st.pts, "qts": st.qts,
+                          "date": st.date, "seq": st.seq}},
+                upsert=True,
+            )
+
+    async def get_update_states(self, ids=None) -> list:
+        query = {"name": self.name}
+        if ids is not None:
+            if isinstance(ids, int):
+                ids = [ids]
+            query["id"] = {"$in": list(ids)}
+
+        from pyrogram.storage.storage import UpdateState
+
+        res = []
+        cursor = self.db.update_state.find(query)
+        async for doc in cursor:
+            res.append(
+                UpdateState(
+                    id=doc.get("id"),
+                    pts=doc.get("pts"),
+                    qts=doc.get("qts"),
+                    date=doc.get("date"),
+                    seq=doc.get("seq"),
+                )
+            )
+        return res
+
+    async def delete_update_state(self, state_id) -> None:
+        if isinstance(state_id, int):
+            state_id = [state_id]
+        await self.db.update_state.delete_many(
+            {"name": self.name, "id": {"$in": list(state_id)}}
+        )
+
+    async def port(self, value: object = Object) -> int | None:
+        res = await self._value("port", value)
+        return res if value is Object else None
+
+    async def server_address(self, value: object = Object) -> str | None:
+        res = await self._value("server_address", value)
         return res if value is Object else None
 
     async def _value(self, attr: str, value: object = Object) -> object:

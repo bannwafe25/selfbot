@@ -230,7 +230,7 @@ class AnimePic(Module):
             tag, moe_tag = self.parse_query(query)
             reply_params = ReplyParameters(message_id=event.reply_to_message_id or event.id)
             res = await event._client.get_inline_bot_results(
-                self.client.bot.me.id, query, chat_id=event.chat.id
+                self.client.bot.me.id, query
             )
             if not res.results:
                 await self._safe_respond(event, "<code>The bot returned no results.</code>")
@@ -239,7 +239,6 @@ class AnimePic(Module):
             try:
                 await event.reply_inline_bot_result(
                     res.query_id, res.results[0].id,
-                    reply_parameters=reply_params,
                 )
             except Exception as inline_err:
                 err_str = str(inline_err).upper()

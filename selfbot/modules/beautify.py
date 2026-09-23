@@ -113,8 +113,7 @@ class Beautify(Module):
                 f"Carbonised by {mention}\n"
                 f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
             ),
-            reply_parameters=ReplyParameters(message_id=event.reply_to_message_id or event.id),
-        )
+                    )
         await event.delete()
 
     async def _handle_ccarbon(self, event: Message, text: str) -> None:
@@ -164,8 +163,7 @@ class Beautify(Module):
                 f"Carbonised by {mention}\n"
                 f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
             ),
-            reply_parameters=ReplyParameters(message_id=event.reply_to_message_id or event.id),
-        )
+                    )
         await event.delete()
 
     async def _handle_rayso(self, event: Message, text: str) -> None:
@@ -229,8 +227,7 @@ class Beautify(Module):
             await event.reply_photo(
                 image_path,
                 caption=f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>",
-                reply_parameters=ReplyParameters(message_id=event.reply_to_message_id or event.id),
-            )
+                            )
             await event.delete()
         finally:
             try:

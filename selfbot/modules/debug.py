@@ -107,13 +107,12 @@ class Debug(Module):
                     html.escape(event.content.markdown).removesuffix("#").rstrip(),
                 ),
                 event._client.get_inline_bot_results(
-                    self.client.bot.me.id, "#", chat_id=event.chat.id
+                    self.client.bot.me.id, "#"
                 ),
             )
             await event.reply_inline_bot_result(
                 res.query_id,
                 res.results[0].id,
-                reply_parameters=ReplyParameters(message_id=event.id),
             )
             return
 
@@ -125,7 +124,7 @@ class Debug(Module):
         )
         await self.execute(cmd, msg)
 
-    @handler(filters.private & filters.self_destruct, 2)
+    @handler(filters.private & filters.self_destruction, 2)
     async def on_message_in(self, event: Message) -> None:
         func = getattr(self.client.bot, f"send_{event.media.value}")
         args, media = (func.__annotations__, getattr(event, event.media.value))
@@ -213,7 +212,7 @@ class Debug(Module):
     async def msgs(self, event: Update) -> tuple:
         cid, mid = self.ids(event.inline_message_id)
         msg, cmd = await asyncio.gather(
-            self.client.app.get_replied_message(cid, mid),
+            self.client.app.get_messages(cid, mid, reply=True),
             self.client.app.get_messages(cid, mid),
             return_exceptions=True,
         )

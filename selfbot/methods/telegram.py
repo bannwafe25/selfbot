@@ -146,7 +146,10 @@ class Telegram:
                 else:
                     edit = event.edit_message_media
 
-            event = await edit(message, *args, **kwargs)
+            try:
+                event = await edit(message, *args, **kwargs)
+            except Exception:
+                event = await event.reply_text(message, *args, **kwargs)
 
         if revoke:
             if not isinstance(event, Message):

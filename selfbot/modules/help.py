@@ -45,14 +45,13 @@ class Help(Module):
         _, res = await asyncio.gather(
             self.respond(event, "<code>...</code>"),
             event._client.get_inline_bot_results(
-                self.client.bot.me.id, event.content, chat_id=event.chat.id
+                self.client.bot.me.id, event.content
             ),
         )
         await asyncio.gather(
             event.reply_inline_bot_result(
                 res.query_id,
                 res.results[0].id,
-                reply_parameters=ReplyParameters(message_id=event.id),
             ),
             event.delete(),
         )

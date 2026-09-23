@@ -81,13 +81,13 @@ class Telegram(abc.ABC):
                         KeyboardButton(
                             "Owned Groups",
                             request_chat=KeyboardButtonRequestChat(
-                                10, chat_is_channel=False, chat_is_created=True
+                                button_id=10, chat_is_channel=False, chat_is_created=True
                             ),
                         ),
                         KeyboardButton(
                             "Owned Channels",
                             request_chat=KeyboardButtonRequestChat(
-                                11, chat_is_channel=True, chat_is_created=True
+                                button_id=11, chat_is_channel=True, chat_is_created=True
                             ),
                         ),
                     ],
@@ -95,7 +95,7 @@ class Telegram(abc.ABC):
                         KeyboardButton(
                             "Admin Groups",
                             request_chat=KeyboardButtonRequestChat(
-                                20,
+                                button_id=20,
                                 chat_is_channel=False,
                                 chat_is_created=False,
                                 user_administrator_rights=ChatPrivileges(),
@@ -104,7 +104,7 @@ class Telegram(abc.ABC):
                         KeyboardButton(
                             "Admin Channels",
                             request_chat=KeyboardButtonRequestChat(
-                                21,
+                                button_id=21,
                                 chat_is_channel=True,
                                 chat_is_created=False,
                                 user_administrator_rights=ChatPrivileges(),
@@ -115,26 +115,26 @@ class Telegram(abc.ABC):
                         KeyboardButton(
                             "Peer Groups",
                             request_chat=KeyboardButtonRequestChat(
-                                30, chat_is_channel=False
+                                button_id=30, chat_is_channel=False
                             ),
                         ),
                         KeyboardButton(
                             "Peer Channels",
                             request_chat=KeyboardButtonRequestChat(
-                                31, chat_is_channel=True
+                                button_id=31, chat_is_channel=True
                             ),
                         ),
                     ],
                     [
                         KeyboardButton(
                             "Peer Users & Peer Bots",
-                            request_users=KeyboardButtonRequestUsers(40),
+                            request_users=KeyboardButtonRequestUsers(button_id=40),
                         )
                     ],
                 ],
                 is_persistent=True,
                 resize_keyboard=True,
-                input_field_placeholder=f"Selfbot {__version__}",
+                placeholder=f"Selfbot {__version__}",
             )
             new = await self.bot.send_sticker(
                 self.app.me.id,
@@ -280,9 +280,7 @@ class Telegram(abc.ABC):
             parse_mode=ParseMode.HTML,
             sleep_threshold=25,
             max_concurrent_transmissions=5,
-            max_message_cache_size=0,
-            max_business_user_connection_cache_size=0,
-            no_joined_notifications=True,
+            max_message_cache_size=100,
             client_platform=ClientPlatform.ANDROID,
             link_preview_options=LinkPreviewOptions(is_disabled=True),
             storage_engine=MongoStorage(name, self.db),
