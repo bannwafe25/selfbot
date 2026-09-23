@@ -1,11 +1,21 @@
 import asyncio
+import base64
 import contextlib
 import datetime
 import re
+import struct
 
-from pyrogram import filters
+from pyrogram import filters, raw
 from pyrogram.errors import RPCError
-from pyrogram.types import Message
+from pyrogram.types import (
+    InputRichBlockParagraph,
+    InputRichBlockTable,
+    InputRichMessage,
+    Message,
+    RichBlockTableCell,
+    RichTextBold,
+    RichTextCode,
+)
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
@@ -107,6 +117,81 @@ class Call(Module):
                 text += f"\n{line}"
 
         return await self._status(event, text)
+
+    # --------------------------------------------------------
+    # Rich native table via inline bot (kurigram 2.2.26+)
+    # --------------------------------------------------------
+
+    async def _rich_status_table(
+        self, event: Message, title: str, lines: list
+    ):
+        """
+        Coba kirim status sebagai rich table via inline bot
+        (muncul atas nama user, via @bot). Fallback ke HTML.
+        """
+        try:
+            import re as _re
+
+            bot = self.client.bot
+            # buka inline query dari userbot ke bot
+            res = await event._client.get_inline_bot_results(
+                bot.me.id, "call_status"
+            )
+            if not res.results:
+                raise RuntimeError("no inline results")
+
+            rows = [[RichBlockTableCell(text=RichTextBold(title), is_header=True)]]
+            for line in lines:
+                plain = _re.sub(r"<[^>]+>", "", line or "").strip()
+                if plain:
+                    rows.append([RichBlockTableCell(text=plain)])
+
+            rich = InputRichMessage(
+                blocks=[
+                    InputRichBlockParagraph(text=RichTextBold(title)),
+                    InputRichBlockTable(
+                        cells=rows, is_bordered=True, is_striped=True
+                    ),
+                ]
+            )
+            rich_raw = await rich.write(client=bot)
+
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+            )
+
+            markup = self.ikm([("Close", "data", b"0")])
+            markup_raw = await markup.write(bot)
+
+            await bot.invoke(
+                rawfn.messages.SetInlineBotResults(
+                    query_id=res.query_id,
+                    results=[
+                        InputBotInlineResult(
+                            id=datetime.datetime.now(datetime.UTC).timestamp().hex(),
+                            type="rich",
+                            send_message=InputBotInlineMessageRichMessage(
+                                rich_message=rich_raw,
+                                reply_markup=markup_raw,
+                            ),
+                        )
+                    ],
+                    cache_time=0,
+                )
+            )
+            await event.reply_inline_bot_result(
+                res.query_id, res.results[0].id
+            )
+            with contextlib.suppress(Exception):
+                await event.delete()
+            return
+        except Exception as e:
+            with contextlib.suppress(Exception):
+                self.logger.warning(f"call rich inline failed: {e!r}")
+
+        return await self._rich_status(event, title, lines)
 
     # --------------------------------------------------------
     # Get / start PyTgCalls

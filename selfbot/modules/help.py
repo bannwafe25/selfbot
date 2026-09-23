@@ -1,17 +1,55 @@
 import asyncio
+import base64
+import contextlib
 import html
 import random
 import re
+import struct
 import sys
 
 import pyrogram
 from pyrogram import filters
-from pyrogram.types import CallbackQuery, InlineQuery, Message, ReplyParameters
+from pyrogram.raw import functions as rawfn
+from pyrogram.raw import types as rawtypes
+from pyrogram.raw.types import (
+    InputBotInlineMessageRichMessage,
+    InputBotInlineResult,
+)
+from pyrogram.types import (
+    CallbackQuery,
+    InlineQuery,
+    InputRichBlockParagraph,
+    InputRichBlockPreformatted,
+    InputRichBlockTable,
+    InputRichMessage,
+    Message,
+    ReplyParameters,
+    RichBlockTableCell,
+    RichTextBold,
+    RichTextCode,
+    RichTextItalic,
+)
 
 from selfbot import __version__
 from selfbot.listener import handler, reply
 from selfbot.module import Module
 from selfbot.apis import FERDEV_ANIMEQUOTE, FERDEV_APIKEY
+
+
+from pyrogram import raw as _praw
+from pyrogram.types.messages_and_media.rich_text import RichText as _RichText
+
+
+class RichTextCopyable(_RichText):
+    """Monospace + tombol copy (raw TextCode, bukan TextFixed)."""
+
+    def __init__(self, text: str):
+        super().__init__()
+        self.text = text
+
+    async def write(self, client):
+        return _praw.types.TextFixed(text=await _RichText._write(client, self.text))
+
 
 pattern = re.compile(r"^help/?(mod|info|page)?(?:/(\d{1}|[a-zA-Z]+))?$")
 
@@ -91,11 +129,156 @@ class Help(Module):
             return
 
         quote = await self._get_quote()
+        try:
+            await self._answer_rich(event, quote)
+            return
+        except Exception as e:
+            with contextlib.suppress(Exception):
+                self.logger.warning(f"help rich inline failed: {e!r}")
         header = self._build_header(quote)
         await self.answer(event, self.ikm(self.build()), header)
 
+    def _rich_blocks(self, quote: str, page: int = 0) -> list:
+        mods = list(self.client.modules.values())
+        per_page = 4
+        chunks = [mods[i : i + per_page] for i in range(0, len(mods), per_page)]
+        total_pages = max(len(chunks), len(self.ikbs))
+        chunk = chunks[page] if page < len(chunks) else chunks[-1]
+
+        def count_cmds(mod) -> int:
+            d = mod.desc
+            if isinstance(d, dict):
+                return max(
+                    sum(
+                        1
+                        for k, v in d.items()
+                        if k not in ("e.g.", "?") and isinstance(v, str) and v
+                    ),
+                    1,
+                )
+            return 1
+
+        rows = [
+            [
+                RichBlockTableCell(text=RichTextBold("No"), is_header=True),
+                RichBlockTableCell(text=RichTextBold("Modul"), is_header=True),
+                RichBlockTableCell(text=RichTextBold("Cmd"), is_header=True),
+            ]
+        ]
+        offset = page * per_page
+        for i, mod in enumerate(chunk, 1):
+            rows.append(
+                [
+                    RichBlockTableCell(text=str(offset + i)),
+                    RichBlockTableCell(text=mod.name),
+                    RichBlockTableCell(text=str(count_cmds(mod))),
+                ]
+            )
+        blocks = [
+            InputRichBlockParagraph(text=RichTextBold("📖 Menu Bantuan Userbot")),
+            InputRichBlockParagraph(
+                text=RichTextItalic(
+                    f"Bagian {page + 1}/{total_pages} — Total {len(mods)} modul"
+                    " — Prefix aktif: (tanpa prefix)"
+                )
+            ),
+            InputRichBlockTable(
+                rows, is_bordered=True, is_striped=True, is_compact=True
+            ),
+            InputRichBlockParagraph(
+                text=RichTextItalic(
+                    "Pilih modul di bawah untuk melihat daftar perintah lengkapnya."
+                )
+            ),
+        ]
+        if quote:
+            blocks.append(
+                InputRichBlockParagraph(
+                    text=RichTextItalic(re.sub(r"<[^>]+>", "", quote))
+                )
+            )
+        return blocks
+
+    async def _answer_rich(self, event: InlineQuery, quote: str) -> None:
+        bot = self.client.bot
+        rich_raw = await InputRichMessage(
+            blocks=self._rich_blocks(quote)
+        ).write(client=bot)
+        markup_raw = await self.ikm(self.build()).write(bot)
+        await bot.invoke(
+            rawfn.messages.SetInlineBotResults(
+                query_id=int(event.id),
+                results=[
+                    InputBotInlineResult(
+                        id=str(event.id),
+                        type="article",
+                        title="Menu Bantuan Userbot",
+                        send_message=InputBotInlineMessageRichMessage(
+                            rich_message=rich_raw,
+                            reply_markup=markup_raw,
+                        ),
+                    )
+                ],
+                cache_time=0,
+            )
+        )
+
     @handler(filters.regex(pattern), 4)
     async def on_inline_callback(self, event: CallbackQuery) -> None:
+        act, val = pattern.match(event.data).groups()
+
+        # Rich path: callback dari rich message (inline_message_id, event.message=None)
+        if event._client is self.client.bot and getattr(
+            event, "inline_message_id", None
+        ):
+            await event.answer()
+            try:
+                if act == "info":
+                    await event.answer(
+                        (
+                            f"Selfbot v{__version__}\n"
+                            f"Pyrogram {pyrogram.__version__}\n"
+                            f"Python {sys.version.split()[0]}\n"
+                            f"\n    {len(self.client.handlers)} Handlers"
+                            f"\n    {len(self.client.listeners)} Listeners"
+                            f"\n    {len(self.client.modules)} Modules"
+                            f"\n\n{len(self.ikbs)} Pages"
+                        ),
+                        show_alert=True,
+                    )
+                    return
+                if act == "mod":
+                    rich_raw = await InputRichMessage(
+                        blocks=self._mod_rich_blocks(val)
+                    ).write(client=self.client.bot)
+                    markup = self.ikm(
+                        [
+                            (
+                                "« Back",
+                                "data",
+                                f"help/page/{self.maps.get(val, 0)}".encode(),
+                                "B",
+                            ),
+                            ("Close", "data", b"0"),
+                        ]
+                    )
+                    await self._edit_inline_rich(event, rich_raw, markup)
+                    return
+                page = int(val)
+                quote = await self._get_quote()
+                rich_raw = await InputRichMessage(
+                    blocks=self._rich_blocks(quote, page)
+                ).write(client=self.client.bot)
+                await self._edit_inline_rich(
+                    event, rich_raw, self.ikm(self.build(page))
+                )
+                return
+            except Exception as e:
+                with contextlib.suppress(Exception):
+                    self.logger.warning(f"help rich callback failed: {e!r}")
+                # jalur HTML lama sebagai fallback
+            return
+
         act, val = pattern.match(event.data).groups()
         if act == "info":
             await event.answer(
@@ -130,6 +313,56 @@ class Help(Module):
         header = self._build_header(quote)
         await self.respond(
             event, header, reply_markup=self.ikm(self.build(int(val)))
+        )
+
+    def _mod_rich_blocks(self, name: str) -> list:
+        mod = self.client.modules.get(name)
+        if mod is None:
+            for key, m in self.client.modules.items():
+                if key.lower() == name.lower():
+                    mod = m
+                    break
+        blocks = [
+            InputRichBlockParagraph(
+                text=RichTextBold(mod.name if mod else name.title())
+            ),
+        ]
+        if mod:
+            blocks.append(
+                InputRichBlockPreformatted(
+                    text=RichTextCopyable(mod.cmds), language="bash"
+                )
+            )
+            desc = mod.desc
+            if isinstance(desc, dict):
+                rows = [
+                    [
+                        RichBlockTableCell(text=RichTextBold(str(k))),
+                        RichBlockTableCell(text=str(v)),
+                    ]
+                    for k, v in desc.items()
+                ]
+                if rows:
+                    blocks.append(
+                        InputRichBlockTable(
+                            rows, is_bordered=True, is_striped=True, is_compact=True
+                        )
+                    )
+            elif desc:
+                blocks.append(InputRichBlockParagraph(text=str(desc)))
+        return blocks
+
+    async def _edit_inline_rich(self, event: CallbackQuery, rich, markup) -> None:
+        from pyrogram.utils import unpack_inline_message_id
+
+        inline_id = unpack_inline_message_id(event.inline_message_id)
+        markup_raw = await markup.write(self.client.bot)
+        await self.client.bot.invoke(
+            rawfn.messages.EditInlineBotMessage(
+                id=inline_id,
+                rich_message=rich,
+                reply_markup=markup_raw,
+            )
         )
 
     def _build_header(self, quote: str = "") -> str:

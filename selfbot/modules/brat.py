@@ -82,7 +82,7 @@ class Brat(Module):
                     await proc.wait()
                     
                     if proc.returncode == 0 and os.path.exists(out_path):
-                        await event._client.send_sticker(
+                        await self.client.app.send_sticker(
                             chat_id=event.chat.id,
                             sticker=out_path,
                             reply_parameters=reply_params,
@@ -98,7 +98,7 @@ class Brat(Module):
                 image = BytesIO(resp.content)
                 image.name = "brat.webp"
                 image.seek(0)
-                await event._client.send_sticker(
+                await self.client.app.send_sticker(
                     chat_id=event.chat.id,
                     sticker=image,
                     reply_parameters=reply_params,
