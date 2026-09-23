@@ -42,7 +42,7 @@ except Exception:
 # ============================================================
 
 pattern = re.compile(
-    r"^call(?:\s-(start|end|join|leave))"
+    r"^call(?:\s-(start|end|join|leave))?"
     r"(?:\s(@?[a-zA-Z][a-zA-Z0-9_]{2,31}[a-zA-Z0-9]|-100[1-9]\d{9}|[1-9]\d{1,9}))?"
     r"(?:\s-as\s(@?[a-zA-Z][a-zA-Z0-9_]{1,31}[a-zA-Z0-9]))?"
     r"(?:\s(-mute))?$"
@@ -291,17 +291,24 @@ class Call(Module):
                     route = getattr(ping_mod, "_rich_route", None) if ping_mod else None
                 except Exception:
                     route = None
+            if route is None and ping_mod is not None:
+                # Handler bersama belum terpasang (ping/afk belum jalan) — pasang
+                self._ensure_rich_handler(
+                    ping_mod,
+                    rawfn,
+                    InputBotInlineMessageRichMessage,
+                    InputBotInlineResult,
+                )
+                route = getattr(ping_mod, "_rich_route", None)
             if route is not None:
                 route["call"] = self._rich_payload
             handler_ready = route is not None
 
-            res = None
-            if handler_ready:
-                res = await event._client.get_inline_bot_results(
-                    bot.me.id, f"call{datetime.datetime.now(datetime.UTC).timestamp()}"
-                )
+            res = await event._client.get_inline_bot_results(
+                bot.me.id, f"call{datetime.datetime.now(datetime.UTC).timestamp()}"
+            ) if handler_ready else None
 
-            if res.results:
+            if res and res.results:
                 await asyncio.gather(
                     event.reply_inline_bot_result(res.query_id, res.results[0].id),
                     event.delete(),
@@ -355,6 +362,11 @@ class Call(Module):
             return
 
         action, chat_id, join_as, mute = match.groups()
+
+        # Default: `call` / `call @chat` = join langsung mute
+        if action is None:
+            action = "join"
+            mute = mute or "-mute"
 
         # ----------------------------------------------------
         # Loading
