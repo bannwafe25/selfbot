@@ -324,6 +324,17 @@ class GenAI(Module):
                     + "..."
                 )
 
+            if len(answer) <= 400:
+                rich_rows = [("Model", "Gemini"), ("Waktu", elapsed)]
+                if await self.send_rich(
+                    event,
+                    "🤖 AI Assistant",
+                    rich_rows,
+                    note=answer,
+                    query_prefix="genai",
+                ):
+                    return
+
             await self.respond(
                 event,
                 (
@@ -331,9 +342,6 @@ class GenAI(Module):
                     f"> **{elapsed}**"
                 ),
                 parse_mode=ParseMode.MARKDOWN,
-                reply_markup=self.ikm(
-                    ("Close", "data", b"0")
-                ),
             )
 
         except Exception as e:

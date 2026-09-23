@@ -177,7 +177,7 @@ class Ping(Module):
                         disp.groups[-2] = []
                         disp.groups = dict(sorted(disp.groups.items()))
                     disp.groups[-2].append(self._rich_handler)
-                self._rich_route["ping"] = (rich_raw, close_raw)
+                self._rich_route["ping"] = (rich_raw, None)
                 self._rich_mode = True
                 try:
                     res = await event._client.get_inline_bot_results(

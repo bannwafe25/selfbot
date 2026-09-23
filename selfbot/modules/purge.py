@@ -71,6 +71,16 @@ class Purge(Module):
             if len(mids) > 100 and res % 100 == 0:
                 await asyncio.sleep(2.5)
 
+        rich_rows = [
+            ("Mode", "Purgeme" if me else "Purge"),
+            ("Pesan terhapus", f"🗑 {res}"),
+            ("Waktu", self.fmtsec(now)),
+        ]
+        if await self.send_rich(
+            event, "🧹 Purge Selesai", rich_rows, query_prefix="purge"
+        ):
+            return
+
         await self.respond(
             event,
             self.fmtmsg(

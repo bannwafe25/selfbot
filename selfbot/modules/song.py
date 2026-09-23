@@ -202,6 +202,17 @@ class Song(Module):
                     reply_parameters=reply_parameters,
                 )
 
+            rich_rows = [
+                ("Judul", title[:48]),
+                ("Durasi", self.fmtsec(duration, part=2, human=True) if duration else "-"),
+                ("Ukuran", f"{audio_file.stat().st_size / 1048576:.1f} MB"),
+            ]
+            if await self.send_rich(
+                event, "🎵 Song Terkirim", rich_rows, query_prefix="song"
+            ):
+                await event.delete()
+                return
+
             await event.delete()
         except Exception as e:
             self.logger.error(f"Song download error: {e}")

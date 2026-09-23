@@ -4,6 +4,7 @@ import html
 import os
 import re
 import shutil
+import sys
 from pathlib import Path
 
 from pyrogram import filters
@@ -28,8 +29,10 @@ class MediaDL(Module):
     async def _run_ytdlp(self, url: str, download_dir: Path) -> tuple[str, str, int]:
         """Menjalankan yt-dlp untuk mengunduh media."""
         output_template = download_dir / "%(title).200s.%(ext)s"
+        # Pakai yt-dlp dari venv selfbot (PATH service tidak memuat .venv/bin)
+        ytdlp = str(Path(sys.executable).parent / "yt-dlp")
         command = (
-            f'yt-dlp -f "bv*+ba/b" --no-warnings --no-playlist '
+            f'"{ytdlp}" -f "bv*+ba/b" --no-warnings --no-playlist '
             f'--write-description '
             f'--remux-video mp4 -o "{output_template}" "{url}"'
         )
@@ -128,6 +131,23 @@ class MediaDL(Module):
                 for i in range(0, len(album_media), 10):
                     chunk = album_media[i : i + 10]
                     await event.reply_media_group(chunk)
+
+            total_size = sum(f.stat().st_size for f in downloaded_files)
+            size_str = (
+                f"{total_size / 1048576:.1f} MB"
+                if total_size >= 1048576
+                else f"{total_size / 1024:.0f} KB"
+            )
+            rich_rows = [
+                ("Sumber", url[:64]),
+                ("File", str(len(downloaded_files))),
+                ("Ukuran", size_str),
+            ]
+            if await self.send_rich(
+                event, "📥 Download Selesai", rich_rows, query_prefix="aio"
+            ):
+                await event.delete()
+                return
 
             await event.delete()
 

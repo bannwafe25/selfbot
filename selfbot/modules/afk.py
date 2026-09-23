@@ -99,14 +99,19 @@ class AFK(Module):
             upsert=True,
         )
 
+        rich_rows = [
+            ("Status", "💤 AFK"),
+            ("Alasan", reason or "-"),
+            ("Sejak", self.fmtsec(self.since)),
+        ]
+        if await self.send_rich(event, "💤 Away From Keyboard", rich_rows):
+            return
+
         await self.respond(
             event,
             self.fmtmsg(
                 "Away From Keyboard",
-                {
-                    "Status": "Enabled",
-                    "Reason": reason or "-",
-                },
+                {"Status": "Enabled", "Reason": reason or "-"},
                 self.fmtsec(self.since),
             ),
         )
@@ -138,6 +143,15 @@ class AFK(Module):
             ),
             self.client.db.afk_msgs.delete_many({}),
         )
+
+        rich_rows = [
+            ("Status", "🟢 Back Online"),
+            ("Away for", elapsed),
+            ("Pesan dibalas", str(total_msgs)),
+            ("Chat", str(total_chats)),
+        ]
+        if await self.send_rich(event, "✅ Back From Keyboard", rich_rows):
+            return
 
         await self.respond(
             event,

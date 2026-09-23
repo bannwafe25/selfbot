@@ -125,7 +125,6 @@ class Format:
             blocks.append(InputRichBlockButtons(rich_btns))
 
             rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
-            close_raw = await self.ikm([("Close", "data", b"0")]).write(bot)
 
             # Daftarkan payload ke handler bersama milik Ping (group -2)
             # — helper send_rich juga bisa dipasang lebih awal oleh modul lain
@@ -139,7 +138,7 @@ class Format:
             self._ensure_rich_handler(ping_mod, rawfn, InputBotInlineMessageRichMessage, InputBotInlineResult)
             if getattr(ping_mod, "_rich_route", None) is None:
                 ping_mod._rich_route = {}
-            ping_mod._rich_route[query_prefix] = (rich_raw, close_raw)
+            ping_mod._rich_route[query_prefix] = (rich_raw, None)
 
             now = _dt.datetime.now(_dt.UTC)
             res = await event._client.get_inline_bot_results(
