@@ -232,4 +232,7 @@ class Telegram:
 
             ikb.append(line)
 
+        # Expose untuk konversi ke rich buttons (InputRichBlockButtons)
+        self._ikm_rows = ikb
+
         return InlineKeyboardMarkup(ikb)

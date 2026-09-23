@@ -10,12 +10,15 @@ from pyrogram.errors import RPCError
 from pyrogram.types import (
     InputRichBlockParagraph,
     InputRichBlockTable,
+    InputRichBlockButtons,
+    RichMessageButton,
     InputRichMessage,
     Message,
     RichBlockTableCell,
     RichTextBold,
     RichTextCode,
 )
+from pyrogram.enums import ButtonStyle
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
@@ -152,6 +155,15 @@ class Call(Module):
                     InputRichBlockTable(
                         cells=rows, is_bordered=True, is_striped=True
                     ),
+                    InputRichBlockButtons(
+                        [
+                            RichMessageButton(
+                                text=RichTextBold("🗑 Close"),
+                                style=ButtonStyle.DANGER,
+                                callback_data=b"0",
+                            )
+                        ]
+                    ),
                 ]
             )
             rich_raw = await rich.write(client=bot)
@@ -162,9 +174,6 @@ class Call(Module):
                 InputBotInlineResult,
             )
 
-            markup = self.ikm([("Close", "data", b"0")])
-            markup_raw = await markup.write(bot)
-
             await bot.invoke(
                 rawfn.messages.SetInlineBotResults(
                     query_id=res.query_id,
@@ -174,7 +183,6 @@ class Call(Module):
                             type="rich",
                             send_message=InputBotInlineMessageRichMessage(
                                 rich_message=rich_raw,
-                                reply_markup=markup_raw,
                             ),
                         )
                     ],
@@ -252,10 +260,20 @@ class Call(Module):
                 InputRichBlockTable(
                     rows, is_bordered=True, is_striped=True, is_compact=True
                 ),
+                # Tombol rich Close (merah) — di dalam kartu
+                InputRichBlockButtons(
+                    [
+                        RichMessageButton(
+                            text=RichTextBold("🗑 Close"),
+                            style=ButtonStyle.DANGER,
+                            callback_data=b"0",
+                        )
+                    ]
+                ),
             ]
 
             rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
-            close_raw = await self.ikm([("Close", "data", b"0")]).write(bot)
+            close_raw = None
 
             # Daftarkan payload ke handler BERSAMA milik ping (group -2),
             # satu-satunya raw handler yang terpasang di dispatcher bot.

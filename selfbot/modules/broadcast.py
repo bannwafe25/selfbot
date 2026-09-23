@@ -7,12 +7,15 @@ from pyrogram.errors import FloodWait, RPCError
 from pyrogram.types import (
     InputRichBlockParagraph,
     InputRichBlockTable,
+    InputRichBlockButtons,
+    RichMessageButton,
     InputRichMessage,
     Message,
     RichBlockTableCell,
     RichTextBold,
     RichTextItalic,
 )
+from pyrogram.enums import ButtonStyle as _BS
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
@@ -140,8 +143,19 @@ class Broadcast(Module):
                     )
                 ),
             ]
+            blocks.append(
+                InputRichBlockButtons(
+                    [
+                        RichMessageButton(
+                            text=RichTextBold("🗑 Close"),
+                            style=_BS.DANGER,
+                            callback_data=b"0",
+                        )
+                    ]
+                )
+            )
             rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
-            close_raw = await self.ikm([("Close", "data", b"0")]).write(bot)
+            close_raw = None
 
             # Payload TERBARU utk handler permanen (bug: output lama terpakai ulang)
             self._rich_payload = (rich_raw, close_raw)

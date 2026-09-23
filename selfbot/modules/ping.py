@@ -16,8 +16,11 @@ from pyrogram.types import (
     RichBlockTableCell,
     RichTextBold,
     RichTextItalic,
+    InputRichBlockButtons,
+    RichMessageButton,
     Update,
 )
+from pyrogram.enums import ButtonStyle
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
@@ -109,6 +112,16 @@ class Ping(Module):
                     InputRichBlockParagraph(
                         text=RichTextItalic("Pengujian latensi berhasil dilakukan.")
                     ),
+                    # Tombol rich: Close saja (Refresh dihapus atas request)
+                    InputRichBlockButtons(
+                        [
+                            RichMessageButton(
+                                text=RichTextBold("🗑 Close"),
+                                style=ButtonStyle.DANGER,
+                                callback_data=b"0",
+                            ),
+                        ]
+                    ),
                 ]
                 botc = self.client.bot
                 from pyrogram.raw import functions as rawfn
@@ -118,16 +131,15 @@ class Ping(Module):
                 )
 
                 rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
-                close_markup = self.ikm([("Close", "data", b"0")])
-                close_raw = await close_markup.write(bot)
+                # Tanpa reply_markup bawah — Close sudah sebagai tombol rich
+                close_raw = None
 
                 from pyrogram.handlers import RawUpdateHandler
 
-                # Satu handler BERSAMA di group -2 untuk semua modul rich
-                # (ping/call/gcast). Pyrogram cuma jalankan handler pertama
-                # per group, jadi TIGA handler di group -2 = dua terakhir
-                # tak pernah jalan. Query dibagi per prefix ke payload
-                # terbaru masing-masing modul (self._rich_route).
+                # Pastikan handler BERSAMA + route siap (mungkin modul lain
+                # seperti alive/sysinfo lebih dulu butuh rich).
+                if getattr(self, "_rich_route", None) is None:
+                    self._rich_route = {}
                 if getattr(self, "_rich_handler", None) is None:
                     from pyrogram.raw.types import UpdateBotInlineQuery as _UBIQ
 
@@ -149,7 +161,6 @@ class Ping(Module):
                                                     title="Result",
                                                     send_message=InputBotInlineMessageRichMessage(
                                                         rich_message=p_rich,
-                                                        reply_markup=p_close,
                                                     ),
                                                 )
                                             ],
@@ -166,11 +177,9 @@ class Ping(Module):
                         disp.groups[-2] = []
                         disp.groups = dict(sorted(disp.groups.items()))
                     disp.groups[-2].append(self._rich_handler)
+                self._rich_route["ping"] = (rich_raw, close_raw)
                 self._rich_mode = True
                 try:
-                    if getattr(self, "_rich_route", None) is None:
-                        self._rich_route = {}
-                    self._rich_route["ping"] = (rich_raw, close_raw)
                     res = await event._client.get_inline_bot_results(
                         botc.me.id, f"ping{now.timestamp()}"
                     )

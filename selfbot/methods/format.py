@@ -59,8 +59,10 @@ class Format:
         rows: list,
         note: str = "",
         query_prefix: str = "rich",
+        buttons: list | None = None,
     ) -> bool:
         """Kirim rich table via inline bot. rows = [(param, keterangan), ...].
+        buttons = [(teks, callback_data, ButtonStyle|None), ...].
         Return True kalau sukses terkirim, False kalau perlu fallback HTML."""
         import datetime as _dt
 
@@ -72,6 +74,7 @@ class Format:
                 InputBotInlineResult,
             )
             from pyrogram.types import (
+                InputRichBlockExpandableBlockQuotation,
                 InputRichBlockParagraph,
                 InputRichBlockTable,
                 InputRichMessage,
@@ -94,7 +97,32 @@ class Format:
             blocks = [InputRichBlockParagraph(text=RichTextBold(title)),
                       InputRichBlockTable(trows, is_bordered=True, is_striped=True, is_compact=True)]
             if note:
-                blocks.append(InputRichBlockParagraph(text=RichTextItalic(note)))
+                # Blockquote (garis biru vertikal) seperti contoh @OnlyDevRoBot
+                blocks.append(InputRichBlockExpandableBlockQuotation(text=RichTextItalic(note)))
+
+            # Tombol rich: Close (merah) + custom tambahan
+            from pyrogram.enums import ButtonStyle
+            from pyrogram.types import (
+                InputRichBlockButtons,
+                RichMessageButton,
+                RichTextBold as _RB,
+            )
+            rich_btns = [
+                RichMessageButton(
+                    text=_RB("🗑 Close"),
+                    style=ButtonStyle.DANGER,
+                    callback_data=b"0",
+                )
+            ]
+            for btext, bdata, bstyle in (buttons or []):
+                rich_btns.append(
+                    RichMessageButton(
+                        text=_RB(btext),
+                        style=bstyle or ButtonStyle.PRIMARY,
+                        callback_data=bdata,
+                    )
+                )
+            blocks.append(InputRichBlockButtons(rich_btns))
 
             rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
             close_raw = await self.ikm([("Close", "data", b"0")]).write(bot)

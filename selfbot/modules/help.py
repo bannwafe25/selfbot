@@ -21,6 +21,8 @@ from pyrogram.types import (
     InputRichBlockParagraph,
     InputRichBlockPreformatted,
     InputRichBlockTable,
+    InputRichBlockButtons,
+    RichMessageButton,
     InputRichMessage,
     Message,
     ReplyParameters,
@@ -29,6 +31,7 @@ from pyrogram.types import (
     RichTextCode,
     RichTextItalic,
 )
+from pyrogram.enums import ButtonStyle
 
 from selfbot import __version__
 from selfbot.listener import handler, reply
@@ -37,7 +40,10 @@ from selfbot.apis import FERDEV_ANIMEQUOTE, FERDEV_APIKEY
 
 
 from pyrogram import raw as _praw
-from pyrogram.types.messages_and_media.rich_text import RichText as _RichText
+from pyrogram.types.messages_and_media.rich_text import (
+    RichText as _RichText,
+    RichTextCode as RichTextFixed,
+)
 
 
 class RichTextCopyable(_RichText):
@@ -134,7 +140,8 @@ class Help(Module):
             return
         except Exception as e:
             with contextlib.suppress(Exception):
-                self.logger.warning(f"help rich inline failed: {e!r}")
+                import traceback as _tb
+                self.logger.warning(f"help rich inline failed: {e!r}\n{_tb.format_exc()}")
         header = self._build_header(quote)
         await self.answer(event, self.ikm(self.build()), header)
 
@@ -160,18 +167,18 @@ class Help(Module):
 
         rows = [
             [
-                RichBlockTableCell(text=RichTextBold("No"), is_header=True),
                 RichBlockTableCell(text=RichTextBold("Modul"), is_header=True),
-                RichBlockTableCell(text=RichTextBold("Cmd"), is_header=True),
+                RichBlockTableCell(text=RichTextBold("Pattern"), is_header=True),
             ]
         ]
         offset = page * per_page
         for i, mod in enumerate(chunk, 1):
             rows.append(
                 [
-                    RichBlockTableCell(text=str(offset + i)),
-                    RichBlockTableCell(text=mod.name),
-                    RichBlockTableCell(text=str(count_cmds(mod))),
+                    RichBlockTableCell(text=RichTextBold(mod.name)),
+                    RichBlockTableCell(
+                        text=RichTextFixed(getattr(mod, "cmds", "") or "-")
+                    ),
                 ]
             )
         blocks = [
@@ -191,6 +198,33 @@ class Help(Module):
                 )
             ),
         ]
+        # Tombol navigasi + Close sebagai rich buttons (konversi dari ikm)
+        # Baris 1: tombol modul | Baris 2 (di bawah): Info + navigasi + Close
+        mod_btns, nav_btns = [], []
+        style_rev = {
+            "ButtonStyle.PRIMARY": ButtonStyle.PRIMARY,
+            "ButtonStyle.SUCCESS": ButtonStyle.SUCCESS,
+            "ButtonStyle.DANGER": ButtonStyle.DANGER,
+        }
+        for row in self.ikm(self.build(page)).inline_keyboard:
+            is_mod = any(
+                getattr(b, "callback_data", b"") and b.callback_data.startswith(b"help/mod/")
+                for b in row
+            )
+            for b in row:
+                kw = {"text": RichTextBold(b.text)}
+                if b.callback_data is not None:
+                    kw["callback_data"] = b.callback_data
+                elif b.url is not None:
+                    kw["url"] = b.url
+                st = style_rev.get(str(b.style))
+                if st:
+                    kw["style"] = st
+                (mod_btns if is_mod else nav_btns).append(RichMessageButton(**kw))
+        if mod_btns:
+            blocks.append(InputRichBlockButtons(mod_btns[:8]))
+        if nav_btns:
+            blocks.append(InputRichBlockButtons(nav_btns[:8]))
         if quote:
             blocks.append(
                 InputRichBlockParagraph(
@@ -204,7 +238,6 @@ class Help(Module):
         rich_raw = await InputRichMessage(
             blocks=self._rich_blocks(quote)
         ).write(client=bot)
-        markup_raw = await self.ikm(self.build()).write(bot)
         await bot.invoke(
             rawfn.messages.SetInlineBotResults(
                 query_id=int(event.id),
@@ -215,7 +248,6 @@ class Help(Module):
                         title="Menu Bantuan Userbot",
                         send_message=InputBotInlineMessageRichMessage(
                             rich_message=rich_raw,
-                            reply_markup=markup_raw,
                         ),
                     )
                 ],
@@ -234,44 +266,42 @@ class Help(Module):
             await event.answer()
             try:
                 if act == "info":
-                    await event.answer(
-                        (
-                            f"Selfbot v{__version__}\n"
-                            f"Pyrogram {pyrogram.__version__}\n"
-                            f"Python {sys.version.split()[0]}\n"
-                            f"\n    {len(self.client.handlers)} Handlers"
-                            f"\n    {len(self.client.listeners)} Listeners"
-                            f"\n    {len(self.client.modules)} Modules"
-                            f"\n\n{len(self.ikbs)} Pages"
-                        ),
-                        show_alert=True,
-                    )
+                    await event.answer()
+                    with contextlib.suppress(Exception):
+                        import pyrogram as _pg
+                        await self._edit_inline_rich(
+                            event,
+                            await InputRichMessage(
+                                blocks=[
+                                    InputRichBlockParagraph(
+                                        text=RichTextBold(f"ℹ️ Selfbot v{__version__}")
+                                    ),
+                                    InputRichBlockParagraph(
+                                        text=(
+                                            f"Pyrogram {_pg.__version__} · "
+                                            f"Python {sys.version.split()[0]} · "
+                                            f"{len(self.client.modules)} Modul · "
+                                            f"{len(self.ikbs)} Halaman"
+                                        )
+                                    ),
+                                ]
+                            ).write(client=self.client.bot),
+                            None,
+                        )
                     return
                 if act == "mod":
                     rich_raw = await InputRichMessage(
                         blocks=self._mod_rich_blocks(val)
                     ).write(client=self.client.bot)
-                    markup = self.ikm(
-                        [
-                            (
-                                "« Back",
-                                "data",
-                                f"help/page/{self.maps.get(val, 0)}".encode(),
-                                "B",
-                            ),
-                            ("Close", "data", b"0"),
-                        ]
-                    )
-                    await self._edit_inline_rich(event, rich_raw, markup)
+                    # Detail modul polos: tanpa tombol apa pun
+                    await self._edit_inline_rich(event, rich_raw, None)
                     return
                 page = int(val)
                 quote = await self._get_quote()
                 rich_raw = await InputRichMessage(
                     blocks=self._rich_blocks(quote, page)
                 ).write(client=self.client.bot)
-                await self._edit_inline_rich(
-                    event, rich_raw, self.ikm(self.build(page))
-                )
+                await self._edit_inline_rich(event, rich_raw, None)
                 return
             except Exception as e:
                 with contextlib.suppress(Exception):
@@ -352,11 +382,18 @@ class Help(Module):
                 blocks.append(InputRichBlockParagraph(text=str(desc)))
         return blocks
 
-    async def _edit_inline_rich(self, event: CallbackQuery, rich, markup) -> None:
+    async def _edit_inline_rich(self, event: CallbackQuery, rich, markup=None) -> None:
         from pyrogram.utils import unpack_inline_message_id
 
         inline_id = unpack_inline_message_id(event.inline_message_id)
-        markup_raw = await markup.write(self.client.bot)
+        # markup bisa InlineKeyboardMarkup (biasa) atau blok rich — rich TIDAK
+        # boleh di-.write(), langsung diteruskan ke rich_message utama
+        if isinstance(markup, InputRichBlockButtons):
+            markup_raw, rich_btn_block = None, rich
+            rich.blocks.append(markup)
+        else:
+            markup_raw = await markup.write(self.client.bot) if markup else None
+            rich_btn_block = None
         await self.client.bot.invoke(
             rawfn.messages.EditInlineBotMessage(
                 id=inline_id,
@@ -364,6 +401,30 @@ class Help(Module):
                 reply_markup=markup_raw,
             )
         )
+
+    def _rich_from_ikm(self, ikm_markup):
+        """Konversi InlineKeyboardMarkup jadi InputRichBlockButtons (rich)."""
+        style_rev = {
+            str(ButtonStyle.DANGER): ButtonStyle.DANGER,
+            str(ButtonStyle.SUCCESS): ButtonStyle.SUCCESS,
+            str(ButtonStyle.PRIMARY): ButtonStyle.PRIMARY,
+        }
+        rows_out = []
+        for row in ikm_markup.inline_keyboard:
+            for btn in row:
+                kwargs = {"text": RichTextBold(btn.text)}
+                if btn.callback_data is not None:
+                    kwargs["callback_data"] = btn.callback_data
+                elif btn.url is not None:
+                    kwargs["url"] = btn.url
+                else:
+                    continue  # jenis tombol tak didukung rich, skip
+                st = style_rev.get(str(btn.style))
+                if st:
+                    kwargs["style"] = st
+                rows_out.append(RichMessageButton(**kwargs))
+        # InputRichBlockButtons: SATU list datar (maks 8 tombol per baris)
+        return InputRichBlockButtons(rows_out[:8])
 
     def _build_header(self, quote: str = "") -> str:
         header = (
