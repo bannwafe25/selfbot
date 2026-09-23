@@ -168,7 +168,7 @@ class Help(Module):
     def build(self, page: int = 0) -> list:
         idx = max(0, min(page, len(self.ikbs) - 1))
         ikb = self.ikbs[idx][:]
-        ikb.append([("ℹ️ Info", "data", b"help/info", "G")])
+        ikb.append([("ℹ️ Info", "data", b"help/info")])
         nav = []
         if idx > 0:
             nav.append((f"« ({idx})", "data", f"help/page/{idx - 1}".encode(), "G"))
