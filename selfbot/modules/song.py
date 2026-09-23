@@ -128,7 +128,16 @@ class Song(Module):
             await self.respond(
                 event, f"<code>Downloading: {html.escape(title[:100])}</code>"
             )
-            await self._download_file(str(dlink), audio_file, timeout=300)
+            try:
+                await self._download_file(str(dlink), audio_file, timeout=300)
+            except Exception as first_err:
+                # Tunnel bisa expired/kosong — minta link baru lalu coba sekali lagi
+                self.logger.warning(f"Download failed ({first_err}), refreshing link...")
+                song_data = await self._fetch_song_data(yt_link)
+                dlink = song_data["dlink"]
+                if not dlink:
+                    raise RuntimeError("API did not provide a download link.")
+                await self._download_file(str(dlink), audio_file, timeout=300)
             if not audio_file.exists() or audio_file.stat().st_size == 0:
                 raise RuntimeError("Audio file download failed or is empty.")
 

@@ -1,171 +1,237 @@
 import asyncio
-import datetime
+import base64
 import html
+import random
 import re
 
+import httpx
 from pyrogram import filters
-from pyrogram.types import Message, ReplyParameters
+from pyrogram.types import Message
 
-from selfbot.listener import handler, reply
+from selfbot.listener import handler
 from selfbot.module import Module
 
-QUOTLY_BOT_ID = 1031952739
-QUOTLY_TIMEOUT = 20
-ERROR_VISIBLE_DURATION = 8
+QUOTE_APIS = [
+    "https://quote.yuri.ly/generate",
+    "https://bot.lyo.su/quote/generate",
+]
 
-pattern = re.compile(r"^(q|quotly)(?:\s+(.+))?$")
+COLOR_NAMES = {
+    "red": "#ff2b2b", "blue": "#3b82f6", "green": "#22c55e", "yellow": "#facc15",
+    "orange": "#f97316", "purple": "#a855f7", "pink": "#ec4899", "black": "#111111",
+    "white": "#ffffff", "gray": "#6b7280", "grey": "#6b7280", "teal": "#14b8a6",
+}
+
+PATTERN = re.compile(
+    r"^(?:q|quotly)(?:\s+(\S+))?(?:\s+(\d+))?\s*$", re.IGNORECASE
+)
+
+
+def _pick_color(arg: str | None) -> str:
+    if not arg:
+        return random.choice(
+            ["#1b1429", "#2d1b3d", "#0f2027", "#3a1c71", "#16222a", "#41295a"]
+        )
+    arg = arg.lower().lstrip("#")
+    if arg in COLOR_NAMES:
+        return COLOR_NAMES[arg]
+    if re.fullmatch(r"[0-9a-f]{6}", arg):
+        return f"#{arg}"
+    return random.choice(["#1b1429", "#2d1b3d", "#0f2027"])
 
 
 class Quotly(Module):
     name = "Quotly"
-    cmds = "<Reply to Message> q(uotly)? {color}? {count}?"
+    cmds = "q [color] [count]"
     desc = {
-        "Info": "Creates a quote by forwarding messages to @QuotLyBot.",
-        "color": "Color name or hex code (optional).",
-        "count": "Number of messages to quote (1-10, optional).",
-        "e.g.": "<Reply to Message> q red 3",
+        "q": "Reply ke pesan — bikin quote stiker via quote-api (LyoSU).",
+        "color": "Nama warna atau hex (opsional).",
+        "count": "Jumlah pesan 1-10 (opsional).",
+        "e.g.": "<Reply> q red 3",
     }
 
-    @staticmethod
-    def _parse_arguments(args_str: str) -> tuple[str | None, int]:
-        if not args_str:
-            return None, 1
+    async def _build_message_payload(self, msg: Message) -> dict | None:
+        sender = msg.from_user
+        if sender is None:
+            chat = msg.chat
+            sender_id = chat.id if chat else 1
+            sender_name = chat.title if chat else "Unknown"
+        else:
+            sender_id = sender.id
+            sender_name = " ".join(
+                filter(None, [sender.first_name, sender.last_name])
+            ) or "Unknown"
 
-        color = None
-        count = 1
-        for part in args_str.split():
-            if part.isdigit():
-                count = max(1, min(int(part), 10))
-            elif part.startswith("#") or part.isalpha():
-                color = part
+        avatar_url = None
+        if sender is not None:
+            try:
+                photo = await self.client.app.download_memory(
+                    sender_id, in_memory=True
+                )
+                import base64 as _b64
+                avatar_url = (
+                    "data:image/jpeg;base64,"
+                    + _b64.b64encode(photo.getvalue()).decode()
+                )
+            except Exception:
+                avatar_url = None
 
-        return color, count
+        text = (msg.text or msg.caption or "").strip()
+        if not text and not (msg.photo or msg.sticker or msg.voice):
+            return None
 
-    @handler(filters.regex(pattern) & reply, 1)
+        payload = {
+            "chatId": msg.chat.id if msg.chat else 1,
+            "from": {"id": sender_id, "name": sender_name},
+            "avatar": True,
+        }
+        if avatar_url:
+            payload["from"]["photo"] = {"url": avatar_url}
+
+        if msg.photo:
+            try:
+                file_path = await self.client.app.download_media(msg, in_memory=True)
+                import base64 as _b64
+                payload["media"] = {
+                    "url": (
+                        "data:image/jpeg;base64,"
+                        + _b64.b64encode(file_path.getvalue()).decode()
+                    )
+                }
+                payload["mediaType"] = "photo"
+            except Exception:
+                pass
+            if text:
+                payload["text"] = text
+        elif msg.sticker:
+            try:
+                file_path = await self.client.app.download_media(msg, in_memory=True)
+                import base64 as _b64
+                payload["media"] = {
+                    "url": (
+                        "data:image/webp;base64,"
+                        + _b64.b64encode(file_path.getvalue()).decode()
+                    )
+                }
+                payload["mediaType"] = "sticker"
+            except Exception:
+                pass
+        elif msg.voice:
+            payload["mediaType"] = "voice"
+            payload["text"] = text or "🎤 Voice message"
+        else:
+            payload["text"] = text
+
+        if msg.reply_to_message:
+            replied = msg.reply_to_message
+            r_sender = replied.from_user
+            r_name = (
+                " ".join(filter(None, [r_sender.first_name, r_sender.last_name]))
+                if r_sender and r_sender.first_name
+                else (replied.chat.title if replied.chat else "Unknown")
+            )
+            payload["replyMessage"] = {
+                "name": r_name,
+                "text": (replied.text or replied.caption or "")[:300],
+                "chatId": replied.chat.id if replied.chat else sender_id,
+            }
+
+        return payload
+
+    async def _generate(self, payloads: list[dict], color: str, as_png: bool):
+        body = {
+            "type": "quote",
+            "format": "png" if as_png else "webp",
+            "backgroundColor": color,
+            "messages": payloads,
+        }
+        last_err = None
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+            for api in QUOTE_APIS:
+                try:
+                    r = await c.post(api, json=body)
+                    if r.status_code != 200:
+                        last_err = RuntimeError(f"HTTP {r.status_code}")
+                        continue
+                    data = r.json()
+                    # Struktur respons beda antar instance:
+                    # - quote-api resmi: {"image": "<base64>", "ext": "png"}
+                    # - yuri.ly: {"ok": true, "result": {"image": "<base64>", ...}}
+                    img_b64 = ""
+                    ext = "png" if as_png else "webp"
+                    if isinstance(data.get("result"), dict):
+                        img_b64 = data["result"].get("image", "")
+                    elif data.get("image"):
+                        img_b64 = data["image"]
+                        if data.get("ext"):
+                            ext = data["ext"]
+                    if not img_b64:
+                        last_err = RuntimeError(
+                            data.get("error", {}).get("message", "empty image")
+                            if isinstance(data.get("error"), dict)
+                            else "empty image"
+                        )
+                        continue
+                    return base64.b64decode(img_b64), ext
+                except Exception as e:
+                    last_err = e
+                    continue
+        raise last_err or RuntimeError("quote api gagal semua")
+
+    @handler(filters.regex(PATTERN), 1)
     async def on_message_out(self, event: Message) -> None:
+        import asyncio as _asyncio
+
+        m = PATTERN.match(str(event.content or "").strip())
+        if not m:
+            return
+        color_arg, count_arg = m.group(1), m.group(2)
+
         if not event.reply_to_message:
-            await self._edit_and_delete(
-                event, "<code>Please reply to a message to quote.</code>"
-            )
-            return
+            return await event.edit("<b>Reply ke pesan dulu.</b>")
 
-        match = pattern.match(event.content)
-        args_str = match.group(2) if match else ""
-        color, count = self._parse_arguments(args_str or "")
+        count = min(max(int(count_arg or 1), 1), 10)
+        as_png = bool(color_arg and color_arg.lower() in ("png", "p"))
+        if as_png and not count_arg:
+            count_arg = color_arg if (color_arg or "").isdigit() else count_arg
+        if (color_arg or "").lower() in ("png", "p"):
+            color_arg = None
+        color = _pick_color(color_arg)
 
-        progress = await self.respond(event, f"<code>Fetching {count} message(s)...</code>")
-        try:
-            message_ids = await self._collect_message_ids(event, count)
-        except Exception as e:
-            await self._edit_and_delete(
-                progress, f"<code>Failed to fetch messages: {html.escape(str(e))}</code>"
-            )
-            return
+        await event.edit("<code>Membuat quote...</code>")
 
-        if not message_ids:
-            await self._edit_and_delete(
-                progress, "<code>Could not find valid messages to quote.</code>"
-            )
-            return
-
-        await self.respond(
-            progress,
-            f"<code>Forwarding {len(message_ids)} message(s) to @QuotLyBot...</code>",
+        messages = await self.client.app.get_messages(
+            event.chat.id, list(range(event.reply_to_message.id, event.reply_to_message.id + count))
         )
 
+        payloads = []
+        for msg in messages:
+            if msg is None:
+                continue
+            p = await self._build_message_payload(msg)
+            if p:
+                payloads.append(p)
+
+        if not payloads:
+            return await event.edit("<b>Tidak ada pesan valid untuk di-quote.</b>")
+
         try:
-            start_time = datetime.datetime.now(datetime.UTC)
+            img_bytes, ext = await self._generate(payloads, color, as_png)
+        except Exception as e:
+            return await event.edit(f"<b>Quote gagal:</b> <code>{html.escape(str(e))}</code>")
 
-            if color:
-                with_color = f"/qcolor {color}"
-                await event._client.send_message(QUOTLY_BOT_ID, with_color)
-                await asyncio.sleep(0.8)
+        import tempfile
+        from pathlib import Path
 
-            await event._client.forward_messages(
-                chat_id=QUOTLY_BOT_ID,
-                from_chat_id=event.chat.id,
-                message_ids=message_ids,
-            )
+        with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as f:
+            f.write(img_bytes)
+            out_path = Path(f.name)
 
-            quotly_response = await self._find_quotly_response(
-                event._client, start_time, QUOTLY_TIMEOUT
-            )
-            if not quotly_response:
-                raise asyncio.TimeoutError("@QuotLyBot did not respond in time.")
-
-            await progress.delete()
-            reply_to_id = event.reply_to_message_id or event.reply_to_message.id
-            try:
-                await event._client.copy_message(
-                    chat_id=event.chat.id,
-                    from_chat_id=QUOTLY_BOT_ID,
-                    message_id=quotly_response.id,
-                    reply_parameters=ReplyParameters(message_id=reply_to_id),
-                )
-            except TypeError:
-                await event._client.copy_message(
-                    chat_id=event.chat.id,
-                    from_chat_id=QUOTLY_BOT_ID,
-                    message_id=quotly_response.id,
-                    reply_to_message_id=reply_to_id,
-                )
+        try:
+            if ext == "webp":
+                await event.reply_sticker(out_path)
+            else:
+                await event.reply_photo(out_path)
             await event.delete()
-        except Exception as e:
-            error_text = (
-                "<b>Error:</b> Could not get a quote from @QuotLyBot.\n"
-                f"<code>{html.escape(str(e)[:300])}</code>"
-            )
-            await self._edit_and_delete(progress, error_text)
-
-    async def _collect_message_ids(self, event: Message, count: int) -> list[int]:
-        replied = event.reply_to_message
-        if count <= 1:
-            return [replied.id]
-
-        start_id = max(1, replied.id - count + 1)
-        ids = list(range(start_id, replied.id + 1))
-        msgs = await event._client.get_messages(
-            chat_id=event.chat.id,
-            message_ids=ids,
-        )
-        return [msg.id for msg in msgs if msg]
-
-    async def _find_quotly_response(
-        self, client, start_time: datetime.datetime, timeout: int
-    ) -> Message | None:
-        end_time = start_time + datetime.timedelta(seconds=timeout)
-        start_ts = start_time.timestamp()
-        seen = set()
-
-        while datetime.datetime.now(datetime.UTC) < end_time:
-            try:
-                async for message in client.get_chat_history(QUOTLY_BOT_ID, limit=10):
-                    if not message or message.id in seen:
-                        continue
-                    seen.add(message.id)
-
-                    if not message.from_user or message.from_user.id != QUOTLY_BOT_ID:
-                        continue
-
-                    msg_dt = message.date
-                    if msg_dt.tzinfo is None:
-                        msg_dt = msg_dt.replace(tzinfo=datetime.UTC)
-                    if msg_dt.timestamp() < start_ts:
-                        continue
-
-                    if message.media or message.text:
-                        return message
-            except Exception as e:
-                self.logger.debug(f"Error checking QuotLyBot response: {e}")
-
-            await asyncio.sleep(1)
-
-        return None
-
-    async def _edit_and_delete(self, message: Message, text: str) -> None:
-        try:
-            await message.edit_text(text)
-            await asyncio.sleep(ERROR_VISIBLE_DURATION)
-            await message.delete()
-        except Exception as e:
-            self.logger.debug(f"Failed to edit/delete status message: {e}")
+        finally:
+            out_path.unlink(missing_ok=True)

@@ -218,3 +218,7 @@ __marimo__/
 # Workdir
 selfbot/downloads/
 downloads/
+
+selfbot/*.session
+*.session
+unknown_errors.txt
