@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import datetime
 import re
 
@@ -8,7 +9,13 @@ from pyrogram.types import (
     CallbackQuery,
     ChosenInlineResult,
     InlineQuery,
+    InputRichBlockParagraph,
+    InputRichBlockTable,
+    InputRichMessage,
     Message,
+    RichBlockTableCell,
+    RichTextBold,
+    RichTextItalic,
     Update,
 )
 
@@ -29,6 +36,8 @@ class Ping(Module):
 
     @handler(filters.regex(pattern), 2)
     async def on_inline_query(self, event: InlineQuery) -> None:
+        # Query ping dari userbot tidak perlu dijawab framework;
+        # raw handler di execute() yang menjawab dengan rich result.
         await self.answer(event)
 
     @handler(filters.regex(pattern), 3)
@@ -45,6 +54,8 @@ class Ping(Module):
         return self.fmtsec(now, 1)
 
     async def execute(self, event: Update) -> None:
+        if isinstance(event, Message) and getattr(event, "_from_rich", False):
+            return
         if isinstance(event, Message):
             await self.respond(event, "<code>...</code>")
         else:
@@ -58,10 +69,129 @@ class Ping(Module):
                 self.ping(self.client.app), self.ping(self.client.bot)
             ),
         )
+        markup = self.ikm(
+            [[("Ping!", "data", b"ping")], [("Close", "data", b"0")]]
+        )
+        # Rich table via INLINE bot — raw handler dipasang di group -2
+        # (dieksekusi sebelum framework handler di group -1)
+        if isinstance(event, Message):
+            try:
+                app_ms = re.sub(r"[^0-9.]", "", str(app)) or app
+                blocks = [
+                    InputRichBlockParagraph(text=RichTextBold("🚀 Pong!")),
+                    InputRichBlockTable(
+                        [
+                            [
+                                RichBlockTableCell(text="Parameter", is_header=True),
+                                RichBlockTableCell(text="Keterangan", is_header=True),
+                            ],
+                            [
+                                RichBlockTableCell(text="Klien Aktif"),
+                                RichBlockTableCell(text=event._client.me.first_name or "Userbot"),
+                            ],
+                            [
+                                RichBlockTableCell(text="User ID"),
+                                RichBlockTableCell(text=str(event._client.me.id)),
+                            ],
+                            [
+                                RichBlockTableCell(text="Kecepatan Respons"),
+                                RichBlockTableCell(text=f"{app_ms} ms"),
+                            ],
+                            [
+                                RichBlockTableCell(text="Status Jaringan"),
+                                RichBlockTableCell(text="✅ Terhubung Normal"),
+                            ],
+                        ],
+                        is_bordered=True,
+                        is_striped=True,
+                        is_compact=True,
+                    ),
+                    InputRichBlockParagraph(
+                        text=RichTextItalic("Pengujian latensi berhasil dilakukan.")
+                    ),
+                ]
+                botc = self.client.bot
+                from pyrogram.raw import functions as rawfn
+                from pyrogram.raw.types import (
+                    InputBotInlineMessageRichMessage,
+                    InputBotInlineResult,
+                )
+
+                rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
+                close_markup = self.ikm([("Close", "data", b"0")])
+                close_raw = await close_markup.write(bot)
+
+                from pyrogram.handlers import RawUpdateHandler
+
+                # Satu handler BERSAMA di group -2 untuk semua modul rich
+                # (ping/call/gcast). Pyrogram cuma jalankan handler pertama
+                # per group, jadi TIGA handler di group -2 = dua terakhir
+                # tak pernah jalan. Query dibagi per prefix ke payload
+                # terbaru masing-masing modul (self._rich_route).
+                if getattr(self, "_rich_handler", None) is None:
+                    from pyrogram.raw.types import UpdateBotInlineQuery as _UBIQ
+
+                    async def _shared_answer(_c, update, users, chats):
+                        if not isinstance(update, _UBIQ):
+                            return
+                        q = str(update.query)
+                        for mod, payload in getattr(self, "_rich_route", {}).items():
+                            if q.startswith(mod):
+                                p_rich, p_close = payload
+                                try:
+                                    await botc.invoke(
+                                        rawfn.messages.SetInlineBotResults(
+                                            query_id=update.query_id,
+                                            results=[
+                                                InputBotInlineResult(
+                                                    id=str(update.query_id),
+                                                    type="article",
+                                                    title="Result",
+                                                    send_message=InputBotInlineMessageRichMessage(
+                                                        rich_message=p_rich,
+                                                        reply_markup=p_close,
+                                                    ),
+                                                )
+                                            ],
+                                            cache_time=0,
+                                        ),
+                                    )
+                                except Exception as exc:
+                                    self.logger.warning(f"shared rich {mod} failed: {exc!r}")
+                                return
+
+                    self._rich_handler = RawUpdateHandler(_shared_answer)
+                    disp = botc.dispatcher
+                    if -2 not in disp.groups:
+                        disp.groups[-2] = []
+                        disp.groups = dict(sorted(disp.groups.items()))
+                    disp.groups[-2].append(self._rich_handler)
+                self._rich_mode = True
+                try:
+                    if getattr(self, "_rich_route", None) is None:
+                        self._rich_route = {}
+                    self._rich_route["ping"] = (rich_raw, close_raw)
+                    res = await event._client.get_inline_bot_results(
+                        botc.me.id, f"ping{now.timestamp()}"
+                    )
+                finally:
+                    self._rich_mode = False
+                if res.results:
+                    await asyncio.gather(
+                        event.reply_inline_bot_result(
+                            res.query_id, res.results[0].id
+                        ),
+                        event.delete(),
+                    )
+                    return
+                # Markup tanpa tombol — kosongkan
+                markup = None
+            except Exception as e:
+                with contextlib.suppress(Exception):
+                    self.logger.warning(f"ping rich failed, fallback html: {e!r}")
+
         await self.respond(
             event,
             self.fmtmsg("Selfbot Latency", {"App": app, "Bot": bot}, self.fmtsec(now)),
-            reply_markup=self.ikm(
-                [[("Ping!", "data", b"ping")], [("Close", "data", b"0")]]
-            ),
+            reply_markup=markup,
         )

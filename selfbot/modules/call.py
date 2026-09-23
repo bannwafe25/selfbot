@@ -194,6 +194,109 @@ class Call(Module):
         return await self._rich_status(event, title, lines)
 
     # --------------------------------------------------------
+    # Final rich table via inline bot (pola ping.py)
+    # --------------------------------------------------------
+
+    async def _rich_final(self, event: Message, title: str, extra: list, dur: float, chat_label: str = "-"):
+        """Kirim hasil call sebagai rich table via inline bot (fallback HTML)."""
+        import html as _html
+
+        try:
+            bot = self.client.bot
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+            )
+            from pyrogram.raw.types import UpdateBotInlineQuery
+            from pyrogram.handlers import RawUpdateHandler
+
+            import contextlib as _cl
+
+            rows = [
+                [
+                    RichBlockTableCell(text="Parameter", is_header=True),
+                    RichBlockTableCell(text="Keterangan", is_header=True),
+                ],
+                [
+                    RichBlockTableCell(text="Aksi"),
+                    RichBlockTableCell(text=_html.unescape(re.sub(r"<[^>]+>", "", title.split(" ⚡ ")[0]))),
+                ],
+                [
+                    RichBlockTableCell(text="Chat"),
+                    RichBlockTableCell(text=chat_label),
+                ],
+            ]
+            for line in extra:
+                plain = re.sub(r"<[^>]+>", "", line or "").strip()
+                if ":" in plain:
+                    k, v = plain.split(":", 1)
+                    rows.append(
+                        [RichBlockTableCell(text=k.strip()), RichBlockTableCell(text=v.strip())]
+                    )
+            rows.append(
+                [
+                    RichBlockTableCell(text="Total Waktu"),
+                    RichBlockTableCell(text=f"{dur:.2f}s"),
+                ]
+            )
+            rows.append(
+                [
+                    RichBlockTableCell(text="Status Akhir"),
+                    RichBlockTableCell(text="✅ Selesai"),
+                ]
+            )
+
+            blocks = [
+                InputRichBlockParagraph(text=RichTextBold(title.split(" ⚡ ")[0])),
+                InputRichBlockTable(
+                    rows, is_bordered=True, is_striped=True, is_compact=True
+                ),
+            ]
+
+            rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
+            close_raw = await self.ikm([("Close", "data", b"0")]).write(bot)
+
+            # Daftarkan payload ke handler BERSAMA milik ping (group -2),
+            # satu-satunya raw handler yang terpasang di dispatcher bot.
+            self._rich_payload = (rich_raw, close_raw)
+
+            async def _h(_c, update, users, chats):
+                pass
+
+            ping_mod = getattr(self.client, "ping_module", None)
+            route = getattr(ping_mod, "_rich_route", None) if ping_mod else None
+            if route is None:
+                # Fallback: cari module instance "Ping" di extender
+                try:
+                    ping_mod = self.client.modules.get("Ping")
+                    route = getattr(ping_mod, "_rich_route", None) if ping_mod else None
+                except Exception:
+                    route = None
+            if route is not None:
+                route["call"] = self._rich_payload
+            handler_ready = route is not None
+
+            res = None
+            if handler_ready:
+                res = await event._client.get_inline_bot_results(
+                    bot.me.id, f"call{datetime.datetime.now(datetime.UTC).timestamp()}"
+                )
+
+            if res.results:
+                await asyncio.gather(
+                    event.reply_inline_bot_result(res.query_id, res.results[0].id),
+                    event.delete(),
+                )
+                return
+        except Exception as e:
+            with contextlib.suppress(Exception):
+                self.logger.warning(f"call rich failed, fallback html: {e!r}")
+
+        lines = [f"  <code>{_l}</code>" for _l in extra]
+        await self._rich_status(event, title, lines)
+
+    # --------------------------------------------------------
     # Get / start PyTgCalls
     # --------------------------------------------------------
 
@@ -521,7 +624,12 @@ class Call(Module):
         title = f"{head} ⚡ {dur:.2f}s"
         lines = list(extra) or [""]
 
-        await self._rich_status(event, title, lines)
+        try:
+            chat_label = getattr(chat, "title", None) or getattr(chat, "username", None) or str(chat_id)
+        except Exception:
+            chat_label = str(chat_id)
+
+        await self._rich_final(event, title, extra, dur, chat_label=chat_label)
 
         # Auto-delete disabled at user request (Sep 23)
         # if action in ("join", "leave", "start", "end"):
