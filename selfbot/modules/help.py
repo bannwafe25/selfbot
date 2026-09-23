@@ -32,7 +32,7 @@ class Help(Module):
                 f"\n{' ' * 4}<code>{html.escape(mod.cmds)}</code>"
                 f"\n\n{self.fmthelp(mod.desc)}"
             )
-            page.append((mod.__class__.__name__, "data", f"help/mod/{name}".encode()))
+            page.append((mod.__class__.__name__, "data", f"help/mod/{name}".encode(), "B"))
             if len(page) == 4:
                 self.ikbs.append([page[i : i + 2] for i in range(0, 4, 2)])
                 page = []
@@ -81,7 +81,9 @@ class Help(Module):
                 self.ikm(("Close", "data", b"0")),
                 (
                     f"<code>No Module with Name '{name}'</code>\n\n"
-                    f"<b>Available Modules:</b>\n{'\n'.join(names)}\n\n"
+                    "<b>Available Modules:</b>\n"
+                    + "\n".join(names)
+                    + "\n\n"
                     "Get with Prefix '<code>help/</code>'\n"
                     "<b>e.g.</b> <code>help/debug</code>"
                 ),
@@ -117,7 +119,7 @@ class Help(Module):
                 self.mods[val],
                 reply_markup=self.ikm(
                     [
-                        ("« Back", "data", f"help/page/{page}".encode()),
+                        ("« Back", "data", f"help/page/{page}".encode(), "B"),
                         ("Close", "data", b"0"),
                     ]
                 ),
@@ -166,14 +168,14 @@ class Help(Module):
     def build(self, page: int = 0) -> list:
         idx = max(0, min(page, len(self.ikbs) - 1))
         ikb = self.ikbs[idx][:]
-        ikb.append([("ℹ️ Info", "data", b"help/info")])
+        ikb.append([("ℹ️ Info", "data", b"help/info", "G")])
         nav = []
         if idx > 0:
-            nav.append((f"« ({idx})", "data", f"help/page/{idx - 1}".encode()))
+            nav.append((f"« ({idx})", "data", f"help/page/{idx - 1}".encode(), "G"))
 
         nav.append(("Close", "data", b"0"))
         if idx < len(self.ikbs) - 1:
-            nav.append((f"({idx + 2}) »", "data", f"help/page/{idx + 1}".encode()))
+            nav.append((f"({idx + 2}) »", "data", f"help/page/{idx + 1}".encode(), "G"))
 
         ikb.append(nav)
         return ikb
