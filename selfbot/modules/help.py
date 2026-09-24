@@ -235,9 +235,8 @@ class Help(Module):
                 )
             )
         )
-        # Tombol navigasi + Close sebagai rich buttons (konversi dari ikm)
-        # Baris 1: tombol modul | Baris 2 (di bawah): Info + navigasi + Close
-        mod_btns, nav_btns = [], []
+        # Tombol navigasi + Close (tombol modul dihapus — cukup accordion Details)
+        nav_btns = []
         style_rev = {
             "ButtonStyle.PRIMARY": ButtonStyle.PRIMARY,
             "ButtonStyle.SUCCESS": ButtonStyle.SUCCESS,
@@ -248,6 +247,8 @@ class Help(Module):
                 getattr(b, "callback_data", b"") and b.callback_data.startswith(b"help/mod/")
                 for b in row
             )
+            if is_mod:
+                continue
             for b in row:
                 kw = {"text": RichTextBold(b.text)}
                 if b.callback_data is not None:
@@ -257,9 +258,7 @@ class Help(Module):
                 st = style_rev.get(str(b.style))
                 if st:
                     kw["style"] = st
-                (mod_btns if is_mod else nav_btns).append(RichMessageButton(**kw))
-        if mod_btns:
-            blocks.append(InputRichBlockButtons(mod_btns[:8]))
+                nav_btns.append(RichMessageButton(**kw))
         if nav_btns:
             blocks.append(InputRichBlockButtons(nav_btns[:8]))
         if quote:
