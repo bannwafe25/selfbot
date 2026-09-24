@@ -232,11 +232,6 @@ class Help(Module):
         blocks.append(InputRichBlockDivider())
         # Tombol navigasi + Close (tombol modul dihapus — cukup accordion Details)
         nav_btns = []
-        style_rev = {
-            "ButtonStyle.PRIMARY": ButtonStyle.PRIMARY,
-            "ButtonStyle.SUCCESS": ButtonStyle.SUCCESS,
-            "ButtonStyle.DANGER": ButtonStyle.DANGER,
-        }
         for row in self.ikm(self.build(page)).inline_keyboard:
             is_mod = any(
                 getattr(b, "callback_data", b"") and b.callback_data.startswith(b"help/mod/")
@@ -254,12 +249,25 @@ class Help(Module):
                     kw["callback_data"] = b.callback_data
                 elif b.url is not None:
                     kw["url"] = b.url
-                st = style_rev.get(str(b.style))
-                if st:
-                    kw["style"] = st
+                if b.callback_data == b"0" or "close" in b.text.lower():
+                    kw["style"] = ButtonStyle.DANGER
+                else:
+                    kw["style"] = ButtonStyle.SUCCESS
                 nav_btns.append(RichMessageButton(**kw))
         if nav_btns:
             blocks.append(InputRichBlockButtons(nav_btns[:8]))
+        # Tombol channel (biru) — di bawah navigasi
+        blocks.append(
+            InputRichBlockButtons(
+                [
+                    RichMessageButton(
+                        text=RichTextBold("📢 Channel"),
+                        style=ButtonStyle.PRIMARY,
+                        url="https://t.me/zpbaiq",
+                    )
+                ]
+            )
+        )
         if quote:
             blocks.append(
                 InputRichBlockParagraph(
