@@ -228,13 +228,6 @@ class Help(Module):
         for d in details_blocks:
             blocks.append(d)
         blocks.append(InputRichBlockDivider())
-        blocks.append(
-            InputRichBlockParagraph(
-                text=RichTextItalic(
-                    "Pilih modul di bawah untuk melihat daftar perintah lengkapnya."
-                )
-            )
-        )
         # Tombol navigasi + Close (tombol modul dihapus — cukup accordion Details)
         nav_btns = []
         style_rev = {
@@ -248,6 +241,10 @@ class Help(Module):
                 for b in row
             )
             if is_mod:
+                continue
+            if any(
+                getattr(b, "callback_data", b"") == b"help/info" for b in row
+            ):
                 continue
             for b in row:
                 kw = {"text": RichTextBold(b.text)}
