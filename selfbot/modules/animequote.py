@@ -8,7 +8,8 @@ from pyrogram.types import Message
 
 from selfbot.listener import handler
 from selfbot.module import Module
-from selfbot.apis import FERDEV_ANIMEQUOTE, FERDEV_APIKEY
+
+ANIMECHAN_RANDOM = "https://api.animechan.io/v1/quotes/random"
 
 pattern = re.compile(r"^animequote(?:\s+)?$", re.IGNORECASE)
 
@@ -27,31 +28,36 @@ class AnimeQuote(Module):
         now = datetime.datetime.now(datetime.UTC)
 
         try:
-            resp = await self.client.http.get(
-                FERDEV_ANIMEQUOTE,
-                params={"apikey": FERDEV_APIKEY},
-                timeout=15,
-            )
+            resp = await self.client.http.get(ANIMECHAN_RANDOM, timeout=15)
             if resp.status_code != 200:
                 raise RuntimeError(f"API error: HTTP {resp.status_code}")
 
-            data = resp.json()
-            results = data.get("result", [])
-            if not results:
-                raise RuntimeError("No quotes returned.")
-
-            q = random.choice(results)
-            quote = html.escape(q.get("quote", ""))
-            char = html.escape(q.get("character", "Unknown"))
-            anime = html.escape(q.get("anime", "Unknown"))
-            episode = html.escape(q.get("episode", ""))
+            data = (resp.json() or {}).get("data") or {}
+            quote = html.unescape(data.get("content", ""))
+            char = html.unescape((data.get("character") or {}).get("name", "Unknown"))
+            anime = html.unescape((data.get("anime") or {}).get("name", "Unknown"))
+            episode = ""
 
             ep_text = f" • {episode}" if episode else ""
+            rich_rows = [
+                ("Karakter", f"— {char}"),
+                ("Anime", f"{anime}{ep_text}"),
+                ("Waktu", self.fmtsec(now)),
+            ]
+            if await self.send_rich(
+                event,
+                "📖 Anime Quote",
+                rich_rows,
+                note=f"“{quote}”",
+                query_prefix="animequote",
+            ):
+                return
+
             text = (
                 f"<b>Anime Quote</b>\n\n"
-                f"<blockquote><i>\"{quote}\"</i></blockquote>\n\n"
+                f"<blockquote><i>\"{html.escape(quote)}\"</i></blockquote>\n\n"
                 f"— <b>{char}</b>\n"
-                f"<code>{anime}{ep_text}</code>\n\n"
+                f"<code>{html.escape(anime)}{html.escape(ep_text)}</code>\n\n"
                 f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
             )
 
