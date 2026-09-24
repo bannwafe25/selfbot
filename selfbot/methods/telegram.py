@@ -130,7 +130,6 @@ class Telegram:
 
             event = await event.reply_text(
                 message,
-                reply_parameters=ReplyParameters(message_id=event.id),
                 *args,
                 **kwargs,
             )

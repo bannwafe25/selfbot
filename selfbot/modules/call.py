@@ -228,16 +228,16 @@ class Call(Module):
 
             rows = [
                 [
-                    RichBlockTableCell(text="Parameter", is_header=True),
-                    RichBlockTableCell(text="Keterangan", is_header=True),
+                    RichBlockTableCell(text="Parameter", is_header=True, align="center"),
+                    RichBlockTableCell(text="Keterangan", is_header=True, align="center"),
                 ],
                 [
-                    RichBlockTableCell(text="Aksi"),
-                    RichBlockTableCell(text=_html.unescape(re.sub(r"<[^>]+>", "", title.split(" ⚡ ")[0]))),
+                    RichBlockTableCell(text="Aksi", align="center"),
+                    RichBlockTableCell(text=_html.unescape(re.sub(r"<[^>]+>", "", title.split(" ⚡ ")[0])), align="center"),
                 ],
                 [
-                    RichBlockTableCell(text="Chat"),
-                    RichBlockTableCell(text=chat_label),
+                    RichBlockTableCell(text="Chat", align="center"),
+                    RichBlockTableCell(text=chat_label, align="center"),
                 ],
             ]
             for line in extra:
@@ -245,21 +245,21 @@ class Call(Module):
                 if ":" in plain:
                     k, v = plain.split(":", 1)
                     rows.append(
-                        [RichBlockTableCell(text=k.strip()), RichBlockTableCell(text=v.strip())]
+                        [RichBlockTableCell(text=k.strip(), align="center"), RichBlockTableCell(text=v.strip(), align="center")]
                     )
             rows.append(
                 [
-                    RichBlockTableCell(text="Total Waktu"),
+                    RichBlockTableCell(text="Total Waktu", align="center"),
                     RichBlockTableCell(
-                        text=RichTextCode(text=RichTextBold(f"{dur:.2f}s"))
+                        text=RichTextCode(text=RichTextBold(f"{dur:.2f}s")), align="center"
                     ),
                 ]
             )
             rows.append(
                 [
-                    RichBlockTableCell(text="Status Akhir"),
+                    RichBlockTableCell(text="Status Akhir", align="center"),
                     RichBlockTableCell(
-                        text=RichTextMarked(text=RichTextBold("✅ Selesai"))
+                        text=RichTextMarked(text=RichTextBold("✅ Selesai")), align="center"
                     ),
                 ]
             )
