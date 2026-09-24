@@ -15,8 +15,11 @@ from pyrogram.types import (
     InputRichMessage,
     Message,
     RichBlockTableCell,
+    RichText,
     RichTextBold,
     RichTextCode,
+
+    RichTextMarked,
 )
 from pyrogram.enums import ButtonStyle
 
@@ -221,6 +224,8 @@ class Call(Module):
 
             import contextlib as _cl
 
+            import datetime as _dt
+
             rows = [
                 [
                     RichBlockTableCell(text="Parameter", is_header=True),
@@ -245,13 +250,17 @@ class Call(Module):
             rows.append(
                 [
                     RichBlockTableCell(text="Total Waktu"),
-                    RichBlockTableCell(text=f"{dur:.2f}s"),
+                    RichBlockTableCell(
+                        text=RichTextCode(text=RichTextBold(f"{dur:.2f}s"))
+                    ),
                 ]
             )
             rows.append(
                 [
                     RichBlockTableCell(text="Status Akhir"),
-                    RichBlockTableCell(text="✅ Selesai"),
+                    RichBlockTableCell(
+                        text=RichTextMarked(text=RichTextBold("✅ Selesai"))
+                    ),
                 ]
             )
 
