@@ -22,6 +22,10 @@ from pyrogram.types import (
     InputRichBlockPreformatted,
     InputRichBlockTable,
     InputRichBlockButtons,
+    InputRichBlockList,
+    InputRichBlockListItem,
+    InputRichBlockDetails,
+    InputRichBlockDivider,
     RichMessageButton,
     InputRichMessage,
     Message,
@@ -189,15 +193,48 @@ class Help(Module):
                     " — Prefix aktif: (tanpa prefix)"
                 )
             ),
-            InputRichBlockTable(
-                rows, is_bordered=True, is_striped=True, is_compact=True
-            ),
+        ]
+        # Details (accordion) per modul — bisa buka-tutup
+        details_blocks = []
+        for mod in chunk:
+            det = [
+                InputRichBlockPreformatted(
+                    text=getattr(mod, "cmds", "") or "-",
+                    language="text",
+                )
+            ]
+            desc = getattr(mod, "desc", None)
+            if isinstance(desc, dict) and desc:
+                det.append(
+                    InputRichBlockList(
+                        items=[
+                            InputRichBlockListItem(
+                                blocks=[InputRichBlockParagraph(
+                                    text=f"{k}: {v}"
+                                    if isinstance(v, str)
+                                    else str(k)
+                                )]
+                            )
+                            for k, v in list(desc.items())[:6]
+                        ]
+                    )
+                )
+            details_blocks.append(
+                InputRichBlockDetails(
+                    summary=RichTextBold(mod.name),
+                    blocks=det,
+                )
+            )
+        for d in details_blocks:
+            blocks.append(d)
+        blocks.append(InputRichBlockDivider())
+        blocks.append(
             InputRichBlockParagraph(
                 text=RichTextItalic(
                     "Pilih modul di bawah untuk melihat daftar perintah lengkapnya."
                 )
-            ),
-        ]
+            )
+        )
         # Tombol navigasi + Close sebagai rich buttons (konversi dari ikm)
         # Baris 1: tombol modul | Baris 2 (di bawah): Info + navigasi + Close
         mod_btns, nav_btns = [], []
