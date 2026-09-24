@@ -278,6 +278,90 @@ class AnimePic(Module):
                 return
 
             caption = self.build_caption(self.fmtsec(now), *result[1:])
+
+            # ── Full rich: foto/GIF + caption + tombol dalam SATU kartu ──
+            bot = self.client.bot
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+                UpdateBotInlineQuery as _UBIQ,
+            )
+            from pyrogram.types import (
+                InputMediaAnimation,
+                InputMediaPhoto,
+                InputRichBlockAnimation,
+                InputRichBlockButtons,
+                InputRichBlockParagraph,
+                InputRichBlockPhoto,
+                InputRichMessage,
+                RichMessageButton,
+                RichTextBold,
+                RichTextItalic,
+            )
+            from pyrogram.enums import ButtonStyle
+
+            try:
+                if self._is_gif_url(result[0]):
+                    media_block = InputRichBlockAnimation(
+                        animation=InputMediaAnimation(result[0])
+                    )
+                else:
+                    media_block = InputRichBlockPhoto(
+                        photo=InputMediaPhoto(result[0])
+                    )
+                rich = InputRichMessage(
+                    blocks=[
+                        media_block,
+                        InputRichBlockParagraph(
+                            text=self.build_caption_rich(
+                                self.fmtsec(now), *result[1:]
+                            )
+                        ),
+                        InputRichBlockButtons(
+                            [
+                                RichMessageButton(
+                                    text=RichTextBold("🔄 Refresh"),
+                                    style=ButtonStyle.SUCCESS,
+                                    callback_data=(
+                                        f"animepic/next/"
+                                        f"{self.build_callback_payload(tag, moe_tag)}"
+                                    ).encode(),
+                                ),
+                                RichMessageButton(
+                                    text=RichTextBold("🗑 Close"),
+                                    style=ButtonStyle.DANGER,
+                                    callback_data=b"0",
+                                ),
+                            ]
+                        ),
+                    ]
+                )
+                # Upload media via BOT (butuh chat_id — pakai peer saved
+                # messages milik bot)
+                rich_raw = await rich.write(client=bot, chat_id=bot.me.id)
+                await bot.invoke(
+                    rawfn.messages.SetInlineBotResults(
+                        query_id=int(event.id),
+                        results=[
+                            InputBotInlineResult(
+                                id=str(event.id),
+                                type="article",
+                                title=f"AnimePic — {tag}",
+                                send_message=InputBotInlineMessageRichMessage(
+                                    rich_message=rich_raw,
+                                ),
+                            )
+                        ],
+                        cache_time=0,
+                    ),
+                )
+                return
+            except Exception as rich_err:
+                self.logger.warning(
+                    f"animepic rich inline failed: {rich_err!r}"
+                )
+
             kb = self.build_keyboard(tag, moe_tag)
             if self._is_gif_url(result[0]):
                 inline_result = InlineQueryResultAnimation(
@@ -305,6 +389,77 @@ class AnimePic(Module):
                 return
 
             caption = self.build_caption(self.fmtsec(now), *result[1:])
+
+            # Jalur rich: rebuild kartu penuh lalu edit inline message
+            bot = self.client.bot
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+            )
+            from pyrogram.types import (
+                InputMediaAnimation,
+                InputMediaPhoto,
+                InputRichBlockAnimation,
+                InputRichBlockButtons,
+                InputRichBlockParagraph,
+                InputRichBlockPhoto,
+                InputRichMessage,
+                RichMessageButton,
+                RichTextBold,
+                RichTextItalic,
+            )
+            from pyrogram.enums import ButtonStyle
+            from pyrogram.utils import unpack_inline_message_id
+
+            try:
+                if self._is_gif_url(result[0]):
+                    media_block = InputRichBlockAnimation(
+                        animation=InputMediaAnimation(result[0])
+                    )
+                else:
+                    media_block = InputRichBlockPhoto(
+                        photo=InputMediaPhoto(result[0])
+                    )
+                rich = InputRichMessage(
+                    blocks=[
+                        media_block,
+                        InputRichBlockParagraph(
+                            text=self.build_caption_rich(
+                                self.fmtsec(now), *result[1:]
+                            )
+                        ),
+                        InputRichBlockButtons(
+                            [
+                                RichMessageButton(
+                                    text=RichTextBold("🔄 Refresh"),
+                                    style=ButtonStyle.SUCCESS,
+                                    callback_data=(
+                                        f"animepic/next/"
+                                        f"{self.build_callback_payload(tag, moe_tag)}"
+                                    ).encode(),
+                                ),
+                                RichMessageButton(
+                                    text=RichTextBold("🗑 Close"),
+                                    style=ButtonStyle.DANGER,
+                                    callback_data=b"0",
+                                ),
+                            ]
+                        ),
+                    ]
+                )
+                rich_raw = await rich.write(client=bot, chat_id=bot.me.id)
+                await bot.invoke(
+                    rawfn.messages.EditInlineBotMessage(
+                        id=unpack_inline_message_id(event.inline_message_id),
+                        rich_message=rich_raw,
+                    )
+                )
+                return
+            except Exception as rich_err:
+                self.logger.warning(f"animepic rich edit failed: {rich_err!r}")
+
+            # Fallback lama: edit media biasa + tombol tempelan
             if self._is_gif_url(result[0]):
                 media = InputMediaAnimation(media=result[0], caption=caption)
             else:
@@ -740,6 +895,44 @@ class AnimePic(Module):
             ("Refresh", "data", f"animepic/next/{payload}", "G"),
             ("Close",   "data", b"0", "R"),
         ]])
+
+    def build_caption_rich(
+        self,
+        rtt: str,
+        artist_name: str | None,
+        artist_links: dict | None,
+        source_url: str | None,
+    ):
+        """Caption sebagai RichText (link & bold asli, bukan HTML mentah)."""
+        from pyrogram.types.messages_and_media.rich_text import (
+            RichText as _RT,
+            RichTextBold,
+            RichTextUrl,
+        )
+
+        parts: list = []
+        if artist_name:
+            parts.append("Artist: ")
+            parts.append(artist_name)
+            if artist_links:
+                links = [
+                    RichTextUrl(n, u)
+                    for n, u in artist_links.items() if u
+                ]
+                if links:
+                    parts.append(" (")
+                    for i, l in enumerate(links):
+                        if i:
+                            parts.append(" | ")
+                        parts.append(l)
+                    parts.append(")")
+        if source_url:
+            if parts:
+                parts.append(" | ")
+            parts.append(RichTextUrl("Source", source_url))
+        parts.append("\n")
+        parts.append(RichTextBold(rtt))
+        return parts
 
     def build_caption(
         self,
