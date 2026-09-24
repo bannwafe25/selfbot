@@ -41,6 +41,7 @@ class Alive(Module):
             ("Versi", str(__version__)),
             ("Uptime", self.fmtsec(started_at, human=True)),
         ]
+
         if await self.send_rich(event, "🟢 Selfbot Alive", rich_rows,
                                 note=self.fmtsec(now), query_prefix="alive"):
             return

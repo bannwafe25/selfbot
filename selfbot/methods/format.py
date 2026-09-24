@@ -60,6 +60,7 @@ class Format:
         note: str = "",
         query_prefix: str = "rich",
         buttons: list | None = None,
+        extra_blocks: list | None = None,
     ) -> bool:
         """Kirim rich table via inline bot. rows = [(param, keterangan), ...].
         buttons = [(teks, callback_data, ButtonStyle|None), ...].
@@ -96,6 +97,9 @@ class Format:
 
             blocks = [InputRichBlockParagraph(text=RichTextBold(title)),
                       InputRichBlockTable(trows, is_bordered=True, is_striped=True, is_compact=True)]
+            # Blok tambahan custom (misal list checkbox) — setelah tabel
+            for eb in (extra_blocks or []):
+                blocks.append(eb)
             if note:
                 # Blockquote (garis biru vertikal) seperti contoh @OnlyDevRoBot
                 blocks.append(InputRichBlockExpandableBlockQuotation(text=RichTextItalic(note)))
