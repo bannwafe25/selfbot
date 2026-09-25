@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import datetime
 import html
+import os
 import re
 from pathlib import Path
 
@@ -18,15 +19,17 @@ try:
 except ImportError:
     yt_dlp = None
 
-pattern = re.compile(r"^song(?:\s+(-d|--doc|-v|--voice))?\s+(.+)$", re.IGNORECASE)
+pattern = re.compile(r"^(song|vsong)(?:\s+(-d|--doc|-v|--voice))?\s+(.+)$", re.IGNORECASE)
 yt_id_pattern = re.compile(r'"videoId":"([A-Za-z0-9_-]{11})"')
 
 
-class Song(Module):
-    name = "Song"
-    cmds = "song (-d|--doc|-v|--voice)? {query}"
+class YtDL(Module):
+    name = "YtDL"
+    cmds = "song|vsong (-d|--doc|-v|--voice)? {query}"
     desc = {
         "query": "A YouTube link, video ID, or title search query.",
+        "song": "Send as audio (MP3).",
+        "vsong": "Send as video (MP4).",
         "-d, --doc": "Send as a document file.",
         "-v, --voice": "Send as a voice message.",
         "e.g.": "song NaFF Kau Masih Kekasihku",
@@ -80,11 +83,12 @@ class Song(Module):
         if not match:
             await self.respond(
                 event,
-                "<b>Usage:</b> <code>song (-d|--doc|-v|--voice)? &lt;youtube_link | search_query&gt;</code>",
+                "<b>Usage:</b> <code>song|vsong &lt;youtube_link | search_query&gt;</code>",
             )
             return
 
-        flag, query = match.groups()
+        cmd, flag, query = match.groups()
+        is_video = (cmd or "").lower().startswith("vsong")
         query = query.strip()
 
         yt_link = self._extract_youtube_url(query)
@@ -100,6 +104,10 @@ class Song(Module):
                     f"<code>No YouTube results found for '{html.escape(query[:100])}'.</code>",
                 )
                 return
+
+        if is_video:
+            await self._vsong(event, yt_link, now)
+            return
 
         await self.respond(event, "<code>Fetching song from API...</code>")
 
@@ -128,8 +136,14 @@ class Song(Module):
             await self.respond(
                 event, f"<code>Downloading: {html.escape(title[:100])}</code>"
             )
+            if song_data.get("local_file"):
+                # Sudah di-download yt-dlp langsung — tinggal rename ke tujuan
+                local = Path(dlink)
+                if local.exists():
+                    local.rename(audio_file)
             try:
-                await self._download_file(str(dlink), audio_file, timeout=300)
+                if not audio_file.exists():
+                    await self._download_file(str(dlink), audio_file, timeout=300)
             except Exception as first_err:
                 # Tunnel bisa expired/kosong — minta link baru lalu coba sekali lagi
                 self.logger.warning(f"Download failed ({first_err}), refreshing link...")
@@ -175,7 +189,8 @@ class Song(Module):
             normalized_flag = (flag or "").lower()
 
             if normalized_flag in ("-d", "--doc"):
-                await event.reply_document(
+                await event._client.send_document(
+                    chat_id=event.chat.id,
                     document=str(audio_file),
                     caption=caption,
                     thumb=thumb,
@@ -184,6 +199,7 @@ class Song(Module):
             elif normalized_flag in ("-v", "--voice"):
                 waveform = await self.get_waveform(str(audio_file))
                 kwargs = {
+                    "chat_id": event.chat.id,
                     "voice": str(audio_file),
                     "caption": caption,
                     "duration": duration,
@@ -191,9 +207,10 @@ class Song(Module):
                 }
                 if waveform:
                     kwargs["waveform"] = waveform
-                await event.reply_voice(**kwargs)
+                await event._client.send_voice(**kwargs)
             else:
-                await event.reply_audio(
+                await event._client.send_audio(
+                    chat_id=event.chat.id,
                     audio=str(audio_file),
                     caption=caption,
                     title=title,
@@ -201,17 +218,6 @@ class Song(Module):
                     thumb=thumb,
                     reply_parameters=reply_parameters,
                 )
-
-            rich_rows = [
-                ("Judul", title[:48]),
-                ("Durasi", self.fmtsec(duration, part=2, human=True) if duration else "-"),
-                ("Ukuran", f"{audio_file.stat().st_size / 1048576:.1f} MB"),
-            ]
-            if await self.send_rich(
-                event, "🎵 Song Terkirim", rich_rows, query_prefix="song"
-            ):
-                await event.delete()
-                return
 
             await event.delete()
         except Exception as e:
@@ -228,6 +234,75 @@ class Song(Module):
                     if file_path.exists():
                         file_path.unlink()
 
+    async def _vsong(self, event: Message, yt_link: str, now) -> None:
+        video_file = None
+        try:
+            await self.respond(event, "<code>Downloading video (bisa agak lama)...</code>")
+            loop = asyncio.get_running_loop()
+            title = await loop.run_in_executor(
+                None, lambda: self._ytdlp_video_title(yt_link)
+            )
+            download_dir = Path("downloads")
+            download_dir.mkdir(parents=True, exist_ok=True)
+            safe_title = self._safe_name(title)
+            suffix = f"{event.chat.id}_{event.id}"
+            video_file = download_dir / f"{safe_title}_{suffix}.mp4"
+
+            info = await loop.run_in_executor(
+                None, lambda: self._ytdlp_download_video(yt_link, str(video_file))
+            )
+            title = info.get("title") or title
+            duration = int(info.get("duration") or 0)
+            if not video_file.exists() or video_file.stat().st_size == 0:
+                raise RuntimeError("Video download failed or is empty.")
+            if duration <= 0:
+                duration = await self._probe_duration(video_file)
+
+            reply_parameters = ReplyParameters(
+                message_id=event.reply_to_message_id or event.id
+            )
+            await event._client.send_video(
+                chat_id=event.chat.id,
+                video=str(video_file),
+                caption=(
+                    f"<b>Title:</b> {html.escape(title)}\n"
+                    f"<b>Duration:</b> {self._duration_text(duration)}\n"
+                    f"<b>Size:</b> {video_file.stat().st_size / 1048576:.1f} MB\n\n"
+                    f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
+                ),
+                supports_streaming=True,
+                reply_parameters=reply_parameters,
+            )
+            await event.delete()
+        except Exception as e:
+            self.logger.error(f"VSong download error: {e}")
+            await self.respond(
+                event,
+                f"<b>VSong failed</b>\n\n<code>{html.escape(str(e)[:300])}</code>",
+            )
+        finally:
+            if video_file:
+                with contextlib.suppress(OSError):
+                    if video_file.exists():
+                        video_file.unlink()
+
+    def _ytdlp_video_opts(self, outtmpl: str | None = None) -> dict:
+        opts = self._ytdlp_base_opts()
+        if outtmpl:
+            opts["format"] = "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best"
+            opts["outtmpl"] = outtmpl
+            opts["merge_output_format"] = "mp4"
+        return opts
+
+    def _ytdlp_video_title(self, yt_link: str) -> str:
+        with yt_dlp.YoutubeDL(self._ytdlp_video_opts()) as ydl:
+            info = ydl.extract_info(yt_link, download=False)
+        return info.get("title") or "vsong"
+
+    def _ytdlp_download_video(self, yt_link: str, outtmpl: str) -> dict:
+        with yt_dlp.YoutubeDL(self._ytdlp_video_opts(outtmpl)) as ydl:
+            return ydl.extract_info(yt_link, download=True)
+
     async def _fetch_song_data(self, yt_link: str) -> dict:
         # Local yt-dlp engine first (no API limits). Raises RuntimeError
         # if yt-dlp is unavailable so callers fall back to remote APIs.
@@ -237,6 +312,18 @@ class Song(Module):
                     None,
                     lambda: self._ytdlp_extract(yt_link),
                 )
+                # yt-dlp langsung download audio (URL googlevideo sering
+                # 403 kalau diakses httpx tanpa headers yt-dlp).
+                out = Path("downloads") / f"ytaudio_{int(asyncio.get_running_loop().time() * 1000)}"
+                out.parent.mkdir(parents=True, exist_ok=True)
+                dl = await asyncio.get_running_loop().run_in_executor(
+                    None,
+                    lambda: self._ytdlp_download_audio(yt_link, out),
+                )
+                if dl and dl.exists() and dl.stat().st_size > 0:
+                    info["dlink"] = str(dl)
+                    info["local_file"] = True
+                    info["ext"] = dl.suffix.lstrip(".") or "mp3"
                 return info
             except Exception as e:
                 self.logger.warning(f"yt-dlp engine failed, fallback to API: {e}")
@@ -282,16 +369,46 @@ class Song(Module):
             "duration": 0,
         }
 
-    def _ytdlp_extract(self, yt_link: str) -> dict:
+    def _ytdlp_base_opts(self, skip_download: bool = True) -> dict:
         opts = {
-            "format": "bestaudio[ext=m4a]/bestaudio/best",
+            "format": "bestaudio/best",
             "quiet": True,
             "no_warnings": True,
             "noplaylist": True,
-            "skip_download": True,
+            "skip_download": skip_download,
             "js_runtimes": {"deno": {"path": "/usr/local/bin/deno"}},
             "remote_components": ["ejs:github"],
         }
+        # YouTube bot-check workaround: pakai cookies bila tersedia.
+        cookie_file = os.environ.get("YTDLP_COOKIES") or "/home/agentuser/cookies.txt"
+        if os.path.isfile(cookie_file):
+            opts["cookiefile"] = cookie_file
+        # yt-dlp default hanya pakai deno; daftarkan node (tersedia di server)
+        # sebagai JS runtime buat n-challenge solver (EJS).
+        opts["js_runtimes"] = {"node": {"path": "/usr/local/bin/node"}, "deno": {}}
+        opts["remote_components"] = ["ejs:github"]
+        return opts
+
+    def _ytdlp_download_audio(self, yt_link: str, out_base: Path) -> Path | None:
+        opts = self._ytdlp_base_opts(skip_download=False)
+        opts["format"] = "bestaudio/best"
+        opts["outtmpl"] = str(out_base) + ".%(ext)s"
+        # Auto-convert ke MP3 biar format konsisten
+        opts["postprocessors"] = [
+            {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}
+        ]
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            ydl.extract_info(yt_link, download=True)
+        mp3 = out_base.with_suffix(".mp3")
+        if mp3.exists():
+            return mp3
+        for p in out_base.parent.glob(out_base.name + ".*"):
+            if p.is_file():
+                return p
+        return None
+
+    def _ytdlp_extract(self, yt_link: str) -> dict:
+        opts = self._ytdlp_base_opts()
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(yt_link, download=False)
 
