@@ -115,7 +115,7 @@ class Broadcast(Module):
             rows = [
                 [RichBlockTableCell(text="Parameter", is_header=True, align="center"), RichBlockTableCell(text="Keterangan", is_header=True, align="center")],
                 [RichBlockTableCell(text="Mode", align="center"), RichBlockTableCell(text=mode, align="center")],
-                [RichBlockTableCell(text="Total Target", align="center"), RichBlockTableCell(text=str(total))],
+                [RichBlockTableCell(text="Total Target", align="center"), RichBlockTableCell(text=str(total), align="center")],
                 [RichBlockTableCell(text="Berhasil", align="center"), RichBlockTableCell(text=f"✅ {ok}", align="center")],
                 [RichBlockTableCell(text="Diblokir", align="center"), RichBlockTableCell(text=f"🚫 {blocked}", align="center")],
                 [RichBlockTableCell(text="Gagal", align="center"), RichBlockTableCell(text=f"❌ {fail}", align="center")],
