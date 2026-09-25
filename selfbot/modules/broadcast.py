@@ -3,7 +3,7 @@ import contextlib
 import datetime
 
 from pyrogram import enums, filters
-from pyrogram.errors import FloodWait, RPCError
+from pyrogram.errors import FloodWait, InputUserDeactivated, RPCError, UserIsBlocked
 from pyrogram.types import (
     InputRichBlockParagraph,
     InputRichBlockTable,
@@ -23,29 +23,17 @@ from selfbot.module import Module
 
 class Broadcast(Module):
     name = "Broadcast"
-    cmds = "gcast {groups|all} (reply pesan)"
+    cmds = "gcast / ucast (reply pesan)"
     desc = {
-        "groups": "Kirim ke semua grup & channel tempat kamu member",
-        "all": "Kirim ke semua grup + chat pribadi",
-        "e.g.": "reply ke sebuah pesan, lalu ketik: gcast group",
+        "gcast": "Broadcast ke semua grup",
+        "ucast": "Broadcast ke chat privat",
+        "e.g.": "reply ke sebuah pesan, lalu ketik: gcast",
     }
 
-    @handler(filters.regex(r"^gcast\s(group|all)(\s[\s\S]+)?$") & ~reply, 1)
+    @handler(filters.regex(r"^(gcast|ucast)$") & reply, 1)
     async def on_message_out(self, event: Message) -> None:
-        parts = (event.text or event.caption).split(None, 2)
-        mode = parts[1]
-        rep = None
-
-        # Teks langsung: gcast group halo semua
-        if len(parts) > 2 and parts[2].strip():
-            rep_text = parts[2].strip()
-            rep = await event.reply_text(rep_text)
-
-        await self._run(event, mode, rep)
-
-    @handler(filters.regex(r"^gcast\s(group|all)$") & reply, 2)
-    async def on_message_reply(self, event: Message) -> None:
-        await self._run(event, (event.text or event.caption).split()[-1], event.reply_to_message)
+        mode = (event.text or "").strip()
+        await self._run(event, mode, event.reply_to_message)
 
     async def _run(self, event: Message, mode: str, rep) -> None:
         msg = await self.respond(
@@ -61,7 +49,7 @@ class Broadcast(Module):
             if dialog.chat.id == event._client.me.id:
                 continue
 
-            if mode == "group":
+            if mode == "gcast":
                 if dialog.chat.type in (
                     enums.ChatType.GROUP,
                     enums.ChatType.SUPERGROUP,
@@ -69,8 +57,6 @@ class Broadcast(Module):
                     targets.append(dialog)
             else:
                 if dialog.chat.type in (
-                    enums.ChatType.GROUP,
-                    enums.ChatType.SUPERGROUP,
                     enums.ChatType.PRIVATE,
                     enums.ChatType.BOT,
                 ):
@@ -80,6 +66,7 @@ class Broadcast(Module):
         ok = 0
         fail = 0
 
+        blocked = 0
         for i, dialog in enumerate(targets, 1):
             try:
                 await rep.copy(dialog.chat.id)
@@ -94,6 +81,9 @@ class Broadcast(Module):
                 except RPCError:
                     fail += 1
 
+            except (UserIsBlocked, InputUserDeactivated):
+                blocked += 1
+
             except RPCError:
                 fail += 1
 
@@ -102,6 +92,7 @@ class Broadcast(Module):
                     f"📢 <b>Broadcast</b>\n"
                     f"  <code>Progres</code> : <code>{i}/{total}</code>\n"
                     f"  <code>Sukses</code> : <code>{ok}</code>\n"
+                    f"  <code>Diblokir</code> : <code>{blocked}</code>\n"
                     f"  <code>Gagal </code> : <code>{fail}</code>"
                 )
 
@@ -122,13 +113,14 @@ class Broadcast(Module):
             )
 
             rows = [
-                [RichBlockTableCell(text="Parameter", is_header=True), RichBlockTableCell(text="Keterangan", is_header=True)],
-                [RichBlockTableCell(text="Mode"), RichBlockTableCell(text=mode)],
-                [RichBlockTableCell(text="Total Target"), RichBlockTableCell(text=str(total))],
-                [RichBlockTableCell(text="Berhasil Terkirim"), RichBlockTableCell(text=f"✅ {ok}")],
-                [RichBlockTableCell(text="Gagal Terkirim"), RichBlockTableCell(text=f"❌ {fail}")],
-                [RichBlockTableCell(text="Total Waktu"), RichBlockTableCell(text=f"{dur:.2f}s")],
-                [RichBlockTableCell(text="Status Akhir"), RichBlockTableCell(text="✅ Selesai")],
+                [RichBlockTableCell(text="Parameter", is_header=True, align="center"), RichBlockTableCell(text="Keterangan", is_header=True, align="center")],
+                [RichBlockTableCell(text="Mode", align="center"), RichBlockTableCell(text=mode, align="center")],
+                [RichBlockTableCell(text="Total Target", align="center"), RichBlockTableCell(text=str(total))],
+                [RichBlockTableCell(text="Berhasil", align="center"), RichBlockTableCell(text=f"✅ {ok}", align="center")],
+                [RichBlockTableCell(text="Diblokir", align="center"), RichBlockTableCell(text=f"🚫 {blocked}", align="center")],
+                [RichBlockTableCell(text="Gagal", align="center"), RichBlockTableCell(text=f"❌ {fail}", align="center")],
+                [RichBlockTableCell(text="Total Waktu", align="center"), RichBlockTableCell(text=f"{dur:.2f}s", align="center")],
+                [RichBlockTableCell(text="Status Akhir", align="center"), RichBlockTableCell(text="✅ Selesai", align="center")],
             ]
             blocks = [
                 InputRichBlockParagraph(
@@ -186,23 +178,66 @@ class Broadcast(Module):
                         )
                     )
 
-            # Daftarkan payload ke handler BERSAMA milik ping (group -2)
-            self._rich_payload = (rich_raw, close_raw)
-            route = None
-            try:
-                ping_mod = self.client.modules.get("Ping")
-                route = getattr(ping_mod, "_rich_route", None) if ping_mod else None
-            except Exception:
-                route = None
-            if route is not None:
-                route["gcast"] = self._rich_payload
-            handler_ready = route is not None
+            # Pasang handler BERSAMA (group -2) — lazy, sama pola ping
+            from pyrogram.handlers import RawUpdateHandler
+
+            ping_mod = self.client.modules.get("Ping")
+            route = getattr(ping_mod, "_rich_route", None) if ping_mod else None
+            if route is None:
+                # Buat route + handler sendiri di broadcast
+                route = {}
+                if ping_mod is not None:
+                    ping_mod._rich_route = route
+
+            if getattr(self, "_rich_handler", None) is None:
+                from pyrogram.raw.types import UpdateBotInlineQuery as _UBIQ
+
+                async def _shared_answer(_c, update, users, chats):
+                    if not isinstance(update, _UBIQ):
+                        return
+                    q = str(update.query)
+                    for mod, payload in route.items():
+                        if q.startswith(mod):
+                            p_rich, p_close = payload
+                            with contextlib.suppress(Exception):
+                                await bot.invoke(
+                                    rawfn.messages.SetInlineBotResults(
+                                        query_id=update.query_id,
+                                        results=[
+                                            InputBotInlineResult(
+                                                id=str(update.query_id),
+                                                type="article",
+                                                title="Result",
+                                                send_message=InputBotInlineMessageRichMessage(
+                                                    rich_message=p_rich,
+                                                    reply_markup=p_close,
+                                                ),
+                                            )
+                                        ],
+                                        cache_time=0,
+                                    )
+                                )
+                            return
+
+                self._rich_handler = RawUpdateHandler(_shared_answer)
+                disp = bot.dispatcher
+                if -2 not in disp.groups:
+                    disp.groups[-2] = []
+                    disp.groups = dict(sorted(disp.groups.items()))
+                disp.groups[-2].append(self._rich_handler)
+
+            route["gcast"] = (rich_raw, close_raw)
 
             res = None
-            if handler_ready:
+            if ping_mod is not None:
+                ping_mod._rich_mode = True
+            try:
                 res = await event._client.get_inline_bot_results(
                     bot.me.id, f"gcast{now.timestamp()}"
                 )
+            finally:
+                if ping_mod is not None:
+                    ping_mod._rich_mode = False
 
             if res.results:
                 await asyncio.gather(
@@ -218,6 +253,7 @@ class Broadcast(Module):
             f"📢 <b>Broadcast Selesai</b>\n"
             f"  <code>Target</code> : <code>{total}</code>\n"
             f"  <code>Sukses</code> : <code>{ok}</code>\n"
+            f"  <code>Diblokir</code> : <code>{blocked}</code>\n"
             f"  <code>Gagal </code> : <code>{fail}</code>\n"
             f"  <code>Waktu </code> : <code>{dur:.1f}s</code>"
         )

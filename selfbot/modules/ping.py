@@ -85,24 +85,24 @@ class Ping(Module):
                     InputRichBlockTable(
                         [
                             [
-                                RichBlockTableCell(text="Parameter", is_header=True),
-                                RichBlockTableCell(text="Keterangan", is_header=True),
+                                RichBlockTableCell(text="Parameter", is_header=True, align="center"),
+                                RichBlockTableCell(text="Keterangan", is_header=True, align="center"),
                             ],
                             [
-                                RichBlockTableCell(text="Klien Aktif"),
-                                RichBlockTableCell(text=event._client.me.first_name or "Userbot"),
+                                RichBlockTableCell(text="Klien Aktif", align="center"),
+                                RichBlockTableCell(text=event._client.me.first_name or "Userbot", align="center"),
                             ],
                             [
-                                RichBlockTableCell(text="User ID"),
+                                RichBlockTableCell(text="User ID", align="center"),
                                 RichBlockTableCell(text=str(event._client.me.id)),
                             ],
                             [
-                                RichBlockTableCell(text="Kecepatan Respons"),
-                                RichBlockTableCell(text=f"{app_ms} ms"),
+                                RichBlockTableCell(text="Kecepatan Respons", align="center"),
+                                RichBlockTableCell(text=f"{app_ms} ms", align="center"),
                             ],
                             [
-                                RichBlockTableCell(text="Status Jaringan"),
-                                RichBlockTableCell(text="✅ Terhubung Normal"),
+                                RichBlockTableCell(text="Status Jaringan", align="center"),
+                                RichBlockTableCell(text="✅ Terhubung Normal", align="center"),
                             ],
                         ],
                         is_bordered=True,

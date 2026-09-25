@@ -294,6 +294,7 @@ class AnimePic(Module):
                 InputRichBlockButtons,
                 InputRichBlockParagraph,
                 InputRichBlockPhoto,
+                InputRichBlockSlideshow,
                 InputRichMessage,
                 RichMessageButton,
                 RichTextBold,
@@ -307,9 +308,21 @@ class AnimePic(Module):
                         animation=InputMediaAnimation(result[0])
                     )
                 else:
-                    media_block = InputRichBlockPhoto(
-                        photo=InputMediaPhoto(result[0])
-                    )
+                    # Slideshow: 3 foto dalam satu blok geser
+                    multi = await self.get_image_urls(tag, moe_tag, 3)
+                    urls = [result[0]] + [r[0] for r in multi if r[0] != result[0]]
+                    urls = urls[:3]
+                    if len(urls) > 1:
+                        media_block = InputRichBlockSlideshow(
+                            blocks=[
+                                InputRichBlockPhoto(photo=InputMediaPhoto(u))
+                                for u in urls
+                            ]
+                        )
+                    else:
+                        media_block = InputRichBlockPhoto(
+                            photo=InputMediaPhoto(result[0])
+                        )
                 rich = InputRichMessage(
                     blocks=[
                         media_block,
@@ -404,6 +417,7 @@ class AnimePic(Module):
                 InputRichBlockButtons,
                 InputRichBlockParagraph,
                 InputRichBlockPhoto,
+                InputRichBlockSlideshow,
                 InputRichMessage,
                 RichMessageButton,
                 RichTextBold,
@@ -418,9 +432,21 @@ class AnimePic(Module):
                         animation=InputMediaAnimation(result[0])
                     )
                 else:
-                    media_block = InputRichBlockPhoto(
-                        photo=InputMediaPhoto(result[0])
-                    )
+                    # Slideshow: 3 foto dalam satu blok geser
+                    multi = await self.get_image_urls(tag, moe_tag, 3)
+                    urls = [result[0]] + [r[0] for r in multi if r[0] != result[0]]
+                    urls = urls[:3]
+                    if len(urls) > 1:
+                        media_block = InputRichBlockSlideshow(
+                            blocks=[
+                                InputRichBlockPhoto(photo=InputMediaPhoto(u))
+                                for u in urls
+                            ]
+                        )
+                    else:
+                        media_block = InputRichBlockPhoto(
+                            photo=InputMediaPhoto(result[0])
+                        )
                 rich = InputRichMessage(
                     blocks=[
                         media_block,
@@ -540,6 +566,16 @@ class AnimePic(Module):
         return tag
 
     # ── Image routing ─────────────────────────────────────────────────────────
+
+    async def get_image_urls(self, tag: str, moe_tag: str | None = None, n: int = 3) -> list[tuple]:
+        results = []
+        for _ in range(n * 3):
+            if len(results) >= n:
+                break
+            r = await self.get_image_url(tag, moe_tag)
+            if r and r[0] and not self._is_gif_url(r[0]) and r[0] not in [x[0] for x in results]:
+                results.append(r)
+        return results
 
     async def get_image_url(self, tag: str, moe_tag: str | None = None) -> tuple | None:
         for list_attr, func_name, use_moe in self._API_REGISTRY:

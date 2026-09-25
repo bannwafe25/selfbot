@@ -150,7 +150,7 @@ class Call(Module):
             for line in lines:
                 plain = _re.sub(r"<[^>]+>", "", line or "").strip()
                 if plain:
-                    rows.append([RichBlockTableCell(text=plain)])
+                    rows.append([RichBlockTableCell(text=plain, align="center")])
 
             rich = InputRichMessage(
                 blocks=[
