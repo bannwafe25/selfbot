@@ -23,7 +23,7 @@ url_pattern = re.compile(
 
 
 class AllDL(Module):
-    name = "AllDL"
+    name = "All Download"
     cmds = "dl {url}"
     desc = {
         "url": "TikTok / Instagram / Facebook link.",
