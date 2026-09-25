@@ -17,9 +17,6 @@ from pyrogram.types import (
     RichBlockTableCell,
     RichText,
     RichTextBold,
-    RichTextCode,
-
-    RichTextMarked,
 )
 from pyrogram.enums import ButtonStyle
 
@@ -125,93 +122,11 @@ class Call(Module):
         return await self._status(event, text)
 
     # --------------------------------------------------------
-    # Rich native table via inline bot (kurigram 2.2.26+)
-    # --------------------------------------------------------
-
-    async def _rich_status_table(
-        self, event: Message, title: str, lines: list
-    ):
-        """
-        Coba kirim status sebagai rich table via inline bot
-        (muncul atas nama user, via @bot). Fallback ke HTML.
-        """
-        try:
-            import re as _re
-
-            bot = self.client.bot
-            # buka inline query dari userbot ke bot
-            res = await event._client.get_inline_bot_results(
-                bot.me.id, "call_status"
-            )
-            if not res.results:
-                raise RuntimeError("no inline results")
-
-            rows = [[RichBlockTableCell(text=RichTextBold(title), is_header=True)]]
-            for line in lines:
-                plain = _re.sub(r"<[^>]+>", "", line or "").strip()
-                if plain:
-                    rows.append([RichBlockTableCell(text=plain, align="center")])
-
-            rich = InputRichMessage(
-                blocks=[
-                    InputRichBlockParagraph(text=RichTextBold(title)),
-                    InputRichBlockTable(
-                        cells=rows, is_bordered=True, is_striped=True
-                    ),
-                    InputRichBlockButtons(
-                        [
-                            RichMessageButton(
-                                text=RichTextBold("🗑 Close"),
-                                style=ButtonStyle.DANGER,
-                                callback_data=b"0",
-                            )
-                        ]
-                    ),
-                ]
-            )
-            rich_raw = await rich.write(client=bot)
-
-            from pyrogram.raw import functions as rawfn
-            from pyrogram.raw.types import (
-                InputBotInlineMessageRichMessage,
-                InputBotInlineResult,
-            )
-
-            await bot.invoke(
-                rawfn.messages.SetInlineBotResults(
-                    query_id=res.query_id,
-                    results=[
-                        InputBotInlineResult(
-                            id=datetime.datetime.now(datetime.UTC).timestamp().hex(),
-                            type="rich",
-                            send_message=InputBotInlineMessageRichMessage(
-                                rich_message=rich_raw,
-                            ),
-                        )
-                    ],
-                    cache_time=0,
-                )
-            )
-            await event.reply_inline_bot_result(
-                res.query_id, res.results[0].id
-            )
-            with contextlib.suppress(Exception):
-                await event.delete()
-            return
-        except Exception as e:
-            with contextlib.suppress(Exception):
-                self.logger.warning(f"call rich inline failed: {e!r}")
-
-        return await self._rich_status(event, title, lines)
-
-    # --------------------------------------------------------
     # Final rich table via inline bot (pola ping.py)
     # --------------------------------------------------------
 
     async def _rich_final(self, event: Message, title: str, extra: list, dur: float, chat_label: str = "-"):
         """Kirim hasil call sebagai rich table via inline bot (fallback HTML)."""
-        import html as _html
-
         try:
             bot = self.client.bot
             from pyrogram.raw import functions as rawfn
@@ -232,12 +147,12 @@ class Call(Module):
                     RichBlockTableCell(text="Keterangan", is_header=True, align="center"),
                 ],
                 [
-                    RichBlockTableCell(text="Aksi", align="center"),
-                    RichBlockTableCell(text=_html.unescape(re.sub(r"<[^>]+>", "", title.split(" ⚡ ")[0])), align="center"),
+                    RichBlockTableCell(text="Aksi", align="left"),
+                    RichBlockTableCell(text=re.sub(r"<[^>]+>", "", title.split(" ⚡ ")[0]), align="left"),
                 ],
                 [
-                    RichBlockTableCell(text="Chat", align="center"),
-                    RichBlockTableCell(text=chat_label, align="center"),
+                    RichBlockTableCell(text="Chat", align="left"),
+                    RichBlockTableCell(text=chat_label, align="left"),
                 ],
             ]
             for line in extra:
@@ -245,22 +160,18 @@ class Call(Module):
                 if ":" in plain:
                     k, v = plain.split(":", 1)
                     rows.append(
-                        [RichBlockTableCell(text=k.strip(), align="center"), RichBlockTableCell(text=v.strip(), align="center")]
+                        [RichBlockTableCell(text=k.strip(), align="left"), RichBlockTableCell(text=v.strip(), align="left")]
                     )
             rows.append(
                 [
-                    RichBlockTableCell(text="Total Waktu", align="center"),
-                    RichBlockTableCell(
-                        text=RichTextCode(text=RichTextBold(f"{dur:.2f}s")), align="center"
-                    ),
+                    RichBlockTableCell(text="Total Waktu", align="left"),
+                    RichBlockTableCell(text=f"{dur:.2f}s", align="left"),
                 ]
             )
             rows.append(
                 [
-                    RichBlockTableCell(text="Status Akhir", align="center"),
-                    RichBlockTableCell(
-                        text=RichTextMarked(text=RichTextBold("✅ Selesai")), align="center"
-                    ),
+                    RichBlockTableCell(text="Status Akhir", align="left"),
+                    RichBlockTableCell(text="✅ Selesai", align="left"),
                 ]
             )
 
