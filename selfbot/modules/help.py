@@ -19,6 +19,7 @@ from pyrogram.types import (
     CallbackQuery,
     InlineQuery,
     InputRichBlockParagraph,
+    InputRichBlockSectionHeading,
     InputRichBlockPreformatted,
     InputRichBlockTable,
     InputRichBlockButtons,
@@ -188,7 +189,7 @@ class Help(Module):
                 ]
             )
         blocks = [
-            InputRichBlockParagraph(text=RichTextBold("📖 Menu Bantuan Userbot")),
+            InputRichBlockSectionHeading(text=RichTextBold("📖 Menu Bantuan Userbot"), size=4),
             InputRichBlockParagraph(
                 text=RichTextItalic(
                     f"Bagian {page + 1}/{total_pages} — Total {len(mods)} modul"

@@ -82,6 +82,8 @@ class Format:
                 RichBlockTableCell,
                 RichTextBold,
                 RichTextItalic,
+                InputRichBlockFooter,
+                RichTextUrl,
             )
 
             trows = [
@@ -98,8 +100,13 @@ class Format:
                     ]
                 )
 
-            blocks = [InputRichBlockParagraph(text=RichTextBold(title)),
-                      InputRichBlockTable(trows, is_bordered=True, is_striped=True, is_compact=False)]
+            # Judul jadi baris colspan pertama dalam tabel (agar center di semua klien)
+            trows.insert(
+                0,
+                [RichBlockTableCell(text=title, is_header=True, colspan=2, align="center")],
+            )
+
+            blocks = [InputRichBlockTable(trows, is_bordered=True, is_striped=True, is_compact=False)]
             # Blok tambahan custom (misal list checkbox) — setelah tabel
             for eb in (extra_blocks or []):
                 blocks.append(eb)

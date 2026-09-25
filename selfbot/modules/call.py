@@ -175,8 +175,12 @@ class Call(Module):
                 ]
             )
 
+            rows.insert(
+                0,
+                [RichBlockTableCell(text=title.split(" ⚡ ")[0], is_header=True, colspan=2, align="center")],
+            )
+
             blocks = [
-                InputRichBlockParagraph(text=RichTextBold(title.split(" ⚡ ")[0])),
                 InputRichBlockTable(
                     rows, is_bordered=True, is_striped=True, is_compact=False
                 ),

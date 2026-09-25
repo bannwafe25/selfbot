@@ -10,6 +10,7 @@ from pyrogram.types import (
     ChosenInlineResult,
     InlineQuery,
     InputRichBlockParagraph,
+    InputRichBlockSectionHeading,
     InputRichBlockTable,
     InputRichMessage,
     Message,
@@ -81,9 +82,11 @@ class Ping(Module):
             try:
                 app_ms = re.sub(r"[^0-9.]", "", str(app)) or app
                 blocks = [
-                    InputRichBlockParagraph(text=RichTextBold("🚀 Pong!")),
                     InputRichBlockTable(
                         [
+                            [
+                                RichBlockTableCell(text="🚀 Pong!", is_header=True, colspan=2, align="center"),
+                            ],
                             [
                                 RichBlockTableCell(text="Parameter", is_header=True, align="center"),
                                 RichBlockTableCell(text="Keterangan", is_header=True, align="center"),
@@ -94,7 +97,7 @@ class Ping(Module):
                             ],
                             [
                                 RichBlockTableCell(text="User ID", align="center"),
-                                RichBlockTableCell(text=str(event._client.me.id)),
+                                RichBlockTableCell(text=str(event._client.me.id), align="center"),
                             ],
                             [
                                 RichBlockTableCell(text="Kecepatan Respons", align="center"),

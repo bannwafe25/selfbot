@@ -122,10 +122,11 @@ class Broadcast(Module):
                 [RichBlockTableCell(text="Total Waktu", align="center"), RichBlockTableCell(text=f"{dur:.2f}s", align="center")],
                 [RichBlockTableCell(text="Status Akhir", align="center"), RichBlockTableCell(text="✅ Selesai", align="center")],
             ]
+            rows.insert(
+                0,
+                [RichBlockTableCell(text="✨ Broadcast Selesai", is_header=True, colspan=2, align="center")],
+            )
             blocks = [
-                InputRichBlockParagraph(
-                    text=RichTextBold("✨ Broadcast Selesai")
-                ),
                 InputRichBlockTable(
                     rows, is_bordered=True, is_striped=True, is_compact=False
                 ),
