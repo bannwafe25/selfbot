@@ -203,7 +203,14 @@ class Debug(Module):
             await cmd.delete()
             return
 
-        if msg.empty:
+        if msg is None:
+            # Kartu rich: inline_message_id menunjuk pesan via bot — proses langsung
+            try:
+                if event.data == b"0":
+                    await event.message.delete() if hasattr(event, "message") and event.message else None
+                    return
+            except Exception:
+                pass
             await event.answer(r"¯\_(ツ)_/¯", show_alert=True)
             return
 
@@ -279,6 +286,122 @@ class Debug(Module):
                     reply_markup=self.ikm(ikb),
                 )
                 return
+
+        # Kartu rich ala debug kynan: Output + tabel Task ID/Elapsed/Length + tombol
+        try:
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+            )
+            from pyrogram.types import (
+                InputRichBlockButtons,
+                InputRichBlockParagraph,
+                InputRichBlockTable,
+                InputRichMessage,
+                RichBlockTableCell,
+                RichMessageButton,
+                RichTextBold,
+                RichTextCode,
+            )
+            from pyrogram.enums import ButtonStyle as _BS
+
+            import uuid as _uuid
+            task_id = str(getattr(event, "id", "")) or _uuid.uuid4().hex[:16]
+            elapsed = rtt
+            length = str(len(out))
+
+            rows = [
+                [RichBlockTableCell(text="Key", is_header=True, align="center"),
+                 RichBlockTableCell(text="Value", is_header=True, align="center")],
+                [RichBlockTableCell(text="Task ID", align="center"),
+                 RichBlockTableCell(text=task_id, align="center")],
+                [RichBlockTableCell(text="Elapsed", align="center"),
+                 RichBlockTableCell(text=elapsed, align="center")],
+                [RichBlockTableCell(text="Length", align="center"),
+                 RichBlockTableCell(text=length, align="center")],
+            ]
+            blocks = [
+                InputRichBlockParagraph(
+                    text=f"<code>{html.escape(out)}</code>"
+                ),
+                InputRichBlockTable(
+                    rows, is_bordered=True, is_striped=True, is_compact=True
+                ),
+            ]
+
+            rich_btns = InputRichBlockButtons(
+                [
+                    RichMessageButton(
+                        text=RichTextBold("🗑 Del"),
+                        style=_BS.DANGER,
+                        callback_data=b"0",
+                    ),
+                ]
+            )
+            blocks.append(rich_btns)
+            rich_raw = await InputRichMessage(blocks=blocks).write(client=self.client.bot)
+
+            bot = self.client.bot
+            from pyrogram.handlers import RawUpdateHandler
+            from pyrogram.raw.types import UpdateBotInlineQuery as _UBIQ
+
+            ping_mod = self.client.modules.get("Ping")
+            route = getattr(ping_mod, "_rich_route", None) if ping_mod else None
+            if route is None:
+                route = {}
+                if ping_mod is not None:
+                    ping_mod._rich_route = route
+
+            if getattr(self, "_dbg_handler", None) is None:
+                async def _dbg_answer(_c, update, users, chats):
+                    if not isinstance(update, _UBIQ):
+                        return
+                    q = str(update.query)
+                    if not q.startswith("dbg"):
+                        return
+                    p_rich, p_close = route.get("dbg", (None, None))
+                    if p_rich is None:
+                        return
+                    with contextlib.suppress(Exception):
+                        await bot.invoke(
+                            rawfn.messages.SetInlineBotResults(
+                                query_id=update.query_id,
+                                results=[
+                                    InputBotInlineResult(
+                                        id=str(update.query_id),
+                                        type="article",
+                                        title="Debug Result",
+                                        send_message=InputBotInlineMessageRichMessage(
+                                            rich_message=p_rich,
+                                            reply_markup=p_close,
+                                        ),
+                                    )
+                                ],
+                                cache_time=0,
+                            )
+                        )
+
+                self._dbg_handler = RawUpdateHandler(_dbg_answer)
+                disp = bot.dispatcher
+                if -2 not in disp.groups:
+                    disp.groups[-2] = []
+                    disp.groups = dict(sorted(disp.groups.items()))
+                disp.groups[-2].append(self._dbg_handler)
+
+            route["dbg"] = (rich_raw, None)
+
+            app = self.client.app
+            res = await app.get_inline_bot_results(
+                bot.me.id, f"dbg{datetime.datetime.now(datetime.UTC).timestamp()}"
+            )
+            if res and res.results:
+                await app.send_inline_bot_result(
+                    msg.chat.id, res.query_id, res.results[0].id
+                )
+                return
+        except Exception as rich_err:
+            self.logger.warning(f"debug rich failed: {rich_err!r}")
 
         await self.respond(
             event,
