@@ -48,9 +48,38 @@ class SGB(Module):
             if "you have used up your quota" in result.lower():
                 result = result.splitlines()[0]
 
+            # Deteksi pesan error dari SangMata bot sendiri
+            low = result.lower()
+            if "tidak valid" in low or "not valid" in low or "invalid" in low:
+                await self.respond(
+                    event,
+                    "<b>SangMata</b>\n<code>Target tidak valid. Reply pesan user atau ketik: sgb @username</code>",
+                )
+                return
+
             safe = html.escape(result.strip())
             if len(safe) > 3600:
                 safe = safe[:3600] + "..."
+
+            # Parse hasil SangMata jadi rows tabel (Name History / Nama)
+            rows = []
+            for ln in result.strip().splitlines():
+                t = html.escape(ln.strip())
+                if not t:
+                    continue
+                if ":" in t:
+                    k, v = t.split(":", 1)
+                    rows.append((k.strip(), v.strip()))
+                else:
+                    rows.append((t, ""))
+            if not rows:
+                rows = [("History", html.escape(result.strip()[:500]))]
+
+            if await self.send_rich(
+                event, "🔍 SangMata Result", rows,
+                note=self.fmtsec(now), query_prefix="sgb",
+            ):
+                return
 
             await self.respond(
                 event,
