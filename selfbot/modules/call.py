@@ -178,7 +178,7 @@ class Call(Module):
             blocks = [
                 InputRichBlockParagraph(text=RichTextBold(title.split(" ⚡ ")[0])),
                 InputRichBlockTable(
-                    rows, is_bordered=True, is_striped=True, is_compact=True
+                    rows, is_bordered=True, is_striped=True, is_compact=False
                 ),
                 # Tombol rich Close (merah) — di dalam kartu
                 InputRichBlockButtons(

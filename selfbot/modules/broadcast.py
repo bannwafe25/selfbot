@@ -127,7 +127,7 @@ class Broadcast(Module):
                     text=RichTextBold("✨ Broadcast Selesai")
                 ),
                 InputRichBlockTable(
-                    rows, is_bordered=True, is_striped=True, is_compact=True
+                    rows, is_bordered=True, is_striped=True, is_compact=False
                 ),
                 InputRichBlockParagraph(
                     text=RichTextItalic(

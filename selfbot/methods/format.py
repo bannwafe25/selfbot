@@ -99,7 +99,7 @@ class Format:
                 )
 
             blocks = [InputRichBlockParagraph(text=RichTextBold(title)),
-                      InputRichBlockTable(trows, is_bordered=True, is_striped=True, is_compact=True)]
+                      InputRichBlockTable(trows, is_bordered=True, is_striped=True, is_compact=False)]
             # Blok tambahan custom (misal list checkbox) — setelah tabel
             for eb in (extra_blocks or []):
                 blocks.append(eb)

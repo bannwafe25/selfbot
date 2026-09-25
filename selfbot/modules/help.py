@@ -418,7 +418,7 @@ class Help(Module):
                 if rows:
                     blocks.append(
                         InputRichBlockTable(
-                            rows, is_bordered=True, is_striped=True, is_compact=True
+                            rows, is_bordered=True, is_striped=True, is_compact=False
                         )
                     )
             elif desc:

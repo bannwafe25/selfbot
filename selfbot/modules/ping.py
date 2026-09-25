@@ -107,7 +107,7 @@ class Ping(Module):
                         ],
                         is_bordered=True,
                         is_striped=True,
-                        is_compact=True,
+                        is_compact=False,
                     ),
                     InputRichBlockParagraph(
                         text=RichTextItalic("Pengujian latensi berhasil dilakukan.")

@@ -326,7 +326,7 @@ class Debug(Module):
                     text=f"<code>{html.escape(out)}</code>"
                 ),
                 InputRichBlockTable(
-                    rows, is_bordered=True, is_striped=True, is_compact=True
+                    rows, is_bordered=True, is_striped=True, is_compact=False
                 ),
             ]
 
