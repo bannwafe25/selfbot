@@ -86,13 +86,16 @@ class Format:
 
             trows = [
                 [
-                    RichBlockTableCell(text="Parameter", is_header=True),
-                    RichBlockTableCell(text="Keterangan", is_header=True),
+                    RichBlockTableCell(text="Parameter", is_header=True, align="center"),
+                    RichBlockTableCell(text="Keterangan", is_header=True, align="center"),
                 ]
             ]
             for k, v in rows:
                 trows.append(
-                    [RichBlockTableCell(text=str(k)), RichBlockTableCell(text=str(v))]
+                    [
+                        RichBlockTableCell(text=str(k), align="left"),
+                        RichBlockTableCell(text=str(v), align="left"),
+                    ]
                 )
 
             blocks = [InputRichBlockParagraph(text=RichTextBold(title)),

@@ -70,31 +70,17 @@ class Info(Module):
 
             caption, photo_id, rich_rows = await self._format_user_info(user, is_full_mode, event)
 
-            # Rich table hanya kalau TANPA foto (output teks)
-            if not photo_id:
-                if await self.send_rich(
-                    event, f"👤 User Info — {user.first_name or user.id}", rich_rows,
-                    note=self.fmtsec(now), query_prefix="info",
-                ):
-                    return
+            # Selalu kirim rich table via bot (foto profil di-skip)
+            if await self.send_rich(
+                event, f"👤 User Info — {user.first_name or user.id}", rich_rows,
+                note=self.fmtsec(now), query_prefix="info",
+            ):
+                return
             caption += f"\n\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
 
-            if photo_id:
-                try:
-                    photo = await event._client.download_media(photo_id, in_memory=True)
-                    await event.delete()
-                    await event.reply_photo(photo=photo, caption=caption)
-                except Exception as e:
-                    self.logger.warning(f"Failed to download profile photo: {e}")
-                    await self.respond(
-                        event,
-                        caption,
-                        link_preview_options=LinkPreviewOptions(is_disabled=True),
-                    )
-            else:
-                await self.respond(
-                    event, caption, link_preview_options=LinkPreviewOptions(is_disabled=True)
-                )
+            await self.respond(
+                event, caption, link_preview_options=LinkPreviewOptions(is_disabled=True)
+            )
         except RPCError as e:
             await self.respond(
                 event, f"<b>RPCError:</b> <code>{html.escape(str(e))}</code>"
