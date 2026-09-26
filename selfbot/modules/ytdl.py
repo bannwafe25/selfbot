@@ -4,6 +4,7 @@ import datetime
 import html
 import os
 import re
+import shutil
 from pathlib import Path
 
 from pyrogram import filters
@@ -416,7 +417,9 @@ class YtDL(Module):
             opts["cookiefile"] = cookie_file
         # yt-dlp default hanya pakai deno; daftarkan node (tersedia di server)
         # sebagai JS runtime buat n-challenge solver (EJS).
-        opts["js_runtimes"] = {"node": {"path": "/usr/local/bin/node"}, "deno": {}}
+        node_path = os.environ.get("NODE_PATH") or shutil.which("node") or "/usr/local/bin/node"
+        deno_path = os.environ.get("DENO_PATH") or shutil.which("deno") or "/usr/local/bin/deno"
+        opts["js_runtimes"] = {"node": {"path": node_path}, "deno": {"path": deno_path}}
         opts["remote_components"] = ["ejs:github"]
         return opts
 
