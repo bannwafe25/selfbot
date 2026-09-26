@@ -219,6 +219,24 @@ class YtDL(Module):
                     reply_parameters=reply_parameters,
                 )
 
+            # Kartu rich teks (audio terkirim polos di atas kartu)
+            rich_rows = [
+                ("Judul", title[:50] or "-"),
+                ("Durasi", duration_str),
+                ("Ukuran", size_text),
+            ]
+            if quality:
+                rich_rows.append(("Quality", quality))
+            flag_name = {"-d": "Document", "-v": "Voice"}.get(
+                (flag or "").lower(), "Audio"
+            )
+            rich_rows.append(("Mode", flag_name))
+            await self.send_rich(
+                event,
+                "🎵 Song Selesai",
+                rich_rows,
+                query_prefix=f"song{int(now.timestamp()*1000)}",
+            )
             await event.delete()
         except Exception as e:
             self.logger.error(f"Song download error: {e}")
@@ -272,6 +290,19 @@ class YtDL(Module):
                 ),
                 supports_streaming=True,
                 reply_parameters=reply_parameters,
+            )
+
+            # Kartu rich teks (video terkirim polos di atas kartu)
+            await self.send_rich(
+                event,
+                "🎬 VSong Selesai",
+                [
+                    ("Judul", title[:50] or "-"),
+                    ("Durasi", self._duration_text(duration)),
+                    ("Ukuran", f"{video_file.stat().st_size / 1048576:.1f} MB"),
+                    ("Format", "MP4"),
+                ],
+                query_prefix=f"vsong{int(now.timestamp()*1000)}",
             )
             await event.delete()
         except Exception as e:

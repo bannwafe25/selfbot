@@ -80,6 +80,27 @@ class AllDL(Module):
                 raise RuntimeError("Download failed or is empty.")
 
             size_mb = media_file.stat().st_size / 1048576
+            dur_s = media_file.stat().st_mtime - now.timestamp()
+            # Kartu rich: Download Selesai
+            rich_rows = [
+                ("Sumber", provider),
+                ("Judul", title[:60] or "-"),
+                ("Ukuran", f"📦 {size_mb:.1f} MB"),
+                ("Format", "MP4"),
+            ]
+            rich_ok = await self.send_rich(
+                event,
+                "📥 Download Selesai",
+                rich_rows,
+                note="Video tampil di atas kartu ini.",
+                query_prefix=f"alldl{now_ts()}",
+                media_file=str(media_file),
+                media_type="video",
+            )
+            if rich_ok:
+                await event.delete()
+                return
+            # Fallback HTML kalau rich gagal
             reply_parameters = ReplyParameters(
                 message_id=event.reply_to_message_id or event.id
             )

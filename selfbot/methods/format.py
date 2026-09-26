@@ -1,11 +1,14 @@
 import asyncio
 import datetime
 import html
+import logging
 import sys
 import traceback
 
 
 class Format:
+    logger = logging.getLogger("Format")
+
     def _ensure_rich_handler(self, ping_mod, rawfn, IMRichMsg, IBIR):
         """Pasang handler bersama group -2 di modul Ping (sekali saja)."""
         if getattr(ping_mod, "_rich_handler", None) is not None:
@@ -61,6 +64,8 @@ class Format:
         query_prefix: str = "rich",
         buttons: list | None = None,
         extra_blocks: list | None = None,
+        media_file: str | None = None,
+        media_type: str = "video",
     ) -> bool:
         """Kirim rich table via inline bot. rows = [(param, keterangan), ...].
         buttons = [(teks, callback_data, ButtonStyle|None), ...].
@@ -106,7 +111,27 @@ class Format:
                 [RichBlockTableCell(text=title, is_header=True, colspan=2, align="center")],
             )
 
-            blocks = [InputRichBlockTable(trows, is_bordered=True, is_striped=True, is_compact=False)]
+            blocks = []
+            # Blok media (video/foto) di atas tabel kalau ada
+            if media_file:
+                try:
+                    from pyrogram.types import (
+                        InputRichBlockVideo,
+                        InputRichBlockPhoto,
+                        InputMediaVideo,
+                        InputMediaPhoto,
+                    )
+                    if media_type == "photo":
+                        blocks.append(
+                            InputRichBlockPhoto(photo=InputMediaPhoto(media_file))
+                        )
+                    else:
+                        blocks.append(
+                            InputRichBlockVideo(video=InputMediaVideo(media_file))
+                        )
+                except Exception as me:
+                    self.logger.warning(f"rich media block failed: {me!r}")
+            blocks.append(InputRichBlockTable(trows, is_bordered=True, is_striped=True, is_compact=False))
             # Blok tambahan custom (misal list checkbox) — setelah tabel
             for eb in (extra_blocks or []):
                 blocks.append(eb)
