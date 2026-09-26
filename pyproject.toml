@@ -9,7 +9,7 @@ dependencies = [
     "httpx[http2]==0.28.1",
     "httpcore==1.0.9",
     "kurigram==2.2.26",
-    "richpyro>=0.1.0",
+    "richpyro>=1.0.0",
     "pillow>=11.0.0",
     "pymongo>=4.9.0",
     "psutil>=6.1.1",
