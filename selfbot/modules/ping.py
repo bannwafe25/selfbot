@@ -9,19 +9,9 @@ from pyrogram.types import (
     CallbackQuery,
     ChosenInlineResult,
     InlineQuery,
-    InputRichBlockParagraph,
-    InputRichBlockSectionHeading,
-    InputRichBlockTable,
-    InputRichMessage,
     Message,
-    RichBlockTableCell,
-    RichTextBold,
-    RichTextItalic,
-    InputRichBlockButtons,
-    RichMessageButton,
     Update,
 )
-from pyrogram.enums import ButtonStyle
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
@@ -81,50 +71,24 @@ class Ping(Module):
         if isinstance(event, Message):
             try:
                 app_ms = re.sub(r"[^0-9.]", "", str(app)) or app
+                import richpyro as rp
+                from pyrogram.enums import ButtonStyle
+                rows = [
+                    ("Klien Aktif", event._client.me.first_name or "Userbot"),
+                    ("User ID", str(event._client.me.id)),
+                    ("Kecepatan Respons", f"{app_ms} ms"),
+                    ("Status Jaringan", "✅ Terhubung Normal"),
+                ]
+                trows = [[rp.table_cell(rp.bold("🚀 Pong!"), is_header=True, colspan=2, align="center")],
+                         [rp.table_cell(rp.bold("Parameter"), is_header=True, align="center"),
+                          rp.table_cell(rp.bold("Keterangan"), is_header=True, align="center")]]
+                for k, v in rows:
+                    trows.append([rp.table_cell(k, align="center"), rp.table_cell(v, align="center")])
                 blocks = [
-                    InputRichBlockTable(
-                        [
-                            [
-                                RichBlockTableCell(text="🚀 Pong!", is_header=True, colspan=2, align="center"),
-                            ],
-                            [
-                                RichBlockTableCell(text="Parameter", is_header=True, align="center"),
-                                RichBlockTableCell(text="Keterangan", is_header=True, align="center"),
-                            ],
-                            [
-                                RichBlockTableCell(text="Klien Aktif", align="center"),
-                                RichBlockTableCell(text=event._client.me.first_name or "Userbot", align="center"),
-                            ],
-                            [
-                                RichBlockTableCell(text="User ID", align="center"),
-                                RichBlockTableCell(text=str(event._client.me.id), align="center"),
-                            ],
-                            [
-                                RichBlockTableCell(text="Kecepatan Respons", align="center"),
-                                RichBlockTableCell(text=f"{app_ms} ms", align="center"),
-                            ],
-                            [
-                                RichBlockTableCell(text="Status Jaringan", align="center"),
-                                RichBlockTableCell(text="✅ Terhubung Normal", align="center"),
-                            ],
-                        ],
-                        is_bordered=True,
-                        is_striped=True,
-                        is_compact=False,
-                    ),
-                    InputRichBlockParagraph(
-                        text=RichTextItalic("Pengujian latensi berhasil dilakukan.")
-                    ),
+                    rp.table(trows, bordered=True, striped=True, compact=False),
+                    rp.para(rp.italic("Pengujian latensi berhasil dilakukan.")),
                     # Tombol rich: Close saja (Refresh dihapus atas request)
-                    InputRichBlockButtons(
-                        [
-                            RichMessageButton(
-                                text=RichTextBold("🗑 Close"),
-                                style=ButtonStyle.DANGER,
-                                callback_data=b"0",
-                            ),
-                        ]
-                    ),
+                    rp.buttons(rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=ButtonStyle.DANGER)),
                 ]
                 botc = self.client.bot
                 from pyrogram.raw import functions as rawfn
@@ -133,7 +97,7 @@ class Ping(Module):
                     InputBotInlineResult,
                 )
 
-                rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
+                rich_raw = await rp.blocks_message(*blocks).write(client=bot)
                 # Tanpa reply_markup bawah — Close sudah sebagai tombol rich
                 close_raw = None
 

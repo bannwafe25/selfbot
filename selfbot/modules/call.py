@@ -8,15 +8,13 @@ import struct
 from pyrogram import filters, raw
 from pyrogram.errors import RPCError
 from pyrogram.types import (
-    InputRichBlockParagraph,
-    InputRichBlockTable,
     InputRichBlockButtons,
-    RichMessageButton,
+    InputRichBlockTable,
     InputRichMessage,
     Message,
     RichBlockTableCell,
-    RichText,
     RichTextBold,
+    RichMessageButton,
 )
 from pyrogram.enums import ButtonStyle
 
@@ -141,6 +139,13 @@ class Call(Module):
 
             import datetime as _dt
 
+            from pyrogram.types import (
+                InputRichBlockButtons,
+                InputRichBlockTable,
+                InputRichMessage,
+                RichBlockTableCell,
+                RichTextBold,
+            )
             rows = [
                 [
                     RichBlockTableCell(text="Parameter", is_header=True, align="center"),

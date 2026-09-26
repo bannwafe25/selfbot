@@ -79,91 +79,42 @@ class Format:
                 InputBotInlineMessageRichMessage,
                 InputBotInlineResult,
             )
-            from pyrogram.types import (
-                InputRichBlockExpandableBlockQuotation,
-                InputRichBlockParagraph,
-                InputRichBlockTable,
-                InputRichMessage,
-                RichBlockTableCell,
-                RichTextBold,
-                RichTextItalic,
-                InputRichBlockFooter,
-                RichTextUrl,
-            )
+            import richpyro as rp
+            from pyrogram.enums import ButtonStyle
 
-            trows = [
-                [
-                    RichBlockTableCell(text="Parameter", is_header=True, align="center"),
-                    RichBlockTableCell(text="Keterangan", is_header=True, align="center"),
-                ]
-            ]
+            # Tabel via richpyro — judul jadi baris colspan pertama (center di semua klien)
+            trows = [[rp.table_cell(rp.bold("Parameter"), is_header=True, align="center"),
+                      rp.table_cell(rp.bold("Keterangan"), is_header=True, align="center")]]
             for k, v in rows:
-                trows.append(
-                    [
-                        RichBlockTableCell(text=str(k), align="left"),
-                        RichBlockTableCell(text=str(v), align="left"),
-                    ]
-                )
-
-            # Judul jadi baris colspan pertama dalam tabel (agar center di semua klien)
-            trows.insert(
-                0,
-                [RichBlockTableCell(text=title, is_header=True, colspan=2, align="center")],
-            )
+                trows.append([rp.table_cell(str(k), align="left"), rp.table_cell(str(v), align="left")])
+            trows.insert(0, [rp.table_cell(rp.bold(title), is_header=True, colspan=2, align="center")])
 
             blocks = []
             # Blok media (video/foto) di atas tabel kalau ada
             if media_file:
                 try:
-                    from pyrogram.types import (
-                        InputRichBlockVideo,
-                        InputRichBlockPhoto,
-                        InputMediaVideo,
-                        InputMediaPhoto,
-                    )
+                    from pyrogram.types import InputMediaVideo, InputMediaPhoto
                     if media_type == "photo":
-                        blocks.append(
-                            InputRichBlockPhoto(photo=InputMediaPhoto(media_file))
-                        )
+                        blocks.append(rp.photo_block(InputMediaPhoto(media_file)))
                     else:
-                        blocks.append(
-                            InputRichBlockVideo(video=InputMediaVideo(media_file))
-                        )
+                        blocks.append(rp.video_block(InputMediaVideo(media_file)))
                 except Exception as me:
                     self.logger.warning(f"rich media block failed: {me!r}")
-            blocks.append(InputRichBlockTable(trows, is_bordered=True, is_striped=True, is_compact=False))
+            blocks.append(rp.table(trows, bordered=True, striped=True, compact=False))
             # Blok tambahan custom (misal list checkbox) — setelah tabel
             for eb in (extra_blocks or []):
                 blocks.append(eb)
             if note:
-                # Blockquote (garis biru vertikal) seperti contoh @OnlyDevRoBot
-                blocks.append(InputRichBlockExpandableBlockQuotation(text=RichTextItalic(note)))
+                # Blockquote (garis biru vertikal)
+                blocks.append(rp.expandable_quote(rp.italic(note)))
 
             # Tombol rich: Close (merah) + custom tambahan
-            from pyrogram.enums import ButtonStyle
-            from pyrogram.types import (
-                InputRichBlockButtons,
-                RichMessageButton,
-                RichTextBold as _RB,
-            )
-            rich_btns = [
-                RichMessageButton(
-                    text=_RB("🗑 Close"),
-                    style=ButtonStyle.DANGER,
-                    callback_data=b"0",
-                )
-            ]
+            rich_btns = [rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=ButtonStyle.DANGER)]
             for btext, bdata, bstyle in (buttons or []):
-                rich_btns.append(
-                    RichMessageButton(
-                        text=_RB(btext),
-                        style=bstyle or ButtonStyle.PRIMARY,
-                        callback_data=bdata,
-                    )
-                )
-            blocks.append(InputRichBlockButtons(rich_btns))
+                rich_btns.append(rp.btn(rp.bold(btext), callback_data=bdata, style=bstyle or ButtonStyle.PRIMARY))
+            blocks.append(rp.buttons(*rich_btns))
 
-            rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
+            rich_raw = await rp.blocks_message(*blocks).write(client=bot)
 
             # Daftarkan payload ke handler bersama milik Ping (group -2)
             # — helper send_rich juga bisa dipasang lebih awal oleh modul lain

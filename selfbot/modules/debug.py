@@ -294,16 +294,7 @@ class Debug(Module):
                 InputBotInlineMessageRichMessage,
                 InputBotInlineResult,
             )
-            from pyrogram.types import (
-                InputRichBlockButtons,
-                InputRichBlockParagraph,
-                InputRichBlockTable,
-                InputRichMessage,
-                RichBlockTableCell,
-                RichMessageButton,
-                RichTextBold,
-                RichTextCode,
-            )
+            import richpyro as rp
             from pyrogram.enums import ButtonStyle as _BS
 
             import uuid as _uuid
@@ -311,36 +302,20 @@ class Debug(Module):
             elapsed = rtt
             length = str(len(out))
 
-            rows = [
-                [RichBlockTableCell(text="Key", is_header=True, align="center"),
-                 RichBlockTableCell(text="Value", is_header=True, align="center")],
-                [RichBlockTableCell(text="Task ID", align="center"),
-                 RichBlockTableCell(text=task_id, align="center")],
-                [RichBlockTableCell(text="Elapsed", align="center"),
-                 RichBlockTableCell(text=elapsed, align="center")],
-                [RichBlockTableCell(text="Length", align="center"),
-                 RichBlockTableCell(text=length, align="center")],
+            trows = [
+                [rp.table_cell(rp.bold("Key"), is_header=True, align="center"),
+                 rp.table_cell(rp.bold("Value"), is_header=True, align="center")],
+                [rp.table_cell("Task ID", align="center"), rp.table_cell(task_id, align="center")],
+                [rp.table_cell("Elapsed", align="center"), rp.table_cell(elapsed, align="center")],
+                [rp.table_cell("Length", align="center"), rp.table_cell(length, align="center")],
             ]
             blocks = [
-                InputRichBlockParagraph(
-                    text=f"<code>{html.escape(out)}</code>"
-                ),
-                InputRichBlockTable(
-                    rows, is_bordered=True, is_striped=True, is_compact=False
-                ),
+                rp.preformatted(out, language="text"),
+                rp.table(trows, bordered=True, striped=True, compact=False),
             ]
 
-            rich_btns = InputRichBlockButtons(
-                [
-                    RichMessageButton(
-                        text=RichTextBold("🗑 Del"),
-                        style=_BS.DANGER,
-                        callback_data=b"0",
-                    ),
-                ]
-            )
-            blocks.append(rich_btns)
-            rich_raw = await InputRichMessage(blocks=blocks).write(client=self.client.bot)
+            blocks.append(rp.buttons(rp.btn(rp.bold("🗑 Del"), callback_data=b"0", style=_BS.DANGER)))
+            rich_raw = await rp.blocks_message(*blocks).write(client=self.client.bot)
 
             bot = self.client.bot
             from pyrogram.handlers import RawUpdateHandler

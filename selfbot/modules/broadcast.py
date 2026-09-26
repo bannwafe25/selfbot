@@ -5,15 +5,7 @@ import datetime
 from pyrogram import enums, filters
 from pyrogram.errors import FloodWait, InputUserDeactivated, RPCError, UserIsBlocked
 from pyrogram.types import (
-    InputRichBlockParagraph,
-    InputRichBlockTable,
-    InputRichBlockButtons,
-    RichMessageButton,
-    InputRichMessage,
     Message,
-    RichBlockTableCell,
-    RichTextBold,
-    RichTextItalic,
 )
 from pyrogram.enums import ButtonStyle as _BS
 
@@ -112,42 +104,24 @@ class Broadcast(Module):
                 UpdateBotInlineQuery,
             )
 
+            import richpyro as rp
             rows = [
-                [RichBlockTableCell(text="Parameter", is_header=True, align="center"), RichBlockTableCell(text="Keterangan", is_header=True, align="center")],
-                [RichBlockTableCell(text="Mode", align="center"), RichBlockTableCell(text=mode, align="center")],
-                [RichBlockTableCell(text="Total Target", align="center"), RichBlockTableCell(text=str(total), align="center")],
-                [RichBlockTableCell(text="Berhasil", align="center"), RichBlockTableCell(text=f"✅ {ok}", align="center")],
-                [RichBlockTableCell(text="Diblokir", align="center"), RichBlockTableCell(text=f"🚫 {blocked}", align="center")],
-                [RichBlockTableCell(text="Gagal", align="center"), RichBlockTableCell(text=f"❌ {fail}", align="center")],
-                [RichBlockTableCell(text="Total Waktu", align="center"), RichBlockTableCell(text=f"{dur:.2f}s", align="center")],
-                [RichBlockTableCell(text="Status Akhir", align="center"), RichBlockTableCell(text="✅ Selesai", align="center")],
+                ("Mode", mode), ("Total Target", str(total)), ("Berhasil", f"✅ {ok}"),
+                ("Diblokir", f"🚫 {blocked}"), ("Gagal", f"❌ {fail}"),
+                ("Total Waktu", f"{dur:.2f}s"), ("Status Akhir", "✅ Selesai"),
             ]
-            rows.insert(
-                0,
-                [RichBlockTableCell(text="✨ Broadcast Selesai", is_header=True, colspan=2, align="center")],
-            )
+            trows = [
+                [rp.table_cell(rp.bold("✨ Broadcast Selesai"), is_header=True, colspan=2, align="center")],
+                [rp.table_cell(rp.bold("Parameter"), is_header=True, align="center"), rp.table_cell(rp.bold("Keterangan"), is_header=True, align="center")],
+            ]
+            for k, v in rows:
+                trows.append([rp.table_cell(k, align="center"), rp.table_cell(v, align="center")])
             blocks = [
-                InputRichBlockTable(
-                    rows, is_bordered=True, is_striped=True, is_compact=False
-                ),
-                InputRichBlockParagraph(
-                    text=RichTextItalic(
-                        "Semua pesan broadcast telah selesai dikirim ke target."
-                    )
-                ),
+                rp.table(trows, bordered=True, striped=True, compact=False),
+                rp.para(rp.italic("Semua pesan broadcast telah selesai dikirim ke target.")),
             ]
-            blocks.append(
-                InputRichBlockButtons(
-                    [
-                        RichMessageButton(
-                            text=RichTextBold("🗑 Close"),
-                            style=_BS.DANGER,
-                            callback_data=b"0",
-                        )
-                    ]
-                )
-            )
-            rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
+            blocks.append(rp.buttons(rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=_BS.DANGER)))
+            rich_raw = await rp.blocks_message(*blocks).write(client=bot)
             close_raw = None
 
             # Payload TERBARU utk handler permanen (bug: output lama terpakai ulang)

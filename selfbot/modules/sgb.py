@@ -61,25 +61,49 @@ class SGB(Module):
             if len(safe) > 3600:
                 safe = safe[:3600] + "..."
 
-            # Parse hasil SangMata jadi rows tabel (Name History / Nama)
-            rows = []
-            for ln in result.strip().splitlines():
-                t = html.escape(ln.strip())
-                if not t:
-                    continue
-                if ":" in t:
-                    k, v = t.split(":", 1)
-                    rows.append((k.strip(), v.strip()))
-                else:
-                    rows.append((t, ""))
-            if not rows:
-                rows = [("History", html.escape(result.strip()[:500]))]
+            # Format ala SangMata: kartu teks terstruktur (list), bukan tabel k/v
+            import asyncio as _aio
+            import contextlib as _cl
+            import richpyro as rp
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+            )
 
-            if await self.send_rich(
-                event, "🔍 SangMata Result", rows,
-                note=self.fmtsec(now), query_prefix="sgb",
-            ):
-                return
+            lines = [ln.strip() for ln in result.strip().splitlines() if ln.strip()]
+            blocks = [
+                rp.heading(rp.bold("🔍 History"), size=2),
+                rp.divider(),
+            ]
+            for ln in lines[:40]:
+                blocks.append(rp.para(rp.italic(ln)))
+            blocks.append(rp.divider())
+            blocks.append(rp.para(rp.bold(f"🕒 {self.fmtsec(now)}")))
+            blocks.append(rp.buttons(rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=rp.Style.DANGER)))
+
+            try:
+                bot = self.client.bot
+                rich_raw = await rp.blocks_message(*blocks).write(client=bot)
+                ping_mod = self.client.modules.get("Ping")
+                route = getattr(ping_mod, "_rich_route", None)
+                if route is None and ping_mod is not None:
+                    self._ensure_rich_handler(ping_mod, rawfn, InputBotInlineMessageRichMessage, InputBotInlineResult)
+                    route = getattr(ping_mod, "_rich_route", None)
+                if route is not None:
+                    route["sgb"] = (rich_raw, None)
+                    res = await event._client.get_inline_bot_results(
+                        bot.me.id, f"sgb{now.timestamp()}"
+                    )
+                    if res.results:
+                        await _aio.gather(
+                            event.reply_inline_bot_result(res.query_id, res.results[0].id),
+                            event.delete(),
+                        )
+                        return
+            except Exception as e:
+                with _cl.suppress(Exception):
+                    self.logger.warning(f"sgb rich failed, fallback html: {e!r}")
 
             await self.respond(
                 event,
