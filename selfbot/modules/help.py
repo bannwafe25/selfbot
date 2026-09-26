@@ -153,126 +153,76 @@ class Help(Module):
         await self.answer(event, self.ikm(self.build()), header)
 
     def _rich_blocks(self, quote: str, page: int = 0) -> list:
+        # Versi richpyro: accordion Details per modul + spoiler quote
+        import richpyro as rp
+
         mods = list(self.client.modules.values())
         per_page = 4
         chunks = [mods[i : i + per_page] for i in range(0, len(mods), per_page)]
         total_pages = max(len(chunks), len(self.ikbs))
         chunk = chunks[page] if page < len(chunks) else chunks[-1]
 
-        def count_cmds(mod) -> int:
-            d = mod.desc
-            if isinstance(d, dict):
-                return max(
-                    sum(
-                        1
-                        for k, v in d.items()
-                        if k not in ("e.g.", "?") and isinstance(v, str) and v
-                    ),
-                    1,
-                )
-            return 1
-
-        rows = [
-            [
-                RichBlockTableCell(text=RichTextBold("Modul"), is_header=True),
-                RichBlockTableCell(text=RichTextBold("Pattern"), is_header=True),
-            ]
-        ]
-        offset = page * per_page
-        for i, mod in enumerate(chunk, 1):
-            rows.append(
-                [
-                    RichBlockTableCell(text=RichTextBold(mod.name)),
-                    RichBlockTableCell(
-                        text=RichTextFixed(getattr(mod, "cmds", "") or "-")
-                    ),
-                ]
-            )
         blocks = [
-            InputRichBlockSectionHeading(text=RichTextBold("📖 Menu Bantuan Userbot"), size=4),
-            InputRichBlockParagraph(
-                text=RichTextItalic(
-                    f"Bagian {page + 1}/{total_pages} — Total {len(mods)} modul"
-                    " — Prefix aktif: (tanpa prefix)"
+            rp.heading(rp.bold("📖 Menu Bantuan Userbot"), size=2),
+            rp.para(
+                rp.italic(
+                    f"Halaman {page + 1}/{total_pages} — {len(mods)} modul"
                 )
             ),
         ]
-        # Details (accordion) per modul — bisa buka-tutup
-        details_blocks = []
+
+        # Accordion per modul — klik judul untuk buka/tutup
+        # Biar tinggi kartu konsisten antar halaman:
+        # - max 3 baris perintah (preformatted)
+        # - max 3 item desc
+        # - summary dipadatkan max 40 char
+        MAX_LINES, MAX_DESC, MAX_SUM = 8, 6, 40
         for mod in chunk:
-            det = [
-                InputRichBlockPreformatted(
-                    text=getattr(mod, "cmds", "") or "-",
-                    language="text",
-                )
-            ]
+            cmds_raw = (getattr(mod, "cmds", "") or "-").strip()
+            cmds_lines = [l for l in cmds_raw.splitlines() if l.strip()][:MAX_LINES]
+            det = [rp.preformatted("\n".join(cmds_lines) or "-", language="text")]
             desc = getattr(mod, "desc", None)
             if isinstance(desc, dict) and desc:
                 det.append(
-                    InputRichBlockList(
-                        items=[
-                            InputRichBlockListItem(
-                                blocks=[InputRichBlockParagraph(
-                                    text=f"{k}: {v}"
-                                    if isinstance(v, str)
-                                    else str(k)
-                                )]
-                            )
-                            for k, v in list(desc.items())[:6]
+                    rp.bullet_list(
+                        *[
+                            rp.list_item(rp.para(f"{k}: {v}" if isinstance(v, str) else str(k)))
+                            for k, v in list(desc.items())[:MAX_DESC]
                         ]
                     )
                 )
-            details_blocks.append(
-                InputRichBlockDetails(
-                    summary=RichTextBold(mod.name),
-                    blocks=det,
+            name = str(mod.name or "?")
+            if len(name) > MAX_SUM:
+                name = name[: MAX_SUM - 1] + "…"
+            blocks.append(rp.details(name, *det))
+
+        blocks.append(rp.divider())
+
+        # Navigasi
+        nav_btns = []
+        if page > 0:
+            nav_btns.append(rp.btn(rp.bold(f"« {page}"), callback_data=f"help/page/{page - 1}".encode(), style=rp.Style.SUCCESS))
+        if page + 1 < total_pages:
+            nav_btns.append(rp.btn(rp.bold(f"{page + 2} »"), callback_data=f"help/page/{page + 1}".encode(), style=rp.Style.SUCCESS))
+        if nav_btns:
+            blocks.append(rp.buttons(*nav_btns, align="center"))
+        blocks.append(rp.buttons(rp.btn("🗑", callback_data=b"0", style=rp.Style.DANGER), align="center"))
+
+        # Channel button
+        blocks.append(
+            rp.buttons(
+                RichMessageButton(
+                    text=rp.bold("📢 Channel"),
+                    style=ButtonStyle.PRIMARY,
+                    url="https://t.me/zpbaiq",
                 )
             )
-        for d in details_blocks:
-            blocks.append(d)
-        blocks.append(InputRichBlockDivider())
-        # Tombol navigasi + Close (tombol modul dihapus — cukup accordion Details)
-        nav_btns = []
-        for row in self.ikm(self.build(page)).inline_keyboard:
-            is_mod = any(
-                getattr(b, "callback_data", b"") and b.callback_data.startswith(b"help/mod/")
-                for b in row
-            )
-            if is_mod:
-                continue
-            if any(
-                getattr(b, "callback_data", b"") == b"help/info" for b in row
-            ):
-                continue
-            for b in row:
-                kw = {"text": RichTextBold(b.text)}
-                if b.callback_data is not None:
-                    kw["callback_data"] = b.callback_data
-                elif b.url is not None:
-                    kw["url"] = b.url
-                if b.callback_data == b"0" or "close" in b.text.lower():
-                    kw["style"] = ButtonStyle.DANGER
-                else:
-                    kw["style"] = ButtonStyle.SUCCESS
-                nav_btns.append(RichMessageButton(**kw))
-        if nav_btns:
-            blocks.append(InputRichBlockButtons(nav_btns[:8]))
-        # Tombol channel (biru) — di bawah navigasi
-        blocks.append(
-            InputRichBlockButtons(
-                [
-                    RichMessageButton(
-                        text=RichTextBold("📢 Channel"),
-                        style=ButtonStyle.PRIMARY,
-                        url="https://t.me/zpbaiq",
-                    )
-                ]
-            )
         )
+
         if quote:
             blocks.append(
-                InputRichBlockParagraph(
-                    text=RichTextItalic(re.sub(r"<[^>]+>", "", quote))
+                rp.para(
+                    rp.spoiler(re.sub(r"<[^>]+>", "", quote)),
                 )
             )
         return blocks
