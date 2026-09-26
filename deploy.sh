@@ -43,6 +43,27 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
+echo "==> [4b/6] Cek ffmpeg & node (buat .song/.vsong)..."
+if ! command -v ffmpeg &>/dev/null; then
+    echo "==> ffmpeg belum ada, installing..."
+    sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+fi
+if ! command -v node &>/dev/null; then
+    echo "==> node belum ada, installing..."
+    (curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y -qq nodejs) \
+        || sudo apt-get install -y -qq nodejs npm
+fi
+
+echo "==> [4c/6] Cek cookies YouTube..."
+COOKIE_PATH="${YTDLP_COOKIES:-$HOME/cookies.txt}"
+if [ ! -f "$COOKIE_PATH" ]; then
+    echo "⚠️  cookies.txt tidak ditemukan di $COOKIE_PATH"
+    echo "    Tanpa cookies, .song/.vsong YouTube bisa kena bot-check."
+    echo "    Salin cookies dari VPS lama: scp vps-lama:~/cookies.txt ~/cookies.txt"
+else
+    echo "✅ Cookies ditemukan: $COOKIE_PATH"
+fi
+
 echo "==> [5/6] Pasang systemd service..."
 sudo tee /etc/systemd/system/$SERVICE_NAME.service >/dev/null <<EOF
 [Unit]
