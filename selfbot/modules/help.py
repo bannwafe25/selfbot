@@ -201,12 +201,19 @@ class Help(Module):
         # Navigasi
         nav_btns = []
         if page > 0:
-            nav_btns.append(rp.btn(rp.bold(f"« {page}"), callback_data=f"help/page/{page - 1}".encode(), style=rp.Style.SUCCESS))
+            nav_btns.append(rp.btn(rp.bold(f"◀️ {page}"), callback_data=f"help/page/{page - 1}".encode(), style=rp.Style.SUCCESS))
         if page + 1 < total_pages:
-            nav_btns.append(rp.btn(rp.bold(f"{page + 2} »"), callback_data=f"help/page/{page + 1}".encode(), style=rp.Style.SUCCESS))
+            nav_btns.append(rp.btn(rp.bold(f"{page + 2} ▶️"), callback_data=f"help/page/{page + 1}".encode(), style=rp.Style.SUCCESS))
         if nav_btns:
+            # Close selalu di tengah: [«prev] [🗑️ ✕] [next»]
+            close_btn = rp.btn("🗑️ ✕", callback_data=b"0", style=rp.Style.DANGER)
+            if len(nav_btns) == 2:
+                nav_btns.insert(1, close_btn)
+            else:
+                nav_btns.append(close_btn)
             blocks.append(rp.buttons(*nav_btns, align="center"))
-        blocks.append(rp.buttons(rp.btn("🗑", callback_data=b"0", style=rp.Style.DANGER), align="center"))
+        else:
+            blocks.append(rp.buttons(rp.btn("🗑️ ✕", callback_data=b"0", style=rp.Style.DANGER), align="center"))
 
         # Channel button
         blocks.append(
