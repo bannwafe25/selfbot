@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import datetime
 import html
 import logging
@@ -54,6 +55,71 @@ class Format:
             disp.groups[-2] = []
             disp.groups = dict(sorted(disp.groups.items()))
         disp.groups[-2].append(ping_mod._rich_handler)
+
+    async def send_rich_blocks(
+        self,
+        event,
+        blocks: list,
+        query_prefix: str = "rich",
+    ) -> bool:
+        """Kirim rich message dari blok bebas (tanpa tabel wajib).
+
+        blocks = list of richpyro blocks (para, details, photo_block, buttons, ...).
+        Tombol 🗑 Close otomatis ditambah kalau belum ada blok buttons.
+        Return True kalau sukses, False kalau perlu fallback HTML.
+        """
+        import datetime as _dt
+
+        try:
+            bot = self.client.bot
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+            )
+            import richpyro as rp
+            from pyrogram.enums import ButtonStyle
+            from pyrogram.types import InputRichBlockButtons
+
+            bl = list(blocks)
+            # Tambah tombol Close kalau belum ada blok tombol
+            if not any(isinstance(b, InputRichBlockButtons) for b in bl):
+                bl.append(
+                    rp.buttons(
+                        rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=ButtonStyle.DANGER)
+                    )
+                )
+
+            rich_raw = await rp.blocks_message(*bl).write(client=bot)
+
+            ping_mod = None
+            try:
+                ping_mod = self.client.modules.get("Ping")
+            except Exception:
+                pass
+            if ping_mod is None:
+                return False
+
+            self._ensure_rich_handler(
+                ping_mod, rawfn, InputBotInlineMessageRichMessage, InputBotInlineResult
+            )
+            if getattr(ping_mod, "_rich_route", None) is None:
+                ping_mod._rich_route = {}
+            ping_mod._rich_route[query_prefix] = (rich_raw, None)
+
+            now = _dt.datetime.now(_dt.UTC)
+            res = await event._client.get_inline_bot_results(
+                bot.me.id, f"{query_prefix}{now.timestamp()}"
+            )
+            if not res or not res.results:
+                return False
+
+            await event.reply_inline_bot_result(res.query_id, res.results[0].id)
+            return True
+        except Exception as e:
+            with contextlib.suppress(Exception):
+                self.logger.warning(f"send_rich_blocks failed: {e!r}")
+            return False
 
     async def send_rich(
         self,

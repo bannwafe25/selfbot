@@ -1,5 +1,7 @@
+import contextlib
 import datetime
 import html
+import os
 import re
 
 from pyrogram import enums, filters
@@ -70,11 +72,8 @@ class Info(Module):
 
             caption, photo_id, rich_rows = await self._format_user_info(user, is_full_mode, event)
 
-            # Selalu kirim rich table via bot (foto profil di-skip)
-            if await self.send_rich(
-                event, f"👤 User Info — {user.first_name or user.id}", rich_rows,
-                note=self.fmtsec(now), query_prefix="info",
-            ):
+            # Rich: foto profil + tabel + detail + tombol profil via send_rich_blocks
+            if await self._send_rich_profile(event, user, photo_id, rich_rows, now):
                 return
             caption += f"\n\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
 
@@ -87,6 +86,102 @@ class Info(Module):
             )
         except Exception as e:
             await self.respond(event, f"<b>Error:</b> <code>{html.escape(str(e))}</code>")
+
+    async def _send_rich_profile(self, event, user, photo_id, rows, now) -> bool:
+        """Rich: foto profil + tabel data + tombol buka profil. False kalau gagal."""
+        import io as _io
+        import tempfile as _tf
+
+        try:
+            import richpyro as rp
+
+            bot = self.client.bot
+            app = self.client.app
+
+            # Upload foto profil via bot (perlu file_id milik bot)
+            bot_file_id = None
+            if photo_id:
+                try:
+                    buf = await app.download_media(photo_id, in_memory=True)
+                    tmp = _tf.NamedTemporaryFile(suffix=".jpg", delete=False)
+                    tmp.write(buf.getvalue())
+                    tmp.close()
+                    target = self.client.config.get("LOG_GROUP") or ""
+                    try:
+                        target = int(target)
+                    except (TypeError, ValueError):
+                        target = None
+                    if target is None:
+                        self.logger.warning("LOG_GROUP tidak valid, foto profil dilewati")
+                        return await self._rich_profile_no_photo(event, user, rows, now)
+                    msg = await bot.send_photo(target, tmp.name)
+                    bot_file_id = msg.photo.file_id
+                    await msg.delete()
+                    with contextlib.suppress(Exception):
+                        os.unlink(tmp.name)
+                except Exception as e:
+                    self.logger.warning(f"profile photo upload failed: {e!r}")
+
+            blocks = []
+            if bot_file_id:
+                blocks.append(rp.photo_block(rp.photo_media(bot_file_id)))
+
+            trows = [[rp.table_cell(rp.bold("👤 User Info"), is_header=True, colspan=2, align="center")]]
+            emoji_map = {
+                "ID": "🆔", "First Name": "📛", "Last Name": "📛", "Username": "🔗",
+                "DC ID": "🌐", "Language": "🗣", "Status": "📌", "Common Groups": "👥",
+                "You Blocked": "🚫", "Flags": "🏷", "Registration Date": "📅",
+                "Last Seen": "👁", "Bio": "📝", "Profile Photos": "🖼",
+            }
+            for k, v in rows:
+                label = k.strip()
+                icon = emoji_map.get(label, "•")
+                trows.append([
+                    rp.table_cell(rp.bold(icon + " " + label), align="center"),
+                    rp.table_cell(v.strip() or "—", align="center"),
+                ])
+            blocks.append(rp.table(trows, bordered=True, striped=True, compact=False))
+            blocks.append(
+                rp.expandable_quote(rp.italic(self.fmtsec(now)))
+            )
+            blocks.append(
+                rp.buttons(
+                    rp.url_btn(rp.bold("🔗 Buka Profil"), f"tg://user?id={user.id}"),
+                    rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=__import__("pyrogram.enums", fromlist=["ButtonStyle"]).ButtonStyle.DANGER),
+                )
+            )
+
+            return await self.send_rich_blocks(event, blocks, query_prefix="info")
+        except Exception as e:
+            self.logger.warning(f"rich profile failed: {e!r}")
+            return False
+
+    async def _rich_profile_no_photo(self, event, user, rows, now) -> bool:
+        """Versi rich tanpa foto (LOG_GROUP tidak tersedia)."""
+        try:
+            import richpyro as rp
+            trows = [[rp.table_cell(rp.bold("👤 User Info"), is_header=True, colspan=2, align="center")]]
+            emoji_map = {
+                "ID": "🆔", "First Name": "📛", "Last Name": "📛", "Username": "🔗",
+                "DC ID": "🌐", "Language": "🗣", "Status": "📌", "Common Groups": "👥",
+                "You Blocked": "🚫", "Flags": "🏷", "Registration Date": "📅",
+                "Last Seen": "👁", "Bio": "📝", "Profile Photos": "🖼",
+            }
+            for k, v in rows:
+                label = k.strip()
+                icon = emoji_map.get(label, "•")
+                trows.append([
+                    rp.table_cell(rp.bold(icon + " " + label), align="center"),
+                    rp.table_cell(v.strip() or "—", align="center"),
+                ])
+            blocks = [
+                rp.table(trows, bordered=True, striped=True, compact=False),
+                rp.expandable_quote(rp.italic(self.fmtsec(now))),
+            ]
+            return await self.send_rich_blocks(event, blocks, query_prefix="info")
+        except Exception as e:
+            self.logger.warning(f"rich profile (no photo) failed: {e!r}")
+            return False
 
     def _get_user_status(self, user: User) -> str:
         if not user.status:

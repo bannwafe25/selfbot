@@ -26,6 +26,7 @@ def run() -> None:
             "STICKER_FILE_ID",
             "CAACAgIAAxkBAAIdeWi1SLWihwZEeyFOk9YM4-mBWJqxAAJOAgACVp29CjD-a22BMgNvHgQ",
         ),
+        "LOG_GROUP": os.environ.get("LOG_GROUP"),
     }
     with asyncio.Runner() as runner:
         runner.run(Selfbot.launch(config, runner.get_loop()))

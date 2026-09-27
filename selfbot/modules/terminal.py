@@ -68,6 +68,21 @@ class Terminal(Module):
                         )
                     )
             else:
+                # Rich: judul command + output preformatted (monospace) + quote waktu
+                try:
+                    import richpyro as rp
+
+                    blocks = [
+                        rp.para(rp.bold(f"$ {command}")),
+                        rp.divider(),
+                        rp.preformatted(result_text or "(no output)", language="bash"),
+                        rp.expandable_quote(rp.italic(str(elapsed))),
+                    ]
+                    if await self.send_rich_blocks(event, blocks, query_prefix="term"):
+                        return
+                except Exception as _re:
+                    self.logger.warning(f"terminal rich failed: {_re!r}")
+
                 await self.respond(
                     event,
                     f"<code>$ {html.escape(command)}</code>\n"

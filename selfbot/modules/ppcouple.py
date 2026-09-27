@@ -63,6 +63,30 @@ class PPCouple(Module):
             f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
         )
         
+        # Rich: 2 foto jadi collage + judul + quote waktu
+        try:
+            import richpyro as rp
+            from pyrogram.types import InputMediaPhoto as _IMP
+
+            resp_cowo = await self.client.http.get(couple[0], timeout=15)
+            resp_cewe = await self.client.http.get(couple[1], timeout=15)
+
+            if resp_cowo.status_code == 200 and resp_cewe.status_code == 200:
+                s1 = BytesIO(resp_cowo.content); s1.name = "cowo.jpg"
+                s2 = BytesIO(resp_cewe.content); s2.name = "cewe.jpg"
+                blocks = [
+                    rp.para(rp.bold("👦 PP Couple 👧")),
+                    rp.collage(
+                        rp.photo_block(_IMP(s1)),
+                        rp.photo_block(_IMP(s2)),
+                    ),
+                    rp.expandable_quote(rp.italic(self.fmtsec(now))),
+                ]
+                if await self.send_rich_blocks(event, blocks, query_prefix="ppcouple"):
+                    return
+        except Exception as _re:
+            self.logger.warning(f"ppcouple rich failed: {_re!r}")
+
         try:
             resp_cowo = await self.client.http.get(couple[0], timeout=15)
             resp_cewe = await self.client.http.get(couple[1], timeout=15)

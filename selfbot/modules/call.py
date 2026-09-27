@@ -1,22 +1,11 @@
 import asyncio
-import base64
 import contextlib
 import datetime
 import re
-import struct
 
 from pyrogram import filters, raw
 from pyrogram.errors import RPCError
-from pyrogram.types import (
-    InputRichBlockButtons,
-    InputRichBlockTable,
-    InputRichMessage,
-    Message,
-    RichBlockTableCell,
-    RichTextBold,
-    RichMessageButton,
-)
-from pyrogram.enums import ButtonStyle
+from pyrogram.types import Message
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
@@ -124,7 +113,29 @@ class Call(Module):
     # --------------------------------------------------------
 
     async def _rich_final(self, event: Message, title: str, extra: list, dur: float, chat_label: str = "-"):
-        """Kirim hasil call sebagai rich table via inline bot (fallback HTML)."""
+        """Kirim hasil call sebagai blok collapsible (details) + tombol Close."""
+        import richpyro as rp
+        from pyrogram.enums import ButtonStyle
+
+        head = rp.bold(title.split(" ⚡ ")[0])
+
+        # Blok isi yang bisa di-collapse (di-expand pas judul di-tap)
+        inner = [rp.para(f"Chat: {chat_label}")]
+        for line in extra:
+            plain = re.sub(r"<[^>]+>", "", line or "").strip()
+            if plain:
+                inner.append(rp.para(plain))
+        inner.append(rp.para(f"Total Waktu: {dur:.2f}s"))
+        inner.append(rp.para("Status Akhir: ✅ Selesai"))
+
+        blocks = [
+            rp.details(head, *inner, is_open=False),
+            rp.expandable_quote(rp.italic(f"Waktu eksekusi {dur:.2f}s")),
+            rp.buttons(
+                rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=ButtonStyle.DANGER)
+            ),
+        ]
+
         try:
             bot = self.client.bot
             from pyrogram.raw import functions as rawfn
@@ -132,96 +143,14 @@ class Call(Module):
                 InputBotInlineMessageRichMessage,
                 InputBotInlineResult,
             )
-            from pyrogram.raw.types import UpdateBotInlineQuery
             from pyrogram.handlers import RawUpdateHandler
+            from pyrogram.raw.types import UpdateBotInlineQuery
 
-            import contextlib as _cl
+            rich_raw = await rp.blocks_message(*blocks).write(client=bot)
 
-            import datetime as _dt
-
-            from pyrogram.types import (
-                InputRichBlockButtons,
-                InputRichBlockTable,
-                InputRichMessage,
-                RichBlockTableCell,
-                RichTextBold,
-            )
-            rows = [
-                [
-                    RichBlockTableCell(text="Parameter", is_header=True, align="center"),
-                    RichBlockTableCell(text="Keterangan", is_header=True, align="center"),
-                ],
-                [
-                    RichBlockTableCell(text="Aksi", align="left"),
-                    RichBlockTableCell(text=re.sub(r"<[^>]+>", "", title.split(" ⚡ ")[0]), align="left"),
-                ],
-                [
-                    RichBlockTableCell(text="Chat", align="left"),
-                    RichBlockTableCell(text=chat_label, align="left"),
-                ],
-            ]
-            for line in extra:
-                plain = re.sub(r"<[^>]+>", "", line or "").strip()
-                if ":" in plain:
-                    k, v = plain.split(":", 1)
-                    rows.append(
-                        [RichBlockTableCell(text=k.strip(), align="left"), RichBlockTableCell(text=v.strip(), align="left")]
-                    )
-            rows.append(
-                [
-                    RichBlockTableCell(text="Total Waktu", align="left"),
-                    RichBlockTableCell(text=f"{dur:.2f}s", align="left"),
-                ]
-            )
-            rows.append(
-                [
-                    RichBlockTableCell(text="Status Akhir", align="left"),
-                    RichBlockTableCell(text="✅ Selesai", align="left"),
-                ]
-            )
-
-            rows.insert(
-                0,
-                [RichBlockTableCell(text=title.split(" ⚡ ")[0], is_header=True, colspan=2, align="center")],
-            )
-
-            blocks = [
-                InputRichBlockTable(
-                    rows, is_bordered=True, is_striped=True, is_compact=False
-                ),
-                # Tombol rich Close (merah) — di dalam kartu
-                InputRichBlockButtons(
-                    [
-                        RichMessageButton(
-                            text=RichTextBold("🗑 Close"),
-                            style=ButtonStyle.DANGER,
-                            callback_data=b"0",
-                        )
-                    ]
-                ),
-            ]
-
-            rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
-            close_raw = None
-
-            # Daftarkan payload ke handler BERSAMA milik ping (group -2),
-            # satu-satunya raw handler yang terpasang di dispatcher bot.
-            self._rich_payload = (rich_raw, close_raw)
-
-            async def _h(_c, update, users, chats):
-                pass
-
-            ping_mod = getattr(self.client, "ping_module", None)
+            ping_mod = self.client.modules.get("Ping")
             route = getattr(ping_mod, "_rich_route", None) if ping_mod else None
-            if route is None:
-                # Fallback: cari module instance "Ping" di extender
-                try:
-                    ping_mod = self.client.modules.get("Ping")
-                    route = getattr(ping_mod, "_rich_route", None) if ping_mod else None
-                except Exception:
-                    route = None
             if route is None and ping_mod is not None:
-                # Handler bersama belum terpasang (ping/afk belum jalan) — pasang
                 self._ensure_rich_handler(
                     ping_mod,
                     rawfn,
@@ -230,22 +159,19 @@ class Call(Module):
                 )
                 route = getattr(ping_mod, "_rich_route", None)
             if route is not None:
-                route["call"] = self._rich_payload
-            handler_ready = route is not None
+                route["call"] = (rich_raw, None)
 
-            res = await event._client.get_inline_bot_results(
-                bot.me.id, f"call{datetime.datetime.now(datetime.UTC).timestamp()}"
-            ) if handler_ready else None
-
-            if res and res.results:
-                await asyncio.gather(
-                    event.reply_inline_bot_result(res.query_id, res.results[0].id),
-                    event.delete(),
+                res = await event._client.get_inline_bot_results(
+                    bot.me.id, f"call{datetime.datetime.now(datetime.UTC).timestamp()}"
                 )
-                return
+                if res and res.results:
+                    await asyncio.gather(
+                        event.reply_inline_bot_result(res.query_id, res.results[0].id),
+                        event.delete(),
+                    )
+                    return
         except Exception as e:
-            with contextlib.suppress(Exception):
-                self.logger.warning(f"call rich failed, fallback html: {e!r}")
+            self.logger.warning(f"call rich failed, fallback html: {e!r}")
 
         lines = [f"  <code>{_l}</code>" for _l in extra]
         await self._rich_status(event, title, lines)

@@ -96,6 +96,30 @@ class RISearch(Module):
             try:
                 shots = await self._capture_screenshots(urls)
             except ImportError:
+                try:
+                    import richpyro as rp
+                    from pyrogram.enums import ButtonStyle
+
+                    btns = [
+                        rp.url_btn(rp.bold(k.capitalize()), str(v))
+                        for k, v in urls.items()
+                    ]
+                    blocks = [
+                        rp.para(rp.bold("🔍 Reverse Image Search")),
+                        rp.details(
+                            rp.bold(f"Hasil ({{len(urls)}} engine)"),
+                            rp.para(rp.italic("Install playwright untuk screenshot.")),
+                            *[rp.para(rp.bold(k.capitalize())) for k in urls],
+                            is_open=False,
+                        ),
+                        rp.buttons(*btns),
+                        rp.expandable_quote(rp.italic(self.fmtsec(now))),
+                    ]
+                    if await self.send_rich_blocks(event, blocks, query_prefix="risearch"):
+                        return
+                except Exception as _re:
+                    self.logger.warning(f"risearch rich failed: {_re!r}")
+
                 lines = [f"• <b>{k.capitalize()}</b>: <a href=\"{v}\">open</a>" for k, v in urls.items()]
                 await self.respond(
                     event,
@@ -109,6 +133,30 @@ class RISearch(Module):
                 return
 
             if not shots:
+                try:
+                    import richpyro as rp
+                    from pyrogram.enums import ButtonStyle
+
+                    btns = [
+                        rp.url_btn(rp.bold(k.capitalize()), str(v))
+                        for k, v in urls.items()
+                    ]
+                    blocks = [
+                        rp.para(rp.bold("🔍 Reverse Image Search")),
+                        rp.details(
+                            rp.bold(f"Hasil ({{len(urls)}} engine)"),
+                            rp.para(rp.italic("Gagal mengambil screenshot.")),
+                            *[rp.para(rp.bold(k.capitalize())) for k in urls],
+                            is_open=False,
+                        ),
+                        rp.buttons(*btns),
+                        rp.expandable_quote(rp.italic(self.fmtsec(now))),
+                    ]
+                    if await self.send_rich_blocks(event, blocks, query_prefix="risearch"):
+                        return
+                except Exception as _re:
+                    self.logger.warning(f"risearch rich failed: {_re!r}")
+
                 lines = [f"• <b>{k.capitalize()}</b>: <a href=\"{v}\">{html.escape(v)}</a>" for k, v in urls.items()]
                 await self.respond(
                     event,

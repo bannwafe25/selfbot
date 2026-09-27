@@ -73,23 +73,32 @@ class Ping(Module):
                 app_ms = re.sub(r"[^0-9.]", "", str(app)) or app
                 import richpyro as rp
                 from pyrogram.enums import ButtonStyle
-                rows = [
-                    ("Klien Aktif", event._client.me.first_name or "Userbot"),
-                    ("User ID", str(event._client.me.id)),
-                    ("Kecepatan Respons", f"{app_ms} ms"),
-                    ("Status Jaringan", "✅ Terhubung Normal"),
+
+                app_ms = re.sub(r"[^0-9.]", "", str(app)) or app
+                bot_ms = re.sub(r"[^0-9.]", "", str(bot)) or bot
+
+                uptime = self.fmtsec(now, human=True) if hasattr(self, "fmtsec") else "-"
+
+                trows = [
+                    [rp.table_cell(rp.bold("🏓 Pong!"), is_header=True, colspan=2, align="center")],
+                    [rp.table_cell(rp.bold("⭐ Owner"), align="center"),
+                     rp.table_cell(event._client.me.first_name or "Userbot", align="center")],
+                    [rp.table_cell(rp.bold("📱 App"), align="center"),
+                     rp.table_cell(f"{app_ms} ms", align="center")],
+                    [rp.table_cell(rp.bold("🤖 Bot"), align="center"),
+                     rp.table_cell(f"{bot_ms} ms", align="center")],
+                    [rp.table_cell(rp.bold("🆔 User ID"), align="center"),
+                     rp.table_cell(str(event._client.me.id), align="center")],
+                    [rp.table_cell(rp.bold("📶 Status"), align="center"),
+                     rp.table_cell("✅ Terhubung Normal", align="center")],
                 ]
-                trows = [[rp.table_cell(rp.bold("🚀 Pong!"), is_header=True, colspan=2, align="center")],
-                         [rp.table_cell(rp.bold("Parameter"), is_header=True, align="center"),
-                          rp.table_cell(rp.bold("Keterangan"), is_header=True, align="center")]]
-                for k, v in rows:
-                    trows.append([rp.table_cell(k, align="center"), rp.table_cell(v, align="center")])
                 blocks = [
                     rp.table(trows, bordered=True, striped=True, compact=False),
-                    rp.para(rp.italic("Pengujian latensi berhasil dilakukan.")),
-                    # Tombol rich: Close saja (Refresh dihapus atas request)
-                    rp.buttons(rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=ButtonStyle.DANGER)),
+                    rp.buttons(
+                        rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=ButtonStyle.DANGER)
+                    ),
                 ]
+
                 botc = self.client.bot
                 from pyrogram.raw import functions as rawfn
                 from pyrogram.raw.types import (
@@ -98,13 +107,11 @@ class Ping(Module):
                 )
 
                 rich_raw = await rp.blocks_message(*blocks).write(client=bot)
-                # Tanpa reply_markup bawah — Close sudah sebagai tombol rich
                 close_raw = None
 
                 from pyrogram.handlers import RawUpdateHandler
 
-                # Pastikan handler BERSAMA + route siap (mungkin modul lain
-                # seperti alive/sysinfo lebih dulu butuh rich).
+                # Pastikan handler BERSAMA + route siap
                 if getattr(self, "_rich_route", None) is None:
                     self._rich_route = {}
                 if getattr(self, "_rich_handler", None) is None:
