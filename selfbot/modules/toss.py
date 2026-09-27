@@ -45,9 +45,12 @@ class Toss(Module):
             return
 
         tmp = f"{path}.{ext}"
+        size = ""
         try:
             os.replace(path, tmp)
             url = await self._upload(tmp, ext)
+            with contextlib.suppress(Exception):
+                size = f"{os.path.getsize(tmp) / 1024:.1f} KB"
         except Exception as e:
             with contextlib.suppress(Exception):
                 await event.edit(f"<b>Upload gagal</b>\n<blockquote>{e}</blockquote>")
@@ -56,15 +59,43 @@ class Toss(Module):
             with contextlib.suppress(Exception):
                 os.remove(tmp)
 
-        await self._reply(event, url)
+        await self._rich_result(event, url, size)
 
-    async def _reply(self, event: Message, url: str) -> None:
-        """Kasih link halaman + direct (qu.ax butuh /x/<id>.<ext> buat file)."""
+    async def _rich_result(self, event: Message, url: str, size: str = "") -> None:
+        """Tampilin hasil upload sebagai rich card (foto + tabel link)."""
         direct = self._direct_url(url)
+
+        rows = [("📦 Host", "qu.ax"), ("🔗 Link", url)]
+        if direct:
+            rows.append(("🖼 Direct", direct))
+        if size:
+            rows.append(("📏 Ukuran", size))
+
+        ok = False
+        with contextlib.suppress(Exception):
+            ok = await self.send_rich(
+                event,
+                title="📤 Upload Berhasil",
+                rows=rows,
+                note="Klik link buat buka hasil upload.",
+                query_prefix="tossrich",
+                media_file=direct,
+                media_type="photo",
+            )
+        if not ok:
+            await self._fallback(event, url, direct)
+
+    async def _fallback(
+        self, event: Message, url: str, direct: str | None = None
+    ) -> None:
+        """Fallback HTML kalo rich gagal."""
+        direct = direct or self._direct_url(url)
         teks = f"<b>🔗 Uploaded</b>\n\n{url}"
         if direct:
             teks += f"\n\n<b>Direct</b>\n<code>{direct}</code>"
         with contextlib.suppress(Exception):
+            from pyrogram.types import LinkPreviewOptions
+
             await event.edit(
                 teks,
                 link_preview_options=LinkPreviewOptions(is_disabled=False),
