@@ -24,9 +24,12 @@ from selfbot.module import Module
 class AnimePic(Module):
     name = "AnimePic"
 
+    _SLIDESHOW_MAX = 10  # jumlah gambar dalam 1 slideshow
+
     # ── Tag lists (priority: safebooru → konachan → mwm_moe → picre → waifu_im
-    #   → animepixels → yandere → nekos_moe → nekobot → nekosapi → nekosia
-    #   → waifu_pics → nekos_best) ──────────────────────────────────────────
+    #   → waifu_im_nsfw → animepixels → yandere → yandere_nsfw → nekos_moe
+    #   → nekobot → nekobot_nsfw → nekosapi → nekosia → waifu_pics → nekos_best)
+    #   ─────────────────────────────────────────────────────────────────────
 
     safebooru_tags = [
         "safebooru", "1girl", "1boy", "2boys", "2girls", "genshin_impact",
@@ -54,8 +57,19 @@ class AnimePic(Module):
 
     waifu_im_tags = [
         "maid", "waifu", "uniform", "kamisato-ayaka", "marin-kitagawa", "mori-calliope",
-        "raiden-shogun", "oppai", "selfies",
+        "raiden-shogun", "oppai", "selfies", "genshin-impact", "rem", "nami",
     ]
+
+    # NSFW (waifu.im — IsNsfw=true)
+    waifu_im_nsfw_tags = [
+        "nsfw", "hentai", "ass", "ecchi", "ero", "milf", "oral", "paizuri",
+        "nsfw-oppai", "one-piece-nsfw",
+    ]
+    waifu_im_nsfw_map = {
+        "nsfw": None, "hentai": "hentai", "ass": "ass", "ecchi": "ecchi",
+        "ero": "ero", "milf": "milf", "oral": "oral", "paizuri": "paizuri",
+        "nsfw-oppai": "oppai", "one-piece-nsfw": "one-piece",
+    }
 
     animepixels_tags = [
         "animepixels", "nature", "one_piece", "one-piece", "naruto", "pokemon",
@@ -88,6 +102,15 @@ class AnimePic(Module):
         "genshin_impact", "honkai_star_rail", "idolmaster", "fate", "kancolle",
     ]
 
+    # NSFW (yande.re — rating:e)
+    yandere_nsfw_tags = [
+        "nsfw", "sex", "nipples", "pussy", "uncensored", "cum", "nude",
+        "huge_breasts", "stockings", "yuri", "nakadashi", "penis",
+    ]
+    yandere_nsfw_extra = {
+        "nsfw": None,  # rating:e order:random
+    }
+
     mwm_moe_tags = [
         "ai", "aimp", "bd", "fj", "lai", "moe", "moemp", "mp", "pc", "tx", "xhl",
         "ys", "ysmp",
@@ -108,6 +131,12 @@ class AnimePic(Module):
 
     nekobot_tags = ["coffee", "food", "holo", "kanna", "kemonomimi", "gasm", "meow", "fox_girl", "avatar"]
 
+    # NSFW (nekobot.xyz)
+    nekobot_nsfw_tags = [
+        "hentai", "boobs", "pussy", "blowjob", "feet", "thigh", "anal",
+        "lewdneko", "pgif",
+    ]
+
     nekosapi_tags = [
         "black_hair", "blonde_hair", "blue_hair", "brown_hair", "horsegirl",
         "large_breasts", "medium_breasts", "mountain", "night", "purple_hair", "rain",
@@ -117,29 +146,22 @@ class AnimePic(Module):
 
     tags = sorted(
         set(
-            safebooru_tags + konachan_tags + mwm_moe_tags + picre_tags
-            + waifu_im_tags + animepixels_tags + yandere_tags + nekos_moe_tags
-            + nekobot_tags + nekosapi_tags + nekosia_tags + waifu_pics_tags
-            + nekos_best_tags
-            + ["gecg", "meow", "gasm", "goose", "lewd", "v3", "wallpaper",
-               "lizard", "woof", "fox_girl", "avatar", "cuddle", "hug", "kiss",
-               "spank", "feed"]
+            waifu_im_nsfw_tags + yandere_nsfw_tags + nekobot_nsfw_tags
         )
     )
 
     msg_pattern = re.compile(
-        rf"^(?:({'|'.join(re.escape(t) for t in tags)})|moe\s+(.+))$",
+        rf"^(?:\.?(?:pic)?tags|({'|'.join(re.escape(t) for t in tags)})|moe\s+(.+))$",
         re.IGNORECASE,
     )
-    moe_tags_pattern = re.compile(r"^moetags(?:\s+(.+))?$", re.IGNORECASE)
     cb_pattern = re.compile(r"^animepic/next/(.+)$")
+    tags_list_pattern = re.compile(r"^\.?(?:pic)?tags$", re.IGNORECASE)
 
-    cmds = f"{{{', '.join(tags)}}} | moe {{tag}} | moetags {{keyword?}}"
+    cmds = f"{', '.join(tags)} | tags"
     desc = {
-        "Info": "Sends anime pictures from multi API sources.",
-        "moe {tag}": "Search image by Nekos.moe tag.",
-        "moetags {keyword?}": "List Nekos.moe tags (or filter by keyword).",
-        "e.g.": "waifu | moe cat ears | moetags cat",
+        "Info": "Kirim gambar anime NSFW (rich inline + slideshow).",
+        "tags": "Lihat daftar semua tag NSFW yang bisa dipakai.",
+        "e.g.": "hentai | nsfw | yuri | tags",
     }
 
     # ── Nekos.moe tag cache ───────────────────────────────────────────────────
@@ -159,10 +181,13 @@ class AnimePic(Module):
         ("mwm_moe_tags",   "_get_from_mwm_moe",   False),
         ("picre_tags",     "_get_from_picre",      False),
         ("waifu_im_tags",  "_get_from_waifu_im",   False),
+        ("waifu_im_nsfw_tags", "_get_from_waifu_im_nsfw", False),
         ("animepixels_tags", "_get_from_animepixels", False),
         ("yandere_tags",   "_get_from_yandere",    False),
+        ("yandere_nsfw_tags", "_get_from_yandere_nsfw", False),
         ("nekos_moe_tags", "_get_from_nekos_moe",  True),
         ("nekobot_tags",   "_get_from_nekobot",    False),
+        ("nekobot_nsfw_tags", "_get_from_nekobot_nsfw", False),
         ("nekosapi_tags",  "_get_from_nekosapi",   False),
         ("nekosia_tags",   "_get_from_nekosia",    False),
         ("waifu_pics_tags","_get_from_waifu_pics", False),
@@ -171,58 +196,18 @@ class AnimePic(Module):
 
     # ── Handlers ─────────────────────────────────────────────────────────────
 
-    @handler(filters.regex(moe_tags_pattern) & ~reply, 1)
-    async def on_moe_tags(self, event: Message) -> None:
-        await self._safe_respond(event, "<code>Fetching Nekos.moe tags...</code>")
-        try:
-            m = self.moe_tags_pattern.match(str(event.content or ""))
-            raw_query = m.group(1) if m else None
-            query = (raw_query or "").strip()
-            force_refresh = query.lower() in {"-r", "--refresh", "refresh"}
-            if force_refresh:
-                query = ""
-
-            all_tags = await self._fetch_moe_tags(force_refresh=force_refresh)
-            if not all_tags:
-                await self._safe_respond(event, "<code>Failed to fetch Nekos.moe tags right now.</code>")
-                return
-
-            if query:
-                matched = [t for t in all_tags if query.lower() in t.lower()]
-                if not matched:
-                    await self._safe_respond(
-                        event,
-                        f"<code>No Nekos.moe tag matched: {html.escape(query)}</code>",
-                    )
-                    return
-                joined_tags, shown_count = self._format_tag_list(matched, max_chars=2500)
-                text = (
-                    "<b>Nekos.moe Tags</b>\n"
-                    f"<b>Query:</b> <code>{html.escape(query)}</code>\n"
-                    f"<b>Matched:</b> <code>{len(matched)}</code>\n"
-                    f"<b>Shown:</b> <code>{shown_count}</code>\n\n"
-                    f"<code>{html.escape(joined_tags)}</code>\n\n"
-                    "<b>Use:</b> <code>moe &lt;tag&gt;</code>"
-                )
-                await self._safe_respond(event, text)
-                return
-
-            hints = [t for t in self._moe_tags_hint if t in all_tags]
-            hint_text, _ = self._format_tag_list(hints, max_chars=500)
-            text = (
-                "<b>Nekos.moe Tags</b>\n"
-                f"<b>Total:</b> <code>{len(all_tags)}</code>\n"
-                f"<b>Hints:</b> <code>{html.escape(hint_text)}</code>\n\n"
-                "<b>Use:</b> <code>moe &lt;tag&gt;</code>\n"
-                "<b>Search:</b> <code>moetags &lt;keyword&gt;</code>\n"
-                "<b>Refresh cache:</b> <code>moetags --refresh</code>"
-            )
-            await self._safe_respond(event, text)
-        except Exception as e:
-            await self._safe_respond(event, f"<code>{html.escape(str(e))}</code>")
-
     @handler(filters.regex(msg_pattern) & ~reply, 1)
     async def on_message_out(self, event: Message) -> None:
+        if self.tags_list_pattern.match(str(event.content or "").strip()):
+            await self.respond(
+                event,
+                "<b>AnimePic — Daftar Tag NSFW</b>\n\n"
+                "<code>" + html.escape(", ".join(self.tags)) + "</code>\n\n"
+                "<b>Cara pakai:</b> ketik tag-nya doang lalu kirim.\n"
+                "<b>Contoh:</b> <code>hentai</code>",
+                reply=True,
+            )
+            return
         await self._safe_respond(event, "<code>...</code>")
         now = datetime.datetime.now(datetime.UTC)
         try:
@@ -309,9 +294,9 @@ class AnimePic(Module):
                     )
                 else:
                     # Slideshow: 3 foto dalam satu blok geser
-                    multi = await self.get_image_urls(tag, moe_tag, 3)
+                    multi = await self.get_image_urls(tag, moe_tag, self._SLIDESHOW_MAX)
                     urls = [result[0]] + [r[0] for r in multi if r[0] != result[0]]
-                    urls = urls[:3]
+                    urls = urls[:self._SLIDESHOW_MAX]
                     if len(urls) > 1:
                         media_block = InputRichBlockSlideshow(
                             blocks=[
@@ -433,9 +418,9 @@ class AnimePic(Module):
                     )
                 else:
                     # Slideshow: 3 foto dalam satu blok geser
-                    multi = await self.get_image_urls(tag, moe_tag, 3)
+                    multi = await self.get_image_urls(tag, moe_tag, self._SLIDESHOW_MAX)
                     urls = [result[0]] + [r[0] for r in multi if r[0] != result[0]]
-                    urls = urls[:3]
+                    urls = urls[:self._SLIDESHOW_MAX]
                     if len(urls) > 1:
                         media_block = InputRichBlockSlideshow(
                             blocks=[
@@ -567,7 +552,7 @@ class AnimePic(Module):
 
     # ── Image routing ─────────────────────────────────────────────────────────
 
-    async def get_image_urls(self, tag: str, moe_tag: str | None = None, n: int = 3) -> list[tuple]:
+    async def get_image_urls(self, tag: str, moe_tag: str | None = None, n: int = 10) -> list[tuple]:
         results = []
         for _ in range(n * 3):
             if len(results) >= n:
@@ -695,6 +680,43 @@ class AnimePic(Module):
         }
         return url, artist.get("name"), links, image_data.get("source") or image_data.get("source_url")
 
+    async def _get_from_waifu_im_nsfw(self, tag: str) -> tuple | None:
+        included = self.waifu_im_nsfw_map.get(tag, "hentai")
+        params = {"IsNsfw": "true", "PageSize": 1}
+        if included:
+            params["IncludedTags"] = included
+        resp = await self.client.http.get(
+            "https://api.waifu.im/images", params=params, timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+
+        data = resp.json() or {}
+        images = data.get("items") or data.get("images") or []
+        if not isinstance(images, list) or not images:
+            return None
+
+        image_data = images[0]
+        url = image_data.get("url")
+        if not self._is_valid_non_gif(url):
+            return None
+
+        artists = image_data.get("artists") or []
+        artist = (
+            artists[0]
+            if isinstance(artists, list) and artists and isinstance(artists[0], dict)
+            else image_data.get("artist") or {}
+        )
+        links = {
+            k: v for k, v in {
+                "Pixiv": artist.get("pixiv"),
+                "Twitter": artist.get("twitter"),
+                "Patreon": artist.get("patreon"),
+                "DeviantArt": artist.get("deviantArt"),
+            }.items() if v
+        }
+        return url, artist.get("name"), links, image_data.get("source") or image_data.get("source_url")
+
     async def _get_from_animepixels(self, tag: str) -> tuple | None:
         category = self.animepixels_category_map.get(tag)
         if category:
@@ -752,7 +774,43 @@ class AnimePic(Module):
 
         post_id = post.get("id")
         source = post.get("source") or (f"https://yande.re/post/show/{post_id}" if post_id else None)
-        return url, post.get("author"), {}, source
+        artist = post.get("author")
+        return url, artist, {}, source
+
+    async def _get_from_yandere_nsfw(self, tag: str) -> tuple | None:
+        tag_filter = self.yandere_nsfw_extra.get(tag)
+        base_query = "rating:e order:random"
+        query = f"{base_query} {tag_filter}" if tag_filter else base_query
+
+        resp = await self.client.http.get(
+            "https://yande.re/post.json", params={"limit": 1, "tags": query}, timeout=10
+        )
+        if resp.status_code != 200:
+            return None
+
+        posts = resp.json() or []
+        if tag_filter and (not isinstance(posts, list) or not posts):
+            resp = await self.client.http.get(
+                "https://yande.re/post.json",
+                params={"limit": 1, "tags": base_query},
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                return None
+            posts = resp.json() or []
+
+        if not isinstance(posts, list) or not posts:
+            return None
+
+        post = posts[0]
+        url = post.get("sample_url") or post.get("jpeg_url") or post.get("file_url")
+        if not self._is_valid_non_gif(url):
+            return None
+
+        post_id = post.get("id")
+        source = post.get("source") or (f"https://yande.re/post/show/{post_id}" if post_id else None)
+        artist = post.get("author")
+        return url, artist, {}, source
 
     async def _get_from_nekos_moe(self, wanted_tag: str | None = None) -> tuple | None:
         image_data: dict = {}
@@ -846,6 +904,16 @@ class AnimePic(Module):
         api_category = "hololewd" if tag == "holo" else tag
         resp = await self.client.http.get(
             "https://nekobot.xyz/api/image", params={"type": api_category}, timeout=10
+        )
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        url = data.get("message") if data.get("success") else None
+        return (url, None, {}, None) if self._is_valid_non_gif(url) else None
+
+    async def _get_from_nekobot_nsfw(self, tag: str) -> tuple | None:
+        resp = await self.client.http.get(
+            "https://nekobot.xyz/api/image", params={"type": tag}, timeout=10
         )
         if resp.status_code != 200:
             return None
