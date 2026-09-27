@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import os
 import re
 
 from pyrogram import filters
@@ -63,18 +64,52 @@ class TelegraPh(Module):
     async def _upload_media(self, event: Message, reply) -> None:
         with contextlib.suppress(Exception):
             await event.edit("<code>Uploading...</code>")
+
+        # telegra.ph butuh file asli di disk + ekstensi yang valid
+        ext = self._guess_ext(reply)
+        path = await reply.download()
+        if not isinstance(path, str):
+            with contextlib.suppress(Exception):
+                await event.edit("<b>Upload gagal</b>\n<blockquote>file kosong</blockquote>")
+            return
+
+        tmp = f"{path}.{ext}"
         try:
-            path = await reply.download(in_memory=True)
-            with open(path, "rb") as f:
+            os.replace(path, tmp)
+            with open(tmp, "rb") as f:
                 files = self.tph.upload_file(f)
             url = "https://telegra.ph" + files[0]
         except Exception as e:
-            await event.edit(f"<b>Upload gagal</b>\n<blockquote>{e}</blockquote>")
+            with contextlib.suppress(Exception):
+                await event.edit(
+                    f"<b>Upload gagal</b>\n<blockquote>{e}</blockquote>"
+                )
             return
+        finally:
+            with contextlib.suppress(Exception):
+                os.remove(tmp)
+
         await event.edit(
             f"<b>🔗 Uploaded</b>\n\n{url}",
             disable_web_page_preview=False,
         )
+
+    @staticmethod
+    def _guess_ext(msg: Message) -> str:
+        """Tebak ekstensi dari mime/attr biar diterima telegra.ph."""
+        for obj in (msg.photo, msg.video, msg.animation, msg.document):
+            if not obj:
+                continue
+            mime = getattr(obj, "mime_type", "") or ""
+            if "/" in mime:
+                sub = mime.split("/")[-1].lower()
+                if sub in ("jpg", "jpeg", "png", "gif", "mp4"):
+                    return "jpg" if sub == "jpeg" else sub
+        if msg.photo:
+            return "jpg"
+        if msg.video or msg.animation:
+            return "mp4"
+        return "png"
 
     async def _create_page(self, event: Message, text: str) -> None:
         try:
