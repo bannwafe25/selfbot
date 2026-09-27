@@ -63,12 +63,18 @@ class AnimePic(Module):
     # NSFW (waifu.im — IsNsfw=true)
     waifu_im_nsfw_tags = [
         "nsfw", "hentai", "ass", "ecchi", "ero", "milf", "oral", "paizuri",
-        "nsfw-oppai", "one-piece-nsfw",
+        "nsfw-oppai", "one-piece-nsfw", "nsfw-waifu", "nsfw-uniform",
+        "nsfw-maid", "nsfw-selfies", "nsfw-rem", "nsfw-nami",
+        "nsfw-marin", "nsfw-mori", "nsfw-raiden", "nsfw-genshin",
     ]
     waifu_im_nsfw_map = {
         "nsfw": None, "hentai": "hentai", "ass": "ass", "ecchi": "ecchi",
         "ero": "ero", "milf": "milf", "oral": "oral", "paizuri": "paizuri",
         "nsfw-oppai": "oppai", "one-piece-nsfw": "one-piece",
+        "nsfw-waifu": "waifu", "nsfw-uniform": "uniform", "nsfw-maid": "maid",
+        "nsfw-selfies": "selfies", "nsfw-rem": "rem", "nsfw-nami": "nami",
+        "nsfw-marin": "marin-kitagawa", "nsfw-mori": "mori-calliope",
+        "nsfw-raiden": "raiden-shogun", "nsfw-genshin": "genshin-impact",
     }
 
     animepixels_tags = [
@@ -106,6 +112,8 @@ class AnimePic(Module):
     yandere_nsfw_tags = [
         "nsfw", "sex", "nipples", "pussy", "uncensored", "cum", "nude",
         "huge_breasts", "stockings", "yuri", "nakadashi", "penis",
+        "pantsu", "nopan", "breasts", "nipple", "no_bra", "open_shirt",
+        "pussy_juice", "anal",
     ]
     yandere_nsfw_extra = {
         "nsfw": None,  # rating:e order:random
