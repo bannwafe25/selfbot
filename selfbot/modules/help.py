@@ -104,7 +104,6 @@ class Help(Module):
         "speedtest": ("📊 Info", "Info & Sistem"),
         "sgb": ("🔍 Riset", "Riset & Pencarian"),
         "risearch": ("🔍 Riset", "Riset & Pencarian"),
-        "qris": ("💳 Lainnya", "Lainnya"),
         "genai": ("🤖 AI", "AI"),
         # Sistem / dev
         "debug": ("⚙️ Sistem", "Sistem"),
