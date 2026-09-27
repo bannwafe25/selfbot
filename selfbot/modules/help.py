@@ -74,50 +74,52 @@ class Help(Module):
     mods, maps, ikbs = {}, {}, []
 
     # Kategori + emoji per modul (key = nama file modul, lowercase)
+    # catatan: icon = EMOJI SAJA (jangan dikasih nama kategori, ntar dobel di tombol)
     CATEGORY = {
         # Tools & utilitas
-        "admintool": ("🛠 Admin", "Admin Tools"),
-        "purge": ("🛠 Admin", "Admin Tools"),
-        "delete": ("🛠 Admin", "Admin Tools"),
-        "afk": ("💬 Chat", "Chat"),
-        "broadcast": ("💬 Chat", "Chat"),
-        "notes": ("💬 Chat", "Chat"),
-        "quotly": ("💬 Chat", "Chat"),
+        "admintool": ("🛠", "Admin Tools"),
+        "purge": ("🛠", "Admin Tools"),
+        "delete": ("🛠", "Admin Tools"),
+        "afk": ("💬", "Chat"),
+        "broadcast": ("💬", "Chat"),
+        "notes": ("💬", "Chat"),
+        "quotly": ("💬", "Chat"),
         # Media & unduhan
-        "alldl": ("📥 Media", "Media & Unduhan"),
-        "ytdl": ("📥 Media", "Media & Unduhan"),
-        "upload": ("📥 Media", "Media & Unduhan"),
-        "sticker": ("🎨 Kreatif", "Kreatif"),
-        "brat": ("🎨 Kreatif", "Kreatif"),
-        "beautify": ("🎨 Kreatif", "Kreatif"),
-        "ppcouple": ("🎨 Kreatif", "Kreatif"),
-        "screenshot": ("🎨 Kreatif", "Kreatif"),
+        "alldl": ("📥", "Media & Unduhan"),
+        "ytdl": ("📥", "Media & Unduhan"),
+        "upload": ("📥", "Media & Unduhan"),
+        "sticker": ("🎨", "Kreatif"),
+        "brat": ("🎨", "Kreatif"),
+        "beautify": ("🎨", "Kreatif"),
+        "ppcouple": ("🎨", "Kreatif"),
+        "screenshot": ("🎨", "Kreatif"),
         # Anime & hiburan
-        "animepic": ("🌸 Anime", "Anime"),
-        "animequote": ("🌸 Anime", "Anime"),
-        "aniquotes": ("🌸 Anime", "Anime"),
+        "animepic": ("🌸", "Anime"),
+        "animequote": ("🌸", "Anime"),
+        "aniquotes": ("🌸", "Anime"),
         # Info & sistem
-        "alive": ("📊 Info", "Info & Sistem"),
-        "info": ("📊 Info", "Info & Sistem"),
-        "ping": ("📊 Info", "Info & Sistem"),
-        "sysinfo": ("📊 Info", "Info & Sistem"),
-        "speedtest": ("📊 Info", "Info & Sistem"),
-        "sgb": ("🔍 Riset", "Riset & Pencarian"),
-        "risearch": ("🔍 Riset", "Riset & Pencarian"),
-        "genai": ("🤖 AI", "AI"),
+        "alive": ("📊", "Info & Sistem"),
+        "info": ("📊", "Info & Sistem"),
+        "ping": ("📊", "Info & Sistem"),
+        "sysinfo": ("📊", "Info & Sistem"),
+        "speedtest": ("📊", "Info & Sistem"),
+        "sgb": ("🔍", "Riset & Pencarian"),
+        "risearch": ("🔍", "Riset & Pencarian"),
+        "genai": ("🤖", "AI"),
         # Sistem / dev
-        "debug": ("⚙️ Sistem", "Sistem"),
-        "restart": ("⚙️ Sistem", "Sistem"),
-        "terminal": ("⚙️ Sistem", "Sistem"),
-        "sendmod": ("⚙️ Sistem", "Sistem"),
-        "call": ("📞 Voice", "Voice Call"),
-        "help": ("📖 Bantuan", "Bantuan"),
+        "debug": ("⚙️", "Sistem"),
+        "restart": ("⚙️", "Sistem"),
+        "terminal": ("⚙️", "Sistem"),
+        "sendmod": ("⚙️", "Sistem"),
+        "call": ("📞", "Voice Call"),
+        "help": ("📖", "Bantuan"),
     }
 
     @classmethod
     def _cat(cls, key: str) -> tuple:
         """Balikin (emoji_kategori, nama_kategori) buat modul."""
-        return cls.CATEGORY.get(key, ("📦 Lainnya", "Lainnya"))
+        icon, cname = cls.CATEGORY.get(key, ("📦", "Lainnya"))
+        return (icon, cname)
 
     async def on_started(self) -> None:
         mods, page = [mod for mod in self.client.modules.values()], []
@@ -240,10 +242,8 @@ class Help(Module):
         import richpyro as rp
 
         groups = self._group_by_category()
-        # urut: kategori paling banyak modul dulu
-        ordered = sorted(
-            groups.items(), key=lambda kv: (-len(kv[1][1]), kv[0])
-        )
+        # urut alfabetis biar posisi tombol konsisten (ga loncat-loncat)
+        ordered = sorted(groups.items(), key=lambda kv: kv[0].lower())
         total_mods = sum(len(v[1]) for _, v in ordered)
 
         blocks = [
@@ -295,19 +295,16 @@ class Help(Module):
         for i in range(0, len(btns), 2):
             blocks.append(rp.buttons(*btns[i : i + 2], align="center"))
 
+        # Nav bawah: Close + Channel jadi 1 baris biar ga numpuk
         blocks.append(
             rp.buttons(
-                rp.btn("🗑️ ✕", callback_data=b"0", style=rp.Style.DANGER),
-                align="center",
-            )
-        )
-        blocks.append(
-            rp.buttons(
+                rp.btn("🗑 ✕ Tutup", callback_data=b"0", style=rp.Style.DANGER),
                 RichMessageButton(
                     text=rp.bold("📢 Channel"),
                     style=ButtonStyle.PRIMARY,
                     url="https://t.me/zpbaiq",
-                )
+                ),
+                align="center",
             )
         )
         if quote:
@@ -364,17 +361,13 @@ class Help(Module):
                     callback_data=b"help/cat/back",
                     style=rp.Style.SUCCESS,
                 ),
-                rp.btn("🗑️ ✕", callback_data=b"0", style=rp.Style.DANGER),
-                align="center",
-            )
-        )
-        blocks.append(
-            rp.buttons(
+                rp.btn("🗑 ✕ Tutup", callback_data=b"0", style=rp.Style.DANGER),
                 RichMessageButton(
                     text=rp.bold("📢 Channel"),
                     style=ButtonStyle.PRIMARY,
                     url="https://t.me/zpbaiq",
-                )
+                ),
+                align="center",
             )
         )
         if quote:
