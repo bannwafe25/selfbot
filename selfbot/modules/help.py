@@ -368,11 +368,6 @@ class Help(Module):
                     style=rp.Style.SUCCESS,
                 ),
                 rp.btn("🗑 ✕ Tutup", callback_data=b"0", style=rp.Style.DANGER),
-                RichMessageButton(
-                    text=rp.bold("📢 Channel"),
-                    style=ButtonStyle.SUCCESS,
-                    url="https://t.me/zpbaiq",
-                ),
                 align="center",
             )
         )
