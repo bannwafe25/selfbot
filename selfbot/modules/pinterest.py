@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import html
 import os
@@ -9,7 +10,7 @@ import urllib.parse
 import httpx
 
 from pyrogram import filters
-from pyrogram.types import Message
+from pyrogram.types import InlineQuery, Message
 
 from selfbot.listener import handler
 from selfbot.module import Module
@@ -57,60 +58,192 @@ class Pinterest(Module):
             return
         await self._search(event, m2.group(2).strip(), as_doc=bool(m2.group(1)))
 
-    async def _search(self, event: Message, query: str, as_doc: bool = False) -> None:
-        msg = await self.respond(event, "<code>Mencari pin...</code>")
+    @handler(filters.regex(r"^pinterest\b"), 2)
+    async def on_inline_query(self, event) -> None:
+        """Jawab inline query dengan slideshow rich (pola AnimePic)."""
+        query = re.sub(r"^pinterest\s*", "", str(event.query or ""), flags=re.I).strip()
         try:
-            async with httpx.AsyncClient(timeout=30, follow_redirects=True) as c:
-                r = await c.get(
-                    "https://api.siputzx.my.id/api/s/pinterest",
-                    params={"query": query},
+            if not query:
+                await event.answer([], cache_time=0)
+                return
+
+            data = await self._api_search(query)
+            pins = [x for x in (data.get("data") or []) if x.get("image_url")][:10]
+            if not pins:
+                await event.answer([], cache_time=0)
+                return
+
+            from pyrogram.enums import ButtonStyle
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+            )
+            from pyrogram.types import (
+                InputMediaPhoto,
+                InputRichBlockButtons,
+                InputRichBlockParagraph,
+                InputRichBlockPhoto,
+                InputRichBlockSlideshow,
+                InputRichMessage,
+                RichMessageButton,
+                RichTextBold,
+            )
+
+            urls = [p["image_url"] for p in pins]
+            if len(urls) > 1:
+                media_block = InputRichBlockSlideshow(
+                    blocks=[
+                        InputRichBlockPhoto(photo=InputMediaPhoto(u)) for u in urls
+                    ]
                 )
-                data = r.json()
+            else:
+                media_block = InputRichBlockPhoto(
+                    photo=InputMediaPhoto(urls[0])
+                )
+
+            rich = InputRichMessage(
+                blocks=[
+                    media_block,
+                    InputRichBlockParagraph(
+                        text=self._build_caption_rich(pins[0])
+                    ),
+                    InputRichBlockButtons(
+                        [
+                            RichMessageButton(
+                                text=RichTextBold("🔄 Cari Ulang"),
+                                style=ButtonStyle.SUCCESS,
+                                callback_data=b"pinterest/again",
+                            ),
+                            RichMessageButton(
+                                text=RichTextBold("🗑 Close"),
+                                style=ButtonStyle.DANGER,
+                                callback_data=b"0",
+                            ),
+                        ]
+                    ),
+                ]
+            )
+            bot = self.client.bot
+            rich_raw = await rich.write(client=bot, chat_id=bot.me.id)
+            await bot.invoke(
+                rawfn.messages.SetInlineBotResults(
+                    query_id=int(event.id),
+                    results=[
+                        InputBotInlineResult(
+                            id=str(event.id),
+                            type="article",
+                            title=f"Pinterest — {query[:30]}",
+                            send_message=InputBotInlineMessageRichMessage(
+                                rich_message=rich_raw,
+                            ),
+                        )
+                    ],
+                    cache_time=0,
+                )
+            )
+        except Exception as e:
+            self.logger.warning(f"pinterest inline failed: {e!r}")
+            with contextlib.suppress(Exception):
+                await event.answer([], cache_time=0)
+
+    async def _search(self, event: Message, query: str, as_doc: bool = False) -> None:
+        await self.respond(event, "<code>Mencari pin...</code>")
+        try:
+            data = await self._api_search(query)
         except Exception as e:
             self.logger.warning(f"pinterest search: {e!r}")
-            await msg.edit_text("❌ <b>Gagal request API Pinterest.</b>")
+            await self.respond(event, "❌ <b>Gagal request API Pinterest.</b>")
             return
 
-        pins = (data.get("data") or [])[:5] if data.get("status") else []
+        pins = (data.get("data") or []) if data.get("status") else []
+        pins = [x for x in pins if x.get("image_url")][:10]
         if not pins:
-            await msg.edit_text(
+            await self.respond(
+                event,
                 "<blockquote>Tidak ada hasil untuk "
-                f"<b>{html.escape(query[:60])}</b>.</blockquote>"
+                f"<b>{html.escape(query[:60])}</b>.</blockquote>",
             )
             return
 
+        await self.respond(
+            event,
+            f"<code>Menyiapkan {len(pins)} pin untuk "
+            f"'{html.escape(query[:60])}'...</code>",
+        )
+
+        # ── Rich slideshow via bot (mirip AnimePic) ──
         try:
-            await msg.edit_text(
-                f"<code>Mengirim {len(pins)} pin untuk "
-                f"'{html.escape(query[:60])}'...</code>"
+            await self._send_rich(event, pins, query)
+            return
+        except Exception as e:
+            self.logger.warning(f"pinterest rich failed, fallback: {e!r}")
+
+        # ── Fallback: kirim album foto biasa ──
+        await self._send_album(event, pins)
+
+    async def _api_search(self, query: str) -> dict:
+        resp = await self.client.http.get(
+            "https://api.siputzx.my.id/api/s/pinterest",
+            params={"query": query},
+            timeout=30,
+        )
+        return resp.json()
+
+    def _build_caption_rich(self, pin: dict, query: str = "") -> list:
+        from pyrogram.types.messages_and_media.rich_text import RichTextUrl
+
+        parts: list = []
+        title = (pin.get("grid_title") or "").strip()[:80]
+        if title:
+            parts.append(title)
+            parts.append("\n")
+        username = ((pin.get("pinner") or {}).get("username") or "").strip()
+        if username:
+            parts.append("Oleh: ")
+            parts.append(username)
+            parts.append(" | ")
+        if pin.get("pin"):
+            parts.append(RichTextUrl("Buka Pin", pin["pin"]))
+            parts.append(" | ")
+        return parts or [query]
+
+    def _build_caption_html(self, pin: dict) -> str:
+        title = (pin.get("grid_title") or "").strip()[:100]
+        username = ((pin.get("pinner") or {}).get("username") or "").strip()
+        out = "<b>📌 Pinterest</b>\n"
+        if title:
+            out += f"<blockquote>{html.escape(title)}</blockquote>\n"
+        if username:
+            out += f"<i>@{html.escape(username)}</i>\n"
+        if pin.get("pin"):
+            out += f'<a href="{html.escape(pin["pin"])}">Buka Pin</a>'
+        return out
+
+    async def _send_rich(self, event: Message, pins: list, query: str) -> None:
+        """Kirim slideshow rich lewat inline bot, lalu hapus pesan asli."""
+        res = await event._client.get_inline_bot_results(
+            self.client.bot.me.id, f"pinterest {query}"[:64]
+        )
+        if not res.results:
+            raise RuntimeError("bot returned no inline results")
+
+        await event.reply_inline_bot_result(res.query_id, res.results[0].id)
+        with contextlib.suppress(Exception):
+            await event.delete()
+
+    async def _send_album(self, event: Message, pins: list) -> None:
+        from pyrogram.types import InputMediaPhoto
+
+        media = []
+        for i, pin in enumerate(pins):
+            media.append(
+                InputMediaPhoto(
+                    pin["image_url"],
+                    caption=self._build_caption_html(pin) if i == 0 else None,
+                )
             )
-        except Exception:
-            msg = None
-
-        sent = 0
-        for pin in pins:
-            image_url = pin.get("image_url")
-            if not image_url:
-                continue
-            title = (pin.get("grid_title") or "").strip()[:100]
-            cap = f"<b>📌 Pinterest</b>\n"
-            if title:
-                cap += f"<blockquote>{html.escape(title)}</blockquote>\n"
-            if pin.get("pin"):
-                cap += f'<a href="{html.escape(pin["pin"])}">Open Pin</a>'
-            try:
-                if as_doc:
-                    await event.reply_document(image_url, caption=cap)
-                else:
-                    await event.reply_photo(image_url, caption=cap)
-                sent += 1
-            except Exception as e:
-                self.logger.warning(f"pinterest send: {e!r}")
-
-        if sent and msg:
-            with contextlib.suppress(Exception):
-                await msg.delete()
-
+        await event.reply_media_group(media)
 
     # ---------- core ----------
     async def _download(self, event: Message, url: str) -> None:
