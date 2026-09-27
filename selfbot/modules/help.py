@@ -280,33 +280,20 @@ class Help(Module):
             )
         blocks.append(rp.table(rows, bordered=True, striped=True))
 
-        # Tombol kategori: label di-pad biar semua sama panjang, lalu
-        # dipasangkan (terpanjang + terpendek) biar tiap baris seimbang
-        labels = []
+        # Tombol kategori (2 per baris biar rapi)
+        btns = []
         for cname, (icon, mods) in ordered:
             key = cname.lower().replace(" ", "-").replace("&", "")
-            labels.append((key, icon, cname, len(mods)))
-        pad = max(len(x[2]) for x in labels)
-        btns = []
-        for key, icon, cname, n in labels:
             btns.append(
                 rp.btn(
-                    rp.bold(f"{icon} {cname.ljust(pad)} ({n})"),
+                    rp.bold(f"{icon} {cname} ({len(mods)})"),
                     callback_data=f"help/cat/{key}".encode(),
                     style=rp.Style.PRIMARY,
                 )
             )
-        # Pairing panjang+pendek supaya lebar tombol tiap baris mirip
-        pairs = []
-        lo, hi = 0, len(btns) - 1
-        while lo <= hi:
-            if lo == hi:
-                pairs.append((btns[lo],))
-            else:
-                pairs.append((btns[hi], btns[lo]))
-            lo, hi = lo + 1, hi - 1
-        for row in pairs:
-            blocks.append(rp.buttons(*row, align="center"))
+        # Bagi jadi baris 2 tombol
+        for i in range(0, len(btns), 2):
+            blocks.append(rp.buttons(*btns[i : i + 2], align="center"))
 
         # Nav bawah: Close + Channel jadi 1 baris biar ga numpuk
         blocks.append(
