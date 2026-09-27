@@ -24,7 +24,7 @@ from pyrogram.errors import (
     UserBannedInChannel,
     UserIsBlocked,
 )
-from pyrogram.types import Message
+from pyrogram.types import CallbackQuery, Message
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
@@ -261,13 +261,7 @@ class Broadcast(Module):
                 ),
                 query_prefix="gcast",
                 buttons=(
-                    [
-                        (
-                            "📋 Error",
-                            b"bcerr",
-                            ButtonStyle.PRIMARY,
-                        )
-                    ]
+                    [("📋 Error", b"bcerr", ButtonStyle.PRIMARY)]
                     if errs
                     else None
                 ),
@@ -293,6 +287,73 @@ class Broadcast(Module):
         if errs:
             teks += f"\n\n<i>{len(errs)} error — ketik</i> <code>bc-error</code>"
         await msg.edit_text(teks)
+
+    @handler(filters.regex(r"^bcerr(?:/(\d+))?$|^bccancel/\d+$"), 4)
+    async def on_inline_callback(self, event: CallbackQuery) -> None:
+        """Nampung klik tombol '📋 Error' / '🛑 Cancel' di rich card."""
+        errs = getattr(self, "_last_errs", None) or []
+        with contextlib.suppress(Exception):
+            await event.answer()
+
+        data = (event.data or "").strip()
+        if data.startswith("bccancel/"):
+            tid = data.split("/", 1)[1]
+            try:
+                self.tasks.end(int(tid))
+                text = f"🛑 Broadcast #{tid} dibatalkan"
+            except ValueError:
+                text = "task_id tidak valid"
+        else:
+            if not errs:
+                text = "✅ Tidak ada error di broadcast terakhir"
+            else:
+                body = "\n".join(f"  • {e[:110]}" for e in errs[:30])
+                more = (
+                    f"\n\n...dan {len(errs) - 30} lagi" if len(errs) > 30 else ""
+                )
+                text = f"⚠️ Error Broadcast ({len(errs)})\n{body}{more}"
+
+        # Rich (inline) → edit pesan. Kalau bukan rich → alert biasa.
+        if getattr(event, "inline_message_id", None):
+            with contextlib.suppress(Exception):
+                await self._edit_inline_rich(
+                    event, self._err_blocks(text), None
+                )
+                return
+        with contextlib.suppress(Exception):
+            await event.answer(text, show_alert=True)
+
+    def _err_blocks(self, text: str) -> list:
+        import richpyro as rp
+
+        return [
+            rp.heading(rp.bold("📋 Detail Error"), size=2),
+            rp.preformatted(text, language="text"),
+            rp.buttons(
+                rp.btn(
+                    rp.bold("🗑 Tutup"),
+                    callback_data=b"0",
+                    style=ButtonStyle.DANGER,
+                ),
+                align="center",
+            ),
+        ]
+
+    async def _edit_inline_rich(self, event: CallbackQuery, blocks, markup=None):
+        """Edit rich message hasil inline (pola help)."""
+        import richpyro as rp
+        from pyrogram.raw import functions as rawfn
+        from pyrogram.utils import unpack_inline_message_id
+
+        rich = await rp.blocks_message(*blocks).write(client=self.client.bot)
+        inline_id = unpack_inline_message_id(event.inline_message_id)
+        await self.client.bot.invoke(
+            rawfn.messages.EditInlineBotMessage(
+                id=inline_id,
+                rich_message=rich,
+                reply_markup=markup,
+            )
+        )
 
     @handler(filters.regex(r"^bc-?error$") & filters.outgoing, 1)
     async def on_error(self, event: Message) -> None:
