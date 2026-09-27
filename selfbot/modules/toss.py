@@ -5,7 +5,7 @@ import os
 import re
 
 from pyrogram import filters
-from pyrogram.types import Message
+from pyrogram.types import LinkPreviewOptions, Message
 
 from selfbot.listener import handler
 from selfbot.module import Module
@@ -56,9 +56,11 @@ class Toss(Module):
             with contextlib.suppress(Exception):
                 os.remove(tmp)
 
-        await event.edit(
-            f"<b>🔗 Uploaded</b>\n\n{url}", disable_web_page_preview=False
-        )
+        with contextlib.suppress(Exception):
+            await event.edit(
+                f"<b>🔗 Uploaded</b>\n\n{url}\n\n<blockquote>(klik link buat buka)</blockquote>",
+                link_preview_options=LinkPreviewOptions(is_disabled=False),
+            )
 
     async def _upload(self, path: str, ext: str) -> str:
         import httpx
