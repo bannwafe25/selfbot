@@ -111,6 +111,7 @@ class Help(Module):
         "restart": ("⚙️", "Sistem"),
         "terminal": ("⚙️", "Sistem"),
         "sendmod": ("⚙️", "Sistem"),
+        "telegraph": ("📤", "Media & Unduhan"),
         "call": ("📞", "Voice Call"),
         "help": ("📖", "Bantuan"),
     }
