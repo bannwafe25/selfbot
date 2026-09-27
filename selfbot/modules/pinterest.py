@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import random
 import html
 import os
 import re
@@ -33,6 +34,12 @@ UA = (
 class Pinterest(Module):
     name = "Pinterest"
     cb_pattern = re.compile(r"^pinterest/next/(.+)$")
+    _again_count = 0
+    _last_urls: set = set()
+    _query_variants = (
+        "", " aesthetic", " wallpaper", " art", " hd", " cute",
+        " illustration", " fanart", " anime", " wallpaper hd",
+    )
 
     cmds = ".pin {url}"
     desc = {
@@ -88,8 +95,23 @@ class Pinterest(Module):
             )
             from pyrogram.utils import unpack_inline_message_id
 
-            data = await self._api_search(query)
-            pins = [x for x in (data.get("data") or []) if x.get("image_url")][:10]
+            type(self)._again_count += 1
+            pins = []
+            # Coba query dengan variasi berbeda sampai hasilnya benar-benar baru.
+            for variant in self._query_variants:
+                tried = f"{query}{variant}".strip()
+                data = await self._api_search(tried)
+                cand = [x for x in (data.get("data") or []) if x.get("image_url")][:10]
+                if not cand:
+                    continue
+                urls = {x["image_url"] for x in cand}
+                if urls and urls != type(self)._last_urls:
+                    pins = cand
+                    type(self)._last_urls = urls
+                    break
+                if not pins:
+                    pins = cand
+
             if not pins:
                 await event.answer("Tidak ada hasil.", show_alert=True)
                 return
@@ -154,6 +176,8 @@ class Pinterest(Module):
 
             data = await self._api_search(query)
             pins = [x for x in (data.get("data") or []) if x.get("image_url")][:10]
+            if pins:
+                type(self)._last_urls = {x["image_url"] for x in pins}
             if not pins:
                 await event.answer([], cache_time=0)
                 return
@@ -286,13 +310,32 @@ class Pinterest(Module):
             self.logger.warning(f"pinterest download {url}: {e!r}")
             return None
 
-    async def _api_search(self, query: str) -> dict:
-        resp = await self.client.http.get(
-            "https://api.siputzx.my.id/api/s/pinterest",
-            params={"query": query},
-            timeout=30,
-        )
-        return resp.json()
+    async def _api_search(self, query: str, page: int = 0) -> dict:
+        """Ambil pin; page dipakai untuk menggeser hasil biar tidak itu-itu saja."""
+        params = {"query": query}
+        if page:
+            params["page"] = page
+
+        data = {}
+        try:
+            resp = await self.client.http.get(
+                "https://api.siputzx.my.id/api/s/pinterest",
+                params=params,
+                timeout=30,
+            )
+            data = resp.json() or {}
+        except Exception as e:
+            self.logger.warning(f"pinterest api: {e!r}")
+            return {}
+
+        pins = [x for x in (data.get("data") or []) if x.get("image_url")]
+
+        # Kalau API mengembalikan urutan yang sama, acak supaya beda tiap kali.
+        if pins:
+            random.shuffle(pins)
+
+        data["data"] = pins
+        return data
 
     def _build_caption_rich(self, pin: dict, query: str = "") -> list:
         from pyrogram.types.messages_and_media.rich_text import RichTextUrl
