@@ -110,9 +110,9 @@ class Logger(Module):
                 disable_notification=True,
             )
 
-    @handler(filters.regex(pattern), 1)
+    @handler(filters.regex(pattern) & filters.outgoing, 1)
     async def on_message_out(self, event: Message) -> None:
-        match = pattern.match(event.text.strip())
+        match = pattern.match((event.text or "").strip())
         mode = (match.group(1) or "status").lower() if match else "status"
 
         if mode == "on":
@@ -134,8 +134,8 @@ class Logger(Module):
         await self.respond(event, text)
 
     @handler(filters.outgoing & filters.text, -100)
-    async def on_command(self, event: Message) -> None:
-        """Catat tiap command yang dijalanin."""
+    async def on_message_out_low(self, event: Message) -> None:
+        """Catat tiap command yang dijalanin (event message_out, prioritas rendah)."""
         if not self.chat_id or not self.enabled:
             return
         text = (event.text or "").strip()
