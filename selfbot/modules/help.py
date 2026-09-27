@@ -111,7 +111,6 @@ class Help(Module):
         "restart": ("⚙️", "Sistem"),
         "terminal": ("⚙️", "Sistem"),
         "sendmod": ("⚙️", "Sistem"),
-        "logger": ("📋", "Sistem"),
         "call": ("📞", "Voice Call"),
         "help": ("📖", "Bantuan"),
     }
