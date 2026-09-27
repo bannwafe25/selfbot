@@ -117,19 +117,34 @@ class Call(Module):
         import richpyro as rp
         from pyrogram.enums import ButtonStyle
 
-        head = rp.bold(title.split(" ⚡ ")[0])
+        head = title.split(" ⚡ ")[0]
 
-        # Blok isi yang bisa di-collapse (di-expand pas judul di-tap)
-        inner = [rp.para(f"Chat: {chat_label}")]
+        # Tabel hasil call
+        _icon = {"Chat": "💬", "Total Waktu": "⏱", "Status Akhir": "📶"}
+        trows = [[rp.table_cell(rp.bold(head), is_header=True, colspan=2, align="center")]]
+        trows.append([
+            rp.table_cell(rp.bold("💬 Chat"), align="center"),
+            rp.table_cell(chat_label, align="center"),
+        ])
         for line in extra:
             plain = re.sub(r"<[^>]+>", "", line or "").strip()
-            if plain:
-                inner.append(rp.para(plain))
-        inner.append(rp.para(f"Total Waktu: {dur:.2f}s"))
-        inner.append(rp.para("Status Akhir: ✅ Selesai"))
+            if plain and ":" in plain:
+                k, v = plain.split(":", 1)
+                trows.append([
+                    rp.table_cell(rp.bold(_icon.get(k.strip(), "•") + " " + k.strip()), align="center"),
+                    rp.table_cell(v.strip(), align="center"),
+                ])
+        trows.append([
+            rp.table_cell(rp.bold("⏱ Total Waktu"), align="center"),
+            rp.table_cell(f"{dur:.2f}s", align="center"),
+        ])
+        trows.append([
+            rp.table_cell(rp.bold("📶 Status Akhir"), align="center"),
+            rp.table_cell("✅ Selesai", align="center"),
+        ])
 
         blocks = [
-            rp.details(head, *inner, is_open=False),
+            rp.table(trows, bordered=True, striped=True, compact=False),
             rp.expandable_quote(rp.italic(f"Waktu eksekusi {dur:.2f}s")),
             rp.buttons(
                 rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=ButtonStyle.DANGER)
