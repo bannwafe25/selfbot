@@ -6,6 +6,7 @@ import html
 import os
 import re
 import urllib.parse
+from io import BytesIO
 
 import httpx
 
@@ -90,16 +91,18 @@ class Pinterest(Module):
                 RichTextBold,
             )
 
-            urls = [p["image_url"] for p in pins]
-            if len(urls) > 1:
+            blobs = [b for b in await asyncio.gather(*(self._fetch_bytes(p["image_url"]) for p in pins)) if b]
+            if not blobs:
+                blobs = [BytesIO()]
+            if len(blobs) > 1:
                 media_block = InputRichBlockSlideshow(
                     blocks=[
-                        InputRichBlockPhoto(photo=InputMediaPhoto(u)) for u in urls
+                        InputRichBlockPhoto(photo=InputMediaPhoto(b)) for b in blobs
                     ]
                 )
             else:
                 media_block = InputRichBlockPhoto(
-                    photo=InputMediaPhoto(urls[0])
+                    photo=InputMediaPhoto(blobs[0])
                 )
 
             rich = InputRichMessage(
@@ -182,6 +185,21 @@ class Pinterest(Module):
         # ── Fallback: kirim album foto biasa ──
         await self._send_album(event, pins)
 
+    async def _fetch_bytes(self, url: str) -> BytesIO | None:
+        """Download gambar ke memory (UploadMedia external URL sering ditolak)."""
+        try:
+            resp = await self.client.http.get(url, timeout=30)
+            if resp.status_code != 200 or not resp.content:
+                return None
+            bio = BytesIO(resp.content)
+            ext = ".png" if ".png" in url.lower().split("?")[0] else ".jpg"
+            bio.name = f"pinterest_{abs(hash(url))}{ext}"
+            bio.seek(0)
+            return bio
+        except Exception as e:
+            self.logger.warning(f"pinterest download {url}: {e!r}")
+            return None
+
     async def _api_search(self, query: str) -> dict:
         resp = await self.client.http.get(
             "https://api.siputzx.my.id/api/s/pinterest",
@@ -235,17 +253,26 @@ class Pinterest(Module):
     async def _send_album(self, event: Message, pins: list) -> None:
         from pyrogram.types import InputMediaPhoto
 
+        blobs = await asyncio.gather(*(self._fetch_bytes(p["image_url"]) for p in pins))
         media = []
-        for i, pin in enumerate(pins):
+        i = 0
+        for pin, blob in zip(pins, blobs):
+            if not blob:
+                continue
             media.append(
                 InputMediaPhoto(
-                    pin["image_url"],
+                    blob,
                     caption=self._build_caption_html(pin) if i == 0 else None,
                 )
             )
+            i += 1
+        if not media:
+            await self.respond(event, "<code>Gagal mengunduh semua pin.</code>")
+            return
         await event.reply_media_group(media)
+        with contextlib.suppress(Exception):
+            await event.delete()
 
-    # ---------- core ----------
     async def _download(self, event: Message, url: str) -> None:
         msg = await self.respond(event, "<code>Mengambil pin...</code>")
 
