@@ -19,6 +19,7 @@ def run() -> None:
         "BOT_TOKEN": os.environ.get("BOT_TOKEN"),
         "MONGODB_URI": mongo_uri,
         "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY"),
+        "LOG_GROUP": os.environ.get("LOG_GROUP"),
         "FERDEV_API_KEY": os.environ.get("FERDEV_API_KEY"),
         "IMGUR_CLIENT_ID": os.environ.get("IMGUR_CLIENT_ID"),
         "IMGBB_API_KEY": os.environ.get("IMGBB_API_KEY"),
