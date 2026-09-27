@@ -280,20 +280,19 @@ class Help(Module):
             )
         blocks.append(rp.table(rows, bordered=True, striped=True))
 
-        # Tombol kategori (2 per baris biar rapi)
-        btns = []
+        # Tombol kategori: 1 per baris (full width) biar rapi & sama besar semua
         for cname, (icon, mods) in ordered:
             key = cname.lower().replace(" ", "-").replace("&", "")
-            btns.append(
-                rp.btn(
-                    rp.bold(f"{icon} {cname} ({len(mods)})"),
-                    callback_data=f"help/cat/{key}".encode(),
-                    style=rp.Style.PRIMARY,
+            blocks.append(
+                rp.buttons(
+                    rp.btn(
+                        rp.bold(f"{icon}  {cname}  ·  {len(mods)} modul"),
+                        callback_data=f"help/cat/{key}".encode(),
+                        style=rp.Style.PRIMARY,
+                    ),
+                    align="center",
                 )
             )
-        # Bagi jadi baris 2 tombol
-        for i in range(0, len(btns), 2):
-            blocks.append(rp.buttons(*btns[i : i + 2], align="center"))
 
         # Nav bawah: Close + Channel jadi 1 baris biar ga numpuk
         blocks.append(
