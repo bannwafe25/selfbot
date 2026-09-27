@@ -257,11 +257,10 @@ class Help(Module):
             rp.divider(),
         ]
 
-        # Tabel ringkas: Kategori | Jumlah modul | Contoh
+        # Tabel ringkas: Kategori | Isi (lebih ramping biar kartu ga tinggi)
         rows = [
             [
                 rp.table_cell(rp.bold("Kategori"), is_header=True, align="center"),
-                rp.table_cell(rp.bold("Modul"), is_header=True, align="center"),
                 rp.table_cell(rp.bold("Isi"), is_header=True, align="center"),
             ]
         ]
@@ -269,30 +268,38 @@ class Help(Module):
             contoh = ", ".join(
                 [str(m.name or "?") for m in sorted(mods, key=lambda x: str(x.name))]
             )
-            if len(contoh) > 46:
-                contoh = contoh[:45] + "…"
+            if len(contoh) > 38:
+                contoh = contoh[:37] + "…"
             rows.append(
                 [
                     rp.table_cell(f"{icon} {cname}", align="left"),
-                    rp.table_cell(str(len(mods)), align="center"),
                     rp.table_cell(contoh, align="left"),
                 ]
             )
         blocks.append(rp.table(rows, bordered=True, striped=True))
 
-        # Tombol kategori: 1 per baris (full width) biar rapi & sama besar semua
+        # Tombol kategori: 2 per baris, label DIPENDEKIN biar lebar mirip semua
+        SHORT = {
+            "Admin Tools": "Admin",
+            "Media & Unduhan": "Media",
+            "Riset & Pencarian": "Riset",
+            "Info & Sistem": "Info",
+            "Voice Call": "Voice",
+        }
+        btns = []
         for cname, (icon, mods) in ordered:
             key = cname.lower().replace(" ", "-").replace("&", "")
-            blocks.append(
-                rp.buttons(
-                    rp.btn(
-                        rp.bold(f"{icon}  {cname}  ·  {len(mods)} modul"),
-                        callback_data=f"help/cat/{key}".encode(),
-                        style=rp.Style.PRIMARY,
-                    ),
-                    align="center",
+            label = SHORT.get(cname, cname)
+            btns.append(
+                rp.btn(
+                    rp.bold(f"{icon} {label} ({len(mods)})"),
+                    callback_data=f"help/cat/{key}".encode(),
+                    style=rp.Style.PRIMARY,
                 )
             )
+        # 2 tombol per baris
+        for i in range(0, len(btns), 2):
+            blocks.append(rp.buttons(*btns[i : i + 2], align="center"))
 
         # Nav bawah: Close + Channel jadi 1 baris biar ga numpuk
         blocks.append(
