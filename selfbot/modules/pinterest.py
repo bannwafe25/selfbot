@@ -38,7 +38,7 @@ class Pinterest(Module):
     }
 
     @handler(filters.regex(r"^\.?pin\b") & filters.outgoing, 1)
-    async def on_cmd(self, event: Message) -> None:
+    async def on_message_out(self, event: Message) -> None:
         text = (event.text or "").strip()
         m = url_pattern.search(text)
         if m:
@@ -111,13 +111,6 @@ class Pinterest(Module):
             with contextlib.suppress(Exception):
                 await msg.delete()
 
-    @handler(filters.regex(url_pattern) & filters.outgoing, 2)
-    async def on_url(self, event: Message) -> None:
-        """Auto-detect: link pinterest dikirim tanpa command."""
-        m = url_pattern.search(str(event.content or ""))
-        if not m:
-            return
-        await self._download(event, m.group(0))
 
     # ---------- core ----------
     async def _download(self, event: Message, url: str) -> None:
