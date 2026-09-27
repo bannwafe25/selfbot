@@ -32,6 +32,8 @@ UA = (
 
 class Pinterest(Module):
     name = "Pinterest"
+    cb_pattern = re.compile(r"^pinterest/next/(.+)$")
+
     cmds = ".pin {url}"
     desc = {
         "url": "Link pin Pinterest (pinterest.com/pin/... atau pin.it/...)",
@@ -58,6 +60,88 @@ class Pinterest(Module):
             )
             return
         await self._search(event, m2.group(2).strip(), as_doc=bool(m2.group(1)))
+
+    @handler(filters.regex(cb_pattern), 4)
+    async def on_inline_callback(self, event) -> None:
+        """Tombol 'Cari Ulang': rebuild slideshow baru di pesan yang sama."""
+        try:
+            payload = event.matches[0].group(1)
+            query = urllib.parse.unquote(payload).strip()
+            await event.answer("Mencari ulang...")
+        except Exception:
+            with contextlib.suppress(Exception):
+                await event.answer([], cache_time=0)
+            return
+
+        try:
+            from pyrogram.enums import ButtonStyle
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.types import (
+                InputMediaPhoto,
+                InputRichBlockButtons,
+                InputRichBlockParagraph,
+                InputRichBlockPhoto,
+                InputRichBlockSlideshow,
+                InputRichMessage,
+                RichMessageButton,
+                RichTextBold,
+            )
+            from pyrogram.utils import unpack_inline_message_id
+
+            data = await self._api_search(query)
+            pins = [x for x in (data.get("data") or []) if x.get("image_url")][:10]
+            if not pins:
+                await event.answer("Tidak ada hasil.", show_alert=True)
+                return
+
+            blobs = [b for b in await asyncio.gather(*(self._fetch_bytes(p["image_url"]) for p in pins)) if b]
+            if not blobs:
+                await event.answer("Gagal mengunduh pin.", show_alert=True)
+                return
+
+            if len(blobs) > 1:
+                media_block = InputRichBlockSlideshow(
+                    blocks=[
+                        InputRichBlockPhoto(photo=InputMediaPhoto(b)) for b in blobs
+                    ]
+                )
+            else:
+                media_block = InputRichBlockPhoto(photo=InputMediaPhoto(blobs[0]))
+
+            rich = InputRichMessage(
+                blocks=[
+                    media_block,
+                    InputRichBlockParagraph(text=self._build_caption_rich(pins[0])),
+                    InputRichBlockButtons(
+                        [
+                            RichMessageButton(
+                                text=RichTextBold("🔄 Cari Ulang"),
+                                style=ButtonStyle.SUCCESS,
+                                callback_data=(
+                                    f"pinterest/next/{urllib.parse.quote(query, safe='')}"
+                                ).encode(),
+                            ),
+                            RichMessageButton(
+                                text=RichTextBold("🗑 Close"),
+                                style=ButtonStyle.DANGER,
+                                callback_data=b"0",
+                            ),
+                        ]
+                    ),
+                ]
+            )
+            bot = self.client.bot
+            rich_raw = await rich.write(client=bot, chat_id=bot.me.id)
+            await bot.invoke(
+                rawfn.messages.EditInlineBotMessage(
+                    id=unpack_inline_message_id(event.inline_message_id),
+                    rich_message=rich_raw,
+                )
+            )
+        except Exception as e:
+            self.logger.warning(f"pinterest callback failed: {e!r}")
+            with contextlib.suppress(Exception):
+                await event.answer(f"Error: {e}", show_alert=True)
 
     @handler(filters.regex(r"^pinterest\b"), 2)
     async def on_inline_query(self, event) -> None:
@@ -116,7 +200,9 @@ class Pinterest(Module):
                             RichMessageButton(
                                 text=RichTextBold("🔄 Cari Ulang"),
                                 style=ButtonStyle.SUCCESS,
-                                callback_data=b"pinterest/again",
+                                callback_data=(
+                                    f"pinterest/next/{urllib.parse.quote(query, safe='')}"
+                                ).encode(),
                             ),
                             RichMessageButton(
                                 text=RichTextBold("🗑 Close"),
