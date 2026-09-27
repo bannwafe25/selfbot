@@ -347,7 +347,7 @@ class Help(Module):
                         ]
                     )
                 )
-            name = f"{icon} {mod.name or '?'}"
+            name = mod.name or "?"
             if len(name) > MAX_SUM:
                 name = name[: MAX_SUM - 1] + "…"
             blocks.append(rp.details(name, *det))
