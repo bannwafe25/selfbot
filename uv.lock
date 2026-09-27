@@ -571,6 +571,19 @@ wheels = [
 ]
 
 [[package]]
+name = "kurigram"
+version = "2.2.26"
+source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
+dependencies = [
+    { name = "pyaes" },
+    { name = "python-socks" },
+]
+sdist = { url = "https://mirrors.cloud.tencent.com/pypi/packages/c1/48/65efaaaaf24dc62d6f6ef046843952ff17b5358f9c7119303ceee6d53657/kurigram-2.2.26.tar.gz", hash = "sha256:83b64fd7ab37122d920b1e7c0e221b599d7c52dd5d0d24c79956f01273020c49" }
+wheels = [
+    { url = "https://mirrors.cloud.tencent.com/pypi/packages/2b/e0/a00020c21725550c9309e6e03787acf7236de2f284c8d9bc57644ae2160a/kurigram-2.2.26-py3-none-any.whl", hash = "sha256:f53cee6119a579b74620f45b5f83d543cd3bd510a8a6a1b4b3852e21603241e9" },
+]
+
+[[package]]
 name = "multidict"
 version = "6.7.1"
 source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
@@ -1082,28 +1095,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pyrotgfork"
-version = "2.2.18"
-source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
-dependencies = [
-    { name = "pyaes" },
-    { name = "pysocks" },
-]
-sdist = { url = "https://mirrors.cloud.tencent.com/pypi/packages/70/74/9b1498ffb2fe82e10cb865c4a4aaac39b265ae08ce02015dd8081f36ec3b/pyrotgfork-2.2.18.tar.gz", hash = "sha256:d51b64c80cfaf5fd4f3e75e5a7efdf0527057d9c8384f55245e00a8cb65ade25" }
-wheels = [
-    { url = "https://mirrors.cloud.tencent.com/pypi/packages/e8/40/83ba07dacd7eac594c3dc492eeee017b83c3c527e5a54f80319be629174a/pyrotgfork-2.2.18-py3-none-any.whl", hash = "sha256:ecc55ee74c54f69cfd1e2ca49140485870b02755cf732f82356635a421a7ef4b" },
-]
-
-[[package]]
-name = "pysocks"
-version = "1.7.1"
-source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
-sdist = { url = "https://mirrors.cloud.tencent.com/pypi/packages/bd/11/293dd436aea955d45fc4e8a35b6ae7270f5b8e00b53cf6c024c83b657a11/PySocks-1.7.1.tar.gz", hash = "sha256:3f8804571ebe159c380ac6de37643bb4685970655d3bba243530d6558b799aa0" }
-wheels = [
-    { url = "https://mirrors.cloud.tencent.com/pypi/packages/8d/59/b4572118e098ac8e46e399a1dd0f2d85403ce8bbaad9ec79373ed6badaf9/PySocks-1.7.1-py3-none-any.whl", hash = "sha256:2725bd0a9925919b9b51739eea5f9e2bae91e83288108a9ad338b2e3a4435ee5" },
-]
-
-[[package]]
 name = "pytgcrypto"
 version = "1.2.12"
 source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
@@ -1156,6 +1147,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-socks"
+version = "3.1.1"
+source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
+sdist = { url = "https://mirrors.cloud.tencent.com/pypi/packages/04/ad/484ffb79532517b11a90af38647c38652224650b31a7ae1cedd5a418d8ab/python_socks-3.1.1.tar.gz", hash = "sha256:8d3e817cdbe858dc0bb8c8fdc8e79b6ce37acce110d33374c6f57a675cc9029e" }
+wheels = [
+    { url = "https://mirrors.cloud.tencent.com/pypi/packages/3b/23/2c2cef1b4313c55d1713201acd4ee2043fb2cf22e546ca9d36bf4317faea/python_socks-3.1.1-py3-none-any.whl", hash = "sha256:327e0d6378702c73a7790bf732e9f01392f17b48c7348a50b5bd1f710c2df1be" },
+]
+
+[[package]]
 name = "requests"
 version = "2.32.5"
 source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
@@ -1168,6 +1168,18 @@ dependencies = [
 sdist = { url = "https://mirrors.cloud.tencent.com/pypi/packages/c9/74/b3ff8e6c8446842c3f5c837e9c3dfcfe2018ea6ecef224c710c85ef728f4/requests-2.32.5.tar.gz", hash = "sha256:dbba0bac56e100853db0ea71b82b4dfd5fe2bf6d3754a8893c3af500cec7d7cf" }
 wheels = [
     { url = "https://mirrors.cloud.tencent.com/pypi/packages/1e/db/4254e3eabe8020b458f1a747140d32277ec7a271daf1d235b70dc0b4e6e3/requests-2.32.5-py3-none-any.whl", hash = "sha256:2462f94637a34fd532264295e186976db0f5d453d1cdd31473c85a6a161affb6" },
+]
+
+[[package]]
+name = "richpyro"
+version = "1.0.0"
+source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
+dependencies = [
+    { name = "kurigram" },
+]
+sdist = { url = "https://mirrors.cloud.tencent.com/pypi/packages/37/39/48b798cc389ef1f55970b4eaf9fd588d04eaa6c4c8f2a7ebbb83bfc54f04/richpyro-1.0.0.tar.gz", hash = "sha256:7e24175796b2877f36a9357e3d2c0b0be09f176ab2bca4dfcffa23d613bcc88a" }
+wheels = [
+    { url = "https://mirrors.cloud.tencent.com/pypi/packages/11/05/9920fcb46bf85c3ecd5156886a7fee631588ab02b61a0bba6ec2169ac2b0/richpyro-1.0.0-py3-none-any.whl", hash = "sha256:ed8953b75c94a8df0775259b504a8b35da071d0b6fcd0f870ddb85d317814cd7" },
 ]
 
 [[package]]
@@ -1189,17 +1201,18 @@ source = { editable = "." }
 dependencies = [
     { name = "dnspython" },
     { name = "google-genai" },
+    { name = "httpcore" },
     { name = "httpx", extra = ["http2"] },
     { name = "instaloader" },
+    { name = "kurigram" },
     { name = "pillow" },
     { name = "psutil" },
     { name = "py-tgcalls" },
     { name = "py-yt-search" },
     { name = "pymongo" },
-    { name = "pyrotgfork" },
     { name = "pytgcrypto" },
+    { name = "richpyro" },
     { name = "speedtest-cli" },
-    { name = "telegraph", extra = ["aio"] },
     { name = "yt-dlp" },
 ]
 
@@ -1207,17 +1220,18 @@ dependencies = [
 requires-dist = [
     { name = "dnspython", specifier = ">=2.6.1" },
     { name = "google-genai" },
+    { name = "httpcore", specifier = "==1.0.9" },
     { name = "httpx", extras = ["http2"], specifier = "==0.28.1" },
     { name = "instaloader", specifier = ">=4.13" },
+    { name = "kurigram", specifier = "==2.2.26" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "psutil", specifier = ">=6.1.1" },
-    { name = "py-tgcalls", specifier = ">=2.0.0" },
+    { name = "py-tgcalls", specifier = ">=2.3.3" },
     { name = "py-yt-search", specifier = ">=0.5.7" },
     { name = "pymongo", specifier = ">=4.9.0" },
-    { name = "pyrotgfork", specifier = "==2.2.18" },
     { name = "pytgcrypto", specifier = "==1.2.12" },
+    { name = "richpyro", specifier = ">=1.0.0" },
     { name = "speedtest-cli", specifier = ">=2.1.3" },
-    { name = "telegraph", extras = ["aio"], specifier = "==2.2.0" },
     { name = "yt-dlp", specifier = ">=2026.2.21" },
 ]
 
@@ -1237,23 +1251,6 @@ source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
 sdist = { url = "https://mirrors.cloud.tencent.com/pypi/packages/85/d2/32c8a30768b788d319f94cde3a77e0ccc1812dca464ad8062d3c4d703e06/speedtest-cli-2.1.3.tar.gz", hash = "sha256:5e2773233cedb5fa3d8120eb7f97bcc4974b5221b254d33ff16e2f1d413d90f0" }
 wheels = [
     { url = "https://mirrors.cloud.tencent.com/pypi/packages/9f/39/65259b7054368b370d3183762484fa2c779ddc41633894d895f9d1720f45/speedtest_cli-2.1.3-py2.py3-none-any.whl", hash = "sha256:75ff32c91af9ac1ce2b905476d6e92bd9eb2c0783f9e7d1939d74605c7d0b9ea" },
-]
-
-[[package]]
-name = "telegraph"
-version = "2.2.0"
-source = { registry = "https://mirrors.cloud.tencent.com/pypi/simple" }
-dependencies = [
-    { name = "requests" },
-]
-sdist = { url = "https://mirrors.cloud.tencent.com/pypi/packages/49/81/1c9f99004e23555fb21b80a2ef6ddbecb3a7a4eefbc4aac75ffb5a9ccf71/telegraph-2.2.0.tar.gz", hash = "sha256:012908f18208c451c7189f4bda7c39a1369241ac436c7543bb6c3fccbe9cfd5d" }
-wheels = [
-    { url = "https://mirrors.cloud.tencent.com/pypi/packages/d3/75/1bc2f8c4e4a736e2e582a1518eb4621db3c9dcb100f379fab5ab49c8d1ac/telegraph-2.2.0-py3-none-any.whl", hash = "sha256:d20b2a5d7cfdd66890c8c3fd60aa8585cabb7c6b03579d3eb1cd8af056ed9971" },
-]
-
-[package.optional-dependencies]
-aio = [
-    { name = "httpx" },
 ]
 
 [[package]]
