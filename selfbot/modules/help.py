@@ -86,6 +86,7 @@ class Help(Module):
         "quotly": ("💬", "Chat"),
         # Media & unduhan
         "alldl": ("📥", "Media & Unduhan"),
+        "toss": ("📤", "Media & Unduhan"),
         "ytdl": ("📥", "Media & Unduhan"),
         "upload": ("📥", "Media & Unduhan"),
         "sticker": ("🎨", "Kreatif"),
