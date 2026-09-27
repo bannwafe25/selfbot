@@ -18,6 +18,7 @@ from pyrogram.raw.types import (
 from pyrogram.types import (
     CallbackQuery,
     InlineQuery,
+    InputMediaPhoto,
     InputRichBlockParagraph,
     InputRichBlockSectionHeading,
     InputRichBlockPreformatted,
@@ -258,26 +259,17 @@ class Help(Module):
             rp.divider(),
         ]
 
-        # Tabel ringkas: Kategori | Isi (lebih ramping biar kartu ga tinggi)
-        rows = [
-            [
-                rp.table_cell(rp.bold("Kategori"), is_header=True, align="center"),
-                rp.table_cell(rp.bold("Isi"), is_header=True, align="center"),
-            ]
-        ]
-        for cname, (icon, mods) in ordered:
-            contoh = ", ".join(
-                [str(m.name or "?") for m in sorted(mods, key=lambda x: str(x.name))]
-            )
-            if len(contoh) > 38:
-                contoh = contoh[:37] + "…"
-            rows.append(
-                [
-                    rp.table_cell(f"{icon} {cname}", align="left"),
-                    rp.table_cell(contoh, align="left"),
-                ]
-            )
-        blocks.append(rp.table(rows, bordered=True, striped=True))
+        # Banner: foto di atas menu (gantiin tabel biar kartu lebih ringkes)
+        BANNER = "https://qu.ax/x/IsBaX.jpg"
+        if BANNER:
+            with contextlib.suppress(Exception):
+                blocks.append(
+                    rp.photo_block(
+                        InputMediaPhoto(BANNER),
+                        cap=rp.caption(rp.italic(f"{len(ordered)} kategori · {total_mods} modul")),
+                    )
+                )
+            blocks.append(rp.divider())
 
         # Tombol kategori: 2 per baris, label DIPENDEKIN biar lebar mirip semua
         SHORT = {

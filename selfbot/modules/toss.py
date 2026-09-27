@@ -56,11 +56,27 @@ class Toss(Module):
             with contextlib.suppress(Exception):
                 os.remove(tmp)
 
+        await self._reply(event, url)
+
+    async def _reply(self, event: Message, url: str) -> None:
+        """Kasih link halaman + direct (qu.ax butuh /x/<id>.<ext> buat file)."""
+        direct = self._direct_url(url)
+        teks = f"<b>🔗 Uploaded</b>\n\n{url}"
+        if direct:
+            teks += f"\n\n<b>Direct</b>\n<code>{direct}</code>"
         with contextlib.suppress(Exception):
             await event.edit(
-                f"<b>🔗 Uploaded</b>\n\n{url}\n\n<blockquote>(klik link buat buka)</blockquote>",
+                teks,
                 link_preview_options=LinkPreviewOptions(is_disabled=False),
             )
+
+    @staticmethod
+    def _direct_url(url: str) -> str | None:
+        """Ubah https://qu.ax/<id> jadi https://qu.ax/x/<id>.jpg."""
+        m = re.match(r"^https?://qu\.ax/([A-Za-z0-9]+)/?$", url or "")
+        if not m:
+            return None
+        return f"https://qu.ax/x/{m.group(1)}.jpg"
 
     async def _upload(self, path: str, ext: str) -> str:
         import httpx
