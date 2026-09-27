@@ -48,6 +48,9 @@ SEARCH_ENGINES = {
     "saucenao": "https://saucenao.com/search.php?db=999&url={image}",
 }
 
+# ── Siputzx APIs ─────────────────────────────────────────────────────
+SIPUTZX_PINTEREST = "https://api.siputzx.my.id/api/s/pinterest"
+
 # ── Misc ─────────────────────────────────────────────────────────────
 SANGMATA_USERNAME = "@SangMata_beta_bot"
 YASIR_REGDATE = "https://yasirapi.eu.org/register_date"

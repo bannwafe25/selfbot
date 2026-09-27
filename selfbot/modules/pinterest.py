@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import html
 import os
 import re
 import urllib.parse
@@ -40,15 +41,75 @@ class Pinterest(Module):
     async def on_cmd(self, event: Message) -> None:
         text = (event.text or "").strip()
         m = url_pattern.search(text)
-        if not m:
+        if m:
+            await self._download(event, m.group(0))
+            return
+        # bukan link → search via siputzx API
+        m2 = re.match(r"^\.?pin\s+(?:(-d|--doc)\s+)?(.+)$", text, re.IGNORECASE)
+        if not m2:
             await self.respond(
                 event,
                 "<b>Cara pakai:</b>\n"
                 "<code>.pin https://pin.it/xxxx</code>\n"
-                "<code>.pin https://pinterest.com/pin/xxxx</code>",
+                "<code>.pin &lt;query&gt;</code> — cari pin\n"
+                "<code>.pin -d &lt;query&gt;</code> — kirim sebagai dokumen",
             )
             return
-        await self._download(event, m.group(0))
+        await self._search(event, m2.group(2).strip(), as_doc=bool(m2.group(1)))
+
+    async def _search(self, event: Message, query: str, as_doc: bool = False) -> None:
+        msg = await self.respond(event, "<code>Mencari pin...</code>")
+        try:
+            async with httpx.AsyncClient(timeout=30, follow_redirects=True) as c:
+                r = await c.get(
+                    "https://api.siputzx.my.id/api/s/pinterest",
+                    params={"query": query},
+                )
+                data = r.json()
+        except Exception as e:
+            self.logger.warning(f"pinterest search: {e!r}")
+            await msg.edit_text("❌ <b>Gagal request API Pinterest.</b>")
+            return
+
+        pins = (data.get("data") or [])[:5] if data.get("status") else []
+        if not pins:
+            await msg.edit_text(
+                "<blockquote>Tidak ada hasil untuk "
+                f"<b>{html.escape(query[:60])}</b>.</blockquote>"
+            )
+            return
+
+        try:
+            await msg.edit_text(
+                f"<code>Mengirim {len(pins)} pin untuk "
+                f"'{html.escape(query[:60])}'...</code>"
+            )
+        except Exception:
+            msg = None
+
+        sent = 0
+        for pin in pins:
+            image_url = pin.get("image_url")
+            if not image_url:
+                continue
+            title = (pin.get("grid_title") or "").strip()[:100]
+            cap = f"<b>📌 Pinterest</b>\n"
+            if title:
+                cap += f"<blockquote>{html.escape(title)}</blockquote>\n"
+            if pin.get("pin"):
+                cap += f'<a href="{html.escape(pin["pin"])}">Open Pin</a>'
+            try:
+                if as_doc:
+                    await event.reply_document(image_url, caption=cap)
+                else:
+                    await event.reply_photo(image_url, caption=cap)
+                sent += 1
+            except Exception as e:
+                self.logger.warning(f"pinterest send: {e!r}")
+
+        if sent and msg:
+            with contextlib.suppress(Exception):
+                await msg.delete()
 
     @handler(filters.regex(url_pattern) & filters.outgoing, 2)
     async def on_url(self, event: Message) -> None:
