@@ -64,7 +64,7 @@ class RichTextCopyable(_RichText):
         return _praw.types.TextFixed(text=await _RichText._write(client, self.text))
 
 
-pattern = re.compile(r"^help/?(mod|info|page)?(?:/(\d{1}|[a-zA-Z]+))?$")
+pattern = re.compile(r"^help/?(mod|info|page|cat)?(?:/([\w\-]+))?$")
 
 
 class Help(Module):
@@ -72,6 +72,53 @@ class Help(Module):
     cmds = "help(/{name})?"
     desc = {"name": "String", "?": "Optional", "e.g.": "help/debug"}
     mods, maps, ikbs = {}, {}, []
+
+    # Kategori + emoji per modul (key = nama file modul, lowercase)
+    CATEGORY = {
+        # Tools & utilitas
+        "admintool": ("🛠 Admin", "Admin Tools"),
+        "purge": ("🛠 Admin", "Admin Tools"),
+        "delete": ("🛠 Admin", "Admin Tools"),
+        "afk": ("💬 Chat", "Chat"),
+        "broadcast": ("💬 Chat", "Chat"),
+        "notes": ("💬 Chat", "Chat"),
+        "quotly": ("💬 Chat", "Chat"),
+        # Media & unduhan
+        "alldl": ("📥 Media", "Media & Unduhan"),
+        "ytdl": ("📥 Media", "Media & Unduhan"),
+        "upload": ("📥 Media", "Media & Unduhan"),
+        "sticker": ("🎨 Kreatif", "Kreatif"),
+        "brat": ("🎨 Kreatif", "Kreatif"),
+        "beautify": ("🎨 Kreatif", "Kreatif"),
+        "ppcouple": ("🎨 Kreatif", "Kreatif"),
+        "screenshot": ("🎨 Kreatif", "Kreatif"),
+        # Anime & hiburan
+        "animepic": ("🌸 Anime", "Anime"),
+        "animequote": ("🌸 Anime", "Anime"),
+        "aniquotes": ("🌸 Anime", "Anime"),
+        # Info & sistem
+        "alive": ("📊 Info", "Info & Sistem"),
+        "info": ("📊 Info", "Info & Sistem"),
+        "ping": ("📊 Info", "Info & Sistem"),
+        "sysinfo": ("📊 Info", "Info & Sistem"),
+        "speedtest": ("📊 Info", "Info & Sistem"),
+        "sgb": ("🔍 Riset", "Riset & Pencarian"),
+        "risearch": ("🔍 Riset", "Riset & Pencarian"),
+        "qris": ("💳 Lainnya", "Lainnya"),
+        "genai": ("🤖 AI", "AI"),
+        # Sistem / dev
+        "debug": ("⚙️ Sistem", "Sistem"),
+        "restart": ("⚙️ Sistem", "Sistem"),
+        "terminal": ("⚙️ Sistem", "Sistem"),
+        "sendmod": ("⚙️ Sistem", "Sistem"),
+        "call": ("📞 Voice", "Voice Call"),
+        "help": ("📖 Bantuan", "Bantuan"),
+    }
+
+    @classmethod
+    def _cat(cls, key: str) -> tuple:
+        """Balikin (emoji_kategori, nama_kategori) buat modul."""
+        return cls.CATEGORY.get(key, ("📦 Lainnya", "Lainnya"))
 
     async def on_started(self) -> None:
         mods, page = [mod for mod in self.client.modules.values()], []
@@ -109,7 +156,24 @@ class Help(Module):
 
     @handler(filters.regex(pattern), 2)
     async def on_inline_query(self, event: InlineQuery) -> None:
-        if len(event.query.split("/")) == 2:
+        parts = event.query.split("/")
+        # help/cat/<nama_kategori> -> daftar modul di kategori itu
+        if len(parts) == 3 and parts[1] == "cat":
+            cat_key = parts[2].strip().lower()
+            quote = await self._get_quote()
+            try:
+                await self._answer_rich(event, quote, category=cat_key)
+                return
+            except Exception as e:
+                with contextlib.suppress(Exception):
+                    import traceback as _tb
+
+                    self.logger.warning(
+                        f"help cat rich failed: {e!r}\n{_tb.format_exc()}"
+                    )
+            return
+
+        if len(event.query.split("/")) == 2 and parts[1] != "cat":
             name = event.query.split("/")[1].strip().lower()
             if name in self.mods:
                 await self.answer(
@@ -152,70 +216,92 @@ class Help(Module):
         header = self._build_header(quote)
         await self.answer(event, self.ikm(self.build()), header)
 
-    def _rich_blocks(self, quote: str, page: int = 0) -> list:
-        # Versi richpyro: accordion Details per modul + spoiler quote
+    def _rich_blocks(
+        self, quote: str, page: int = 0, category: str = ""
+    ) -> list:
+        # Mode 2: daftar modul di satu kategori
+        if category:
+            return self._blocks_by_category(quote, category)
+
+        # Mode 1 (utama): DAFTAR KATEGORI — klik salah satu buat lihat modulnya
+        return self._blocks_category_index(quote)
+
+    def _group_by_category(self) -> dict:
+        """Kelompokkan modul: {nama_kategori: (icon, [modul, ...])}"""
+        groups: dict = {}
+        for mod in self.client.modules.values():
+            icon, cname = self._cat(mod.__class__.__name__.lower())
+            if cname not in groups:
+                groups[cname] = (icon, [])
+            groups[cname][1].append(mod)
+        return groups
+
+    def _blocks_category_index(self, quote: str) -> list:
+        """Halaman utama: grid tombol per kategori."""
         import richpyro as rp
 
-        mods = list(self.client.modules.values())
-        per_page = 4
-        chunks = [mods[i : i + per_page] for i in range(0, len(mods), per_page)]
-        total_pages = max(len(chunks), len(self.ikbs))
-        chunk = chunks[page] if page < len(chunks) else chunks[-1]
+        groups = self._group_by_category()
+        # urut: kategori paling banyak modul dulu
+        ordered = sorted(
+            groups.items(), key=lambda kv: (-len(kv[1][1]), kv[0])
+        )
+        total_mods = sum(len(v[1]) for _, v in ordered)
 
         blocks = [
             rp.heading(rp.bold("📖 Menu Bantuan Userbot"), size=2),
             rp.para(
                 rp.italic(
-                    f"Halaman {page + 1}/{total_pages} — {len(mods)} modul"
+                    f"Pilih kategori — {len(ordered)} kategori, "
+                    f"{total_mods} modul"
                 )
             ),
+            rp.divider(),
         ]
 
-        # Accordion per modul — klik judul untuk buka/tutup
-        # Biar tinggi kartu konsisten antar halaman:
-        # - max 3 baris perintah (preformatted)
-        # - max 3 item desc
-        # - summary dipadatkan max 40 char
-        MAX_LINES, MAX_DESC, MAX_SUM = 8, 6, 40
-        for mod in chunk:
-            cmds_raw = (getattr(mod, "cmds", "") or "-").strip()
-            cmds_lines = [l for l in cmds_raw.splitlines() if l.strip()][:MAX_LINES]
-            det = [rp.preformatted("\n".join(cmds_lines) or "-", language="text")]
-            desc = getattr(mod, "desc", None)
-            if isinstance(desc, dict) and desc:
-                det.append(
-                    rp.bullet_list(
-                        *[
-                            rp.list_item(rp.para(f"{k}: {v}" if isinstance(v, str) else str(k)))
-                            for k, v in list(desc.items())[:MAX_DESC]
-                        ]
-                    )
+        # Tabel ringkas: Kategori | Jumlah modul | Contoh
+        rows = [
+            [
+                rp.table_cell(rp.bold("Kategori"), is_header=True, align="center"),
+                rp.table_cell(rp.bold("Modul"), is_header=True, align="center"),
+                rp.table_cell(rp.bold("Isi"), is_header=True, align="center"),
+            ]
+        ]
+        for cname, (icon, mods) in ordered:
+            contoh = ", ".join(
+                [str(m.name or "?") for m in sorted(mods, key=lambda x: str(x.name))]
+            )
+            if len(contoh) > 46:
+                contoh = contoh[:45] + "…"
+            rows.append(
+                [
+                    rp.table_cell(f"{icon} {cname}", align="left"),
+                    rp.table_cell(str(len(mods)), align="center"),
+                    rp.table_cell(contoh, align="left"),
+                ]
+            )
+        blocks.append(rp.table(rows, bordered=True, striped=True))
+
+        # Tombol kategori (2 per baris biar rapi)
+        btns = []
+        for cname, (icon, mods) in ordered:
+            key = cname.lower().replace(" ", "-").replace("&", "")
+            btns.append(
+                rp.btn(
+                    rp.bold(f"{icon} {cname} ({len(mods)})"),
+                    callback_data=f"help/cat/{key}".encode(),
+                    style=rp.Style.PRIMARY,
                 )
-            name = str(mod.name or "?")
-            if len(name) > MAX_SUM:
-                name = name[: MAX_SUM - 1] + "…"
-            blocks.append(rp.details(name, *det))
+            )
+        # Bagi jadi baris 2 tombol
+        for i in range(0, len(btns), 2):
+            blocks.append(rp.buttons(*btns[i : i + 2], align="center"))
 
-        blocks.append(rp.divider())
-
-        # Navigasi
-        nav_btns = []
-        if page > 0:
-            nav_btns.append(rp.btn(rp.bold(f"◀️ {page}"), callback_data=f"help/page/{page - 1}".encode(), style=rp.Style.SUCCESS))
-        if page + 1 < total_pages:
-            nav_btns.append(rp.btn(rp.bold(f"{page + 2} ▶️"), callback_data=f"help/page/{page + 1}".encode(), style=rp.Style.SUCCESS))
-        if nav_btns:
-            # Close selalu di tengah: [«prev] [🗑️ ✕] [next»]
-            close_btn = rp.btn("🗑️ ✕", callback_data=b"0", style=rp.Style.DANGER)
-            if len(nav_btns) == 2:
-                nav_btns.insert(1, close_btn)
-            else:
-                nav_btns.append(close_btn)
-            blocks.append(rp.buttons(*nav_btns, align="center"))
-        else:
-            blocks.append(rp.buttons(rp.btn("🗑️ ✕", callback_data=b"0", style=rp.Style.DANGER), align="center"))
-
-        # Channel button
+        blocks.append(
+            rp.buttons(
+                rp.btn("🗑️ ✕", callback_data=b"0", style=rp.Style.DANGER),
+                align="center",
+            )
+        )
         blocks.append(
             rp.buttons(
                 RichMessageButton(
@@ -225,20 +311,88 @@ class Help(Module):
                 )
             )
         )
-
         if quote:
-            blocks.append(
-                rp.para(
-                    rp.spoiler(re.sub(r"<[^>]+>", "", quote)),
-                )
-            )
+            blocks.append(rp.para(rp.spoiler(re.sub(r"<[^>]+>", "", quote))))
         return blocks
 
-    async def _answer_rich(self, event: InlineQuery, quote: str) -> None:
+    def _blocks_by_category(self, quote: str, category: str) -> list:
+        """Halaman kategori: accordion modul di kategori itu + tombol kembali."""
+        import richpyro as rp
+
+        groups = self._group_by_category()
+        target, icon, cname_real = None, "📦", category.title()
+        for cname, (ic, mods) in groups.items():
+            if cname.lower().replace(" ", "-").replace("&", "") == category:
+                target, icon, cname_real = mods, ic, cname
+                break
+        if target is None:
+            target, cname_real = [], category.title()
+
+        blocks = [
+            rp.heading(rp.bold(f"{icon} {cname_real}"), size=2),
+            rp.para(rp.italic(f"{len(target)} modul di kategori ini")),
+        ]
+
+        MAX_LINES, MAX_DESC, MAX_SUM = 8, 6, 40
+        for mod in sorted(target, key=lambda x: str(x.name)):
+            cmds_raw = (getattr(mod, "cmds", "") or "-").strip()
+            cmds_lines = [l for l in cmds_raw.splitlines() if l.strip()][:MAX_LINES]
+            det = [rp.preformatted("\n".join(cmds_lines) or "-", language="text")]
+            desc = getattr(mod, "desc", None)
+            if isinstance(desc, dict) and desc:
+                det.append(
+                    rp.bullet_list(
+                        *[
+                            rp.list_item(
+                                rp.para(
+                                    f"{k}: {v}" if isinstance(v, str) else str(k)
+                                )
+                            )
+                            for k, v in list(desc.items())[:MAX_DESC]
+                        ]
+                    )
+                )
+            name = f"{icon} {mod.name or '?'}"
+            if len(name) > MAX_SUM:
+                name = name[: MAX_SUM - 1] + "…"
+            blocks.append(rp.details(name, *det))
+
+        blocks.append(rp.divider())
+        blocks.append(
+            rp.buttons(
+                rp.btn(
+                    rp.bold("◀️ Kembali"),
+                    callback_data=b"help/cat/back",
+                    style=rp.Style.SUCCESS,
+                ),
+                rp.btn("🗑️ ✕", callback_data=b"0", style=rp.Style.DANGER),
+                align="center",
+            )
+        )
+        blocks.append(
+            rp.buttons(
+                RichMessageButton(
+                    text=rp.bold("📢 Channel"),
+                    style=ButtonStyle.PRIMARY,
+                    url="https://t.me/zpbaiq",
+                )
+            )
+        )
+        if quote:
+            blocks.append(rp.para(rp.spoiler(re.sub(r"<[^>]+>", "", quote))))
+        return blocks
+
+    async def _answer_rich(
+        self, event: InlineQuery, quote: str, category: str = ""
+    ) -> None:
         bot = self.client.bot
-        rich_raw = await InputRichMessage(
-            blocks=self._rich_blocks(quote)
-        ).write(client=bot)
+        blocks = self._rich_blocks(quote, category=category)
+        title = (
+            "Menu Bantuan Userbot"
+            if not category
+            else f"Bantuan: {category.title()}"
+        )
+        rich_raw = await InputRichMessage(blocks=blocks).write(client=bot)
         await bot.invoke(
             rawfn.messages.SetInlineBotResults(
                 query_id=int(event.id),
@@ -246,7 +400,7 @@ class Help(Module):
                     InputBotInlineResult(
                         id=str(event.id),
                         type="article",
-                        title="Menu Bantuan Userbot",
+                        title=title,
                         send_message=InputBotInlineMessageRichMessage(
                             rich_message=rich_raw,
                         ),
@@ -295,6 +449,22 @@ class Help(Module):
                         blocks=self._mod_rich_blocks(val)
                     ).write(client=self.client.bot)
                     # Detail modul polos: tanpa tombol apa pun
+                    await self._edit_inline_rich(event, rich_raw, None)
+                    return
+                if act == "cat":
+                    if val == "back":
+                        # Kembali ke index kategori
+                        quote = await self._get_quote()
+                        rich_raw = await InputRichMessage(
+                            blocks=self._rich_blocks(quote)
+                        ).write(client=self.client.bot)
+                        await self._edit_inline_rich(event, rich_raw, None)
+                        return
+                    # Buka halaman kategori
+                    quote = await self._get_quote()
+                    rich_raw = await InputRichMessage(
+                        blocks=self._rich_blocks(quote, category=val)
+                    ).write(client=self.client.bot)
                     await self._edit_inline_rich(event, rich_raw, None)
                     return
                 page = int(val)
