@@ -1,235 +1,308 @@
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import datetime
+import html as _html
 
 from pyrogram import enums, filters
-from pyrogram.errors import FloodWait, InputUserDeactivated, RPCError, UserIsBlocked
-from pyrogram.types import (
-    Message,
+from pyrogram.enums import ButtonStyle
+from pyrogram.errors import (
+    ChannelInvalid,
+    ChannelPrivate,
+    ChatSendPlainForbidden,
+    ChatWriteForbidden,
+    FloodPremiumWait,
+    FloodWait,
+    Forbidden,
+    InputUserDeactivated,
+    NotAcceptable,
+    PeerFlood,
+    PeerIdInvalid,
+    RPCError,
+    SlowmodeWait,
+    UserBannedInChannel,
+    UserIsBlocked,
 )
-from pyrogram.enums import ButtonStyle as _BS
+from pyrogram.types import Message
 
 from selfbot.listener import handler, reply
 from selfbot.module import Module
 
+pattern = r"^(gcast|ucast|bc|cancel)(?:\s+([\w\-]+))?$"
+
+
+class _Task:
+    """Task broadcast sederhana (bisa dibatalin pake .cancel <id>)."""
+
+    def __init__(self) -> None:
+        self._id = 0
+        self._active: set[int] = set()
+
+    def start(self) -> int:
+        self._id += 1
+        self._active.add(self._id)
+        return self._id
+
+    def is_active(self, tid: int) -> bool:
+        return tid in self._active
+
+    def end(self, tid: int) -> None:
+        self._active.discard(tid)
+
 
 class Broadcast(Module):
     name = "Broadcast"
-    cmds = "gcast / ucast (reply pesan)"
+    cmds = (
+        "gcast (reply)\n"
+        "ucast (reply)\n"
+        "bc group|private|all (reply)\n"
+        "cancel <task_id>"
+    )
     desc = {
         "gcast": "Broadcast ke semua grup",
         "ucast": "Broadcast ke chat privat",
-        "e.g.": "reply ke sebuah pesan, lalu ketik: gcast",
+        "bc": "Broadcast per tipe: group/private/all",
+        "cancel": "Batalkan broadcast yg jalan",
+        "e.g.": "reply pesan, lalu ketik: gcast",
     }
 
-    @handler(filters.regex(r"^(gcast|ucast)$") & reply, 1)
+    def __init__(self, client) -> None:
+        super().__init__(client)
+        self.tasks = _Task()
+        # blacklist chat id (bisa diisi manual di sini)
+        self.blacklist: set[int] = set()
+
+    @staticmethod
+    def _text(event: Message) -> str:
+        """Ambil teks dari reply (kalo ga reply, pake sisa command)."""
+        parts = (event.text or "").split(maxsplit=1)
+        return parts[1].strip() if len(parts) > 1 else ""
+
+    @handler(filters.regex(r"^cancel(?:\s+(\d+))?$"), 1)
+    async def on_cancel(self, event: Message) -> None:
+        parts = (event.text or "").split()
+        if len(parts) < 2:
+            await self.respond(event, "<b>Cara pakai:</b> <code>cancel <task_id></code>")
+            return
+        try:
+            tid = int(parts[1])
+        except ValueError:
+            await self.respond(event, "<code>task_id</code> harus angka")
+            return
+        if not self.tasks.is_active(tid):
+            await self.respond(
+                event, f"<b>Task</b> <code>#{tid}</code> tidak aktif / sudah selesai"
+            )
+            return
+        self.tasks.end(tid)
+        await self.respond(event, f"🛑 Broadcast <code>#{tid}</code> dibatalkan")
+
+    @handler(filters.regex(pattern) & reply, 1)
     async def on_message_out(self, event: Message) -> None:
-        mode = (event.text or "").strip()
+        cmd = (event.text or "").strip().split()[0].lstrip(".").lower()
+        arg = ""
+        if cmd == "bc":
+            parts = (event.text or "").split(maxsplit=1)
+            arg = parts[1].strip().lower() if len(parts) > 1 else "all"
+            mode = arg if arg in ("group", "private", "all") else "all"
+            if arg not in ("group", "private", "all"):
+                await self.respond(
+                    event,
+                    "<b>Pilihan:</b> <code>bc group</code> / <code>bc private</code> "
+                    "/ <code>bc all</code>",
+                )
+                return
+        elif cmd == "gcast":
+            mode = "group"
+        else:
+            mode = "private"
+
         await self._run(event, mode, event.reply_to_message)
 
-    async def _run(self, event: Message, mode: str, rep) -> None:
+    async def _run(self, event: Message, mode: str, rep: Message) -> None:
+        task_id = self.tasks.start()
         msg = await self.respond(
             event,
-            "<code>Menghitung target...</code>",
+            f"<code>Menghitung target...</code>\n"
+            f"<b>Task</b> <code>#{task_id}</code> — ketik "
+            f"<code>cancel {task_id}</code> buat berhenti",
         )
 
         now = datetime.datetime.now(datetime.UTC)
         targets = []
-
         async for dialog in event._client.get_dialogs():
-            # ID user sendiri berada di dialog.chat.id
             if dialog.chat.id == event._client.me.id:
                 continue
-
-            if mode == "gcast":
-                if dialog.chat.type in (
-                    enums.ChatType.GROUP,
-                    enums.ChatType.SUPERGROUP,
-                ):
-                    targets.append(dialog)
-            else:
-                if dialog.chat.type in (
-                    enums.ChatType.PRIVATE,
-                    enums.ChatType.BOT,
-                ):
-                    targets.append(dialog)
+            if dialog.chat.id in self.blacklist:
+                continue
+            t = dialog.chat.type
+            if mode == "group" and t in (
+                enums.ChatType.GROUP,
+                enums.ChatType.SUPERGROUP,
+            ):
+                targets.append(dialog)
+            elif mode == "private" and t in (
+                enums.ChatType.PRIVATE,
+                enums.ChatType.BOT,
+            ):
+                targets.append(dialog)
+            elif mode == "all":
+                targets.append(dialog)
 
         total = len(targets)
-        ok = 0
-        fail = 0
+        ok = fail = blocked = 0
+        errs: list[str] = []
 
-        blocked = 0
         for i, dialog in enumerate(targets, 1):
+            if not self.tasks.is_active(task_id):
+                await msg.edit_text(
+                    f"🛑 <b>Broadcast dibatalkan</b>\n"
+                    f"  <code>Terkirim</code> : <code>{ok}/{total}</code>"
+                )
+                return
             try:
-                await rep.copy(dialog.chat.id)
+                if rep is not None:
+                    await rep.copy(dialog.chat.id)
                 ok += 1
 
             except FloodWait as e:
-                await asyncio.sleep(e.value)
-
+                wait = min(int(e.value), 60)
+                await asyncio.sleep(wait)
                 try:
-                    await rep.copy(dialog.chat.id)
+                    if rep is not None:
+                        await rep.copy(dialog.chat.id)
                     ok += 1
-                except RPCError:
+                except RPCError as e2:
                     fail += 1
+                    errs.append(f"FloodWait ulang: {dialog.chat.id} ({e2})")
 
-            except (UserIsBlocked, InputUserDeactivated):
+            except (FloodPremiumWait, SlowmodeWait):
+                fail += 1
+                errs.append(f"Grup timer/slowmode: {dialog.chat.id}")
+
+            except ChatWriteForbidden:
+                fail += 1
+                errs.append(f"Dimute / ga bisa nulis: {dialog.chat.id}")
+
+            except ChatSendPlainForbidden:
+                fail += 1
+                errs.append(f"Teks polos dilarang: {dialog.chat.id}")
+
+            except Forbidden:
+                fail += 1
+                errs.append(f"AntiSpam aktif: {dialog.chat.id}")
+
+            except UserBannedInChannel:
+                fail += 1
+                errs.append(f"Akun di-ban di channel: {dialog.chat.id}")
+
+            except UserIsBlocked:
                 blocked += 1
 
-            except RPCError:
+            except InputUserDeactivated:
+                blocked += 1
+
+            except (ChannelPrivate, ChannelInvalid):
+                errs.append(f"Channel privat/invalid: {dialog.chat.id}")
+
+            except PeerIdInvalid:
+                errs.append(f"Grup invalid: {dialog.chat.id}")
+
+            except NotAcceptable:
+                errs.append(f"Grup berbayar (stars): {dialog.chat.id}")
+
+            except PeerFlood:
                 fail += 1
+                errs.append(f"Akun kena limit (PeerFlood): {dialog.chat.id}")
+
+            except RPCError as e:
+                fail += 1
+                errs.append(f"{dialog.chat.id}: {e}")
+
+            except Exception as e:
+                fail += 1
+                errs.append(f"{dialog.chat.id}: {e!r}")
 
             if i % 10 == 0 or i == total:
-                await msg.edit_text(
-                    f"📢 <b>Broadcast</b>\n"
-                    f"  <code>Progres</code> : <code>{i}/{total}</code>\n"
-                    f"  <code>Sukses</code> : <code>{ok}</code>\n"
-                    f"  <code>Diblokir</code> : <code>{blocked}</code>\n"
-                    f"  <code>Gagal </code> : <code>{fail}</code>"
-                )
+                with contextlib.suppress(Exception):
+                    await msg.edit_text(
+                        f"📢 <b>Broadcast</b>\n"
+                        f"  <code>Progres</code> : <code>{i}/{total}</code>\n"
+                        f"  <code>Sukses</code> : <code>{ok}</code>\n"
+                        f"  <code>Diblokir</code> : <code>{blocked}</code>\n"
+                        f"  <code>Gagal </code> : <code>{fail}</code>"
+                    )
 
             await asyncio.sleep(2)
 
-        dur = (
-            datetime.datetime.now(datetime.UTC) - now
-        ).total_seconds()
+        self.tasks.end(task_id)
+        dur = (datetime.datetime.now(datetime.UTC) - now).total_seconds()
 
-        # Coba rich table via inline bot (pola ping — fallback: HTML biasa)
-        try:
-            bot = self.client.bot
-            from pyrogram.raw import functions as rawfn
-            from pyrogram.raw.types import (
-                InputBotInlineMessageRichMessage,
-                InputBotInlineResult,
-                UpdateBotInlineQuery,
+        rows = [
+            ("Mode", mode),
+            ("Total Target", str(total)),
+            ("Berhasil", f"✅ {ok}"),
+            ("Diblokir", f"🚫 {blocked}"),
+            ("Gagal", f"❌ {fail}"),
+            ("Total Waktu", f"{dur:.1f}s"),
+            ("Task ID", f"#{task_id}"),
+        ]
+
+        ok_rich = False
+        with contextlib.suppress(Exception):
+            ok_rich = await self.send_rich(
+                event,
+                title="✨ Broadcast Selesai",
+                rows=rows,
+                note=(
+                    "Semua pesan broadcast telah selesai dikirim."
+                    + (f"\n{len(errs)} error — ketik bc-error" if errs else "")
+                ),
+                query_prefix="gcast",
+                buttons=(
+                    [
+                        (
+                            "📋 Error",
+                            b"bcerr",
+                            ButtonStyle.PRIMARY,
+                        )
+                    ]
+                    if errs
+                    else None
+                ),
             )
 
-            import richpyro as rp
-            rows = [
-                ("Mode", mode), ("Total Target", str(total)), ("Berhasil", f"✅ {ok}"),
-                ("Diblokir", f"🚫 {blocked}"), ("Gagal", f"❌ {fail}"),
-                ("Total Waktu", f"{dur:.2f}s"), ("Status Akhir", "✅ Selesai"),
-            ]
-            trows = [
-                [rp.table_cell(rp.bold("✨ Broadcast Selesai"), is_header=True, colspan=2, align="center")],
-                [rp.table_cell(rp.bold("Parameter"), is_header=True, align="center"), rp.table_cell(rp.bold("Keterangan"), is_header=True, align="center")],
-            ]
-            for k, v in rows:
-                trows.append([rp.table_cell(k, align="center"), rp.table_cell(v, align="center")])
-            blocks = [
-                rp.table(trows, bordered=True, striped=True, compact=False),
-                rp.para(rp.italic("Semua pesan broadcast telah selesai dikirim ke target.")),
-            ]
-            blocks.append(rp.buttons(rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=_BS.DANGER)))
-            rich_raw = await rp.blocks_message(*blocks).write(client=bot)
-            close_raw = None
-
-            # Payload TERBARU utk handler permanen (bug: output lama terpakai ulang)
-            self._rich_payload = (rich_raw, close_raw)
-
-            async def _h(_c, update, users, chats):
-                if not isinstance(update, UpdateBotInlineQuery):
-                    return
-                # Hanya jawab query gcast (jangan query ping/help/call)
-                if not str(update.query).startswith("gcast"):
-                    return
-                with contextlib.suppress(Exception):
-                    p_rich, p_close = self._rich_payload
-                    await bot.invoke(
-                        rawfn.messages.SetInlineBotResults(
-                            query_id=update.query_id,
-                            results=[
-                                InputBotInlineResult(
-                                    id=str(update.query_id),
-                                    type="article",
-                                    title="Broadcast Selesai",
-                                    send_message=InputBotInlineMessageRichMessage(
-                                        rich_message=p_rich,
-                                        reply_markup=p_close,
-                                    ),
-                                )
-                            ],
-                            cache_time=0,
-                        )
-                    )
-
-            # Pasang handler BERSAMA (group -2) — lazy, sama pola ping
-            from pyrogram.handlers import RawUpdateHandler
-
-            ping_mod = self.client.modules.get("Ping")
-            route = getattr(ping_mod, "_rich_route", None) if ping_mod else None
-            if route is None:
-                # Buat route + handler sendiri di broadcast
-                route = {}
-                if ping_mod is not None:
-                    ping_mod._rich_route = route
-
-            if getattr(self, "_rich_handler", None) is None:
-                from pyrogram.raw.types import UpdateBotInlineQuery as _UBIQ
-
-                async def _shared_answer(_c, update, users, chats):
-                    if not isinstance(update, _UBIQ):
-                        return
-                    q = str(update.query)
-                    for mod, payload in route.items():
-                        if q.startswith(mod):
-                            p_rich, p_close = payload
-                            with contextlib.suppress(Exception):
-                                await bot.invoke(
-                                    rawfn.messages.SetInlineBotResults(
-                                        query_id=update.query_id,
-                                        results=[
-                                            InputBotInlineResult(
-                                                id=str(update.query_id),
-                                                type="article",
-                                                title="Result",
-                                                send_message=InputBotInlineMessageRichMessage(
-                                                    rich_message=p_rich,
-                                                    reply_markup=p_close,
-                                                ),
-                                            )
-                                        ],
-                                        cache_time=0,
-                                    )
-                                )
-                            return
-
-                self._rich_handler = RawUpdateHandler(_shared_answer)
-                disp = bot.dispatcher
-                if -2 not in disp.groups:
-                    disp.groups[-2] = []
-                    disp.groups = dict(sorted(disp.groups.items()))
-                disp.groups[-2].append(self._rich_handler)
-
-            route["gcast"] = (rich_raw, close_raw)
-
-            res = None
-            if ping_mod is not None:
-                ping_mod._rich_mode = True
-            try:
-                res = await event._client.get_inline_bot_results(
-                    bot.me.id, f"gcast{now.timestamp()}"
-                )
-            finally:
-                if ping_mod is not None:
-                    ping_mod._rich_mode = False
-
-            if res.results:
-                await asyncio.gather(
-                    event.reply_inline_bot_result(res.query_id, res.results[0].id),
-                    msg.delete(),
-                )
-                return
-        except Exception as e:
+        if ok_rich:
             with contextlib.suppress(Exception):
-                self.logger.warning(f"gcast rich failed, fallback html: {e!r}")
+                await msg.delete()
+            self._last_errs = errs
+            return
 
-        await msg.edit_text(
+        self._last_errs = errs
+        teks = (
             f"📢 <b>Broadcast Selesai</b>\n"
-            f"  <code>Target</code> : <code>{total}</code>\n"
-            f"  <code>Sukses</code> : <code>{ok}</code>\n"
-            f"  <code>Diblokir</code> : <code>{blocked}</code>\n"
-            f"  <code>Gagal </code> : <code>{fail}</code>\n"
-            f"  <code>Waktu </code> : <code>{dur:.1f}s</code>"
+            f"  <code>Mode   </code> : <code>{mode}</code>\n"
+            f"  <code>Target </code> : <code>{total}</code>\n"
+            f"  <code>Sukses </code> : <code>{ok}</code>\n"
+            f"  <code>Diblok </code> : <code>{blocked}</code>\n"
+            f"  <code>Gagal  </code> : <code>{fail}</code>\n"
+            f"  <code>Waktu  </code> : <code>{dur:.1f}s</code>\n"
+            f"  <code>Task   </code> : <code>#{task_id}</code>"
         )
+        if errs:
+            teks += f"\n\n<i>{len(errs)} error — ketik</i> <code>bc-error</code>"
+        await msg.edit_text(teks)
 
+    @handler(filters.regex(r"^bc-?error$") & filters.outgoing, 1)
+    async def on_error(self, event: Message) -> None:
+        errs = getattr(self, "_last_errs", None) or []
+        if not errs:
+            await self.respond(event, "✅ <b>Tidak ada error</b> di broadcast terakhir")
+            return
+        body = "\n".join(f"  <code>{_html.escape(e[:120])}</code>" for e in errs[:30])
+        more = f"\n\n<i>...dan {len(errs) - 30} lagi</i>" if len(errs) > 30 else ""
+        await self.respond(
+            event,
+            f"⚠️ <b>Error Broadcast ({len(errs)})</b>\n{body}{more}",
+        )
