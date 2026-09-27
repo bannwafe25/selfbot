@@ -249,7 +249,7 @@ class Help(Module):
         total_mods = sum(len(v[1]) for _, v in ordered)
 
         blocks = [
-            rp.heading(rp.bold("📖 Menu Bantuan Userbot"), size=2),
+            rp.heading(rp.bold("📖 Menu Bantuan Selfbot"), size=2),
             rp.para(
                 rp.italic(
                     f"Pilih kategori — {len(ordered)} kategori, "
@@ -374,7 +374,7 @@ class Help(Module):
         bot = self.client.bot
         blocks = self._rich_blocks(quote, category=category)
         title = (
-            "Menu Bantuan Userbot"
+            "Menu Bantuan Selfbot"
             if not category
             else f"Bantuan: {category.title()}"
         )
