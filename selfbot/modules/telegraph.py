@@ -70,15 +70,15 @@ class TelegraPh(Module):
         path = await reply.download()
         if not isinstance(path, str):
             with contextlib.suppress(Exception):
-                await event.edit("<b>Upload gagal</b>\n<blockquote>file kosong</blockquote>")
+                await event.edit(
+                    "<b>Upload gagal</b>\n<blockquote>file kosong</blockquote>"
+                )
             return
 
         tmp = f"{path}.{ext}"
         try:
             os.replace(path, tmp)
-            with open(tmp, "rb") as f:
-                files = self.tph.upload_file(f)
-            url = "https://telegra.ph" + files[0]
+            url = await self._post_upload(tmp, ext)
         except Exception as e:
             with contextlib.suppress(Exception):
                 await event.edit(
@@ -93,6 +93,41 @@ class TelegraPh(Module):
             f"<b>🔗 Uploaded</b>\n\n{url}",
             disable_web_page_preview=False,
         )
+
+    async def _post_upload(self, path: str, ext: str) -> str:
+        """Upload langsung ke https://telegra.ph/upload pake httpx.
+
+        Library telegraph==2.2.0 udah usang: API sekarang balikin list of
+        string, tapi lib-nya nyangka list of dict -> crash '.get()'.
+        """
+        mime = {
+            "jpg": "image/jpeg",
+            "png": "image/png",
+            "gif": "image/gif",
+            "mp4": "video/mp4",
+        }.get(ext, "image/jpeg")
+
+        with open(path, "rb") as f:
+            files = {"file": (f"upload.{ext}", f.read(), mime)}
+
+        # pakai client sendiri: http klien utama jalan http2 + timeout=None
+        import httpx
+
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+            resp = await c.post("https://telegra.ph/upload", files=files)
+        resp.raise_for_status()
+        data = resp.json()
+
+        src = None
+        if isinstance(data, list) and data:
+            first = data[0]
+            src = first.get("src") if isinstance(first, dict) else str(first)
+        elif isinstance(data, dict):
+            src = data.get("src") or (data.get("error") and None)
+
+        if not src:
+            raise RuntimeError(str(data)[:200])
+        return src if src.startswith("http") else f"https://telegra.ph{src}"
 
     @staticmethod
     def _guess_ext(msg: Message) -> str:
