@@ -80,11 +80,15 @@ class TelegraPh(Module):
             os.replace(path, tmp)
             url = await self._post_upload(tmp, ext)
         except Exception as e:
-            with contextlib.suppress(Exception):
-                await event.edit(
-                    f"<b>Upload gagal</b>\n<blockquote>{e}</blockquote>"
-                )
-            return
+            # telegra.ph diblokir buat klien luar -> fallback ke tmpfiles.org
+            try:
+                url = await self._tmpfiles_upload(tmp, ext)
+            except Exception:
+                with contextlib.suppress(Exception):
+                    await event.edit(
+                        f"<b>Upload gagal</b>\n<blockquote>{e}</blockquote>"
+                    )
+                return
         finally:
             with contextlib.suppress(Exception):
                 os.remove(tmp)
@@ -128,6 +132,31 @@ class TelegraPh(Module):
         if not src:
             raise RuntimeError(str(data)[:200])
         return src if src.startswith("http") else f"https://telegra.ph{src}"
+
+    async def _tmpfiles_upload(self, path: str, ext: str) -> str:
+        """Fallback host: tmpfiles.org (telegra.ph /upload diblokir buat bot)."""
+        import httpx
+
+        mime = {
+            "jpg": "image/jpeg",
+            "png": "image/png",
+            "gif": "image/gif",
+            "mp4": "video/mp4",
+        }.get(ext, "image/jpeg")
+
+        with open(path, "rb") as f:
+            files = {"file": (f"upload.{ext}", f.read(), mime)}
+
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+            resp = await c.post(
+                "https://tmpfiles.org/api/v1/upload", files=files
+            )
+        resp.raise_for_status()
+        url = (resp.json().get("data") or {}).get("url")
+        if not url:
+            raise RuntimeError(str(resp.text)[:200])
+        # tmpfiles kasih halaman, bukan file langsung
+        return url
 
     @staticmethod
     def _guess_ext(msg: Message) -> str:
