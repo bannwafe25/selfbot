@@ -95,6 +95,23 @@ class Telegram:
 
         if time - event.prog_last >= 2.5 or current == total:
             speed = (current - event.prog_byte) / (time - event.prog_last)
+            # Rich progress card (bot-only; userbot otomatis fallback via _rich_card_html)
+            rich_sent = False
+            try:
+                rich_sent = await self._rich_progress_card(
+                    event,
+                    title.lstrip() or "Progress",
+                    current,
+                    total,
+                    speed,
+                    time - event.prog_init,
+                    (total - current) / speed if speed > 0 else 0,
+                )
+            except Exception:
+                rich_sent = False
+            if rich_sent:
+                return
+
             await self.respond(
                 event,
                 self.fmtmsg(
@@ -114,6 +131,132 @@ class Telegram:
             )
             event.prog_last = time
             event.prog_byte = current
+
+    async def _rich_progress_card(
+        self,
+        event: Update,
+        title: str,
+        current: int,
+        total: int,
+        speed: float,
+        elapsed: float,
+        eta: float,
+    ) -> bool:
+        """Kartu progress rich via inline bot; fallback HTML progress kalau gagal."""
+        import contextlib
+
+        bot = self.client.bot
+        # 1) Bot account: kartu rich penuh via inline
+        if getattr(bot, "me", None) and bot.me.is_bot:
+            try:
+                import richpyro as rp
+                from pyrogram.enums import ButtonStyle
+
+                pct = current / total * 100 if total else 0
+                filled = round(pct / 10)
+                bar = "▰" * filled + "▱" * (10 - filled)
+
+                blocks = [
+                    rp.heading(rp.bold(f"⬆️ {title}"), size=3),
+                    rp.divider(),
+                    rp.para(rp.bold(f"{bar} {pct:.1f}%")),
+                    rp.para(
+                        rp.code(self.fmtbyte(current)),
+                        " / ",
+                        rp.code(self.fmtbyte(total)),
+                    ),
+                    rp.table(
+                        [
+                            [
+                                rp.table_cell(rp.bold("Speed"), align="left"),
+                                rp.table_cell(
+                                    f"{self.fmtbyte(speed)}/s", align="left"
+                                ),
+                            ],
+                            [
+                                rp.table_cell(rp.bold("Elapsed"), align="left"),
+                                rp.table_cell(
+                                    self.fmtsec(elapsed, human=True), align="left"
+                                ),
+                            ],
+                            [
+                                rp.table_cell(rp.bold("ETA"), align="left"),
+                                rp.table_cell(
+                                    self.fmtsec(eta, human=True), align="left"
+                                ),
+                            ],
+                        ],
+                        bordered=True,
+                        striped=True,
+                        compact=True,
+                    ),
+                    rp.buttons(
+                        rp.btn(
+                            rp.bold("✕ Cancel"),
+                            callback_data=b"0",
+                            style=ButtonStyle.DANGER,
+                        )
+                    ),
+                ]
+
+                rich_raw = await rp.blocks_message(*blocks).write(client=bot)
+
+                from pyrogram.raw import functions as rawfn
+                from pyrogram.raw.types import (
+                    InputBotInlineMessageRichMessage,
+                    InputBotInlineResult,
+                )
+
+                # Route via handler bersama milik Ping (group -2)
+                from selfbot.methods.format import Format
+
+                fmt = Format.__new__(Format)
+                fmt.client = self.client
+                fmt.logger = self.client.logger
+                fmt._ensure_rich_handler(
+                    self.client.modules.get("Ping"),
+                    rawfn,
+                    InputBotInlineMessageRichMessage,
+                    InputBotInlineResult,
+                )
+                ping_mod = self.client.modules.get("Ping")
+                if ping_mod is None:
+                    return False
+                if getattr(ping_mod, "_rich_route", None) is None:
+                    ping_mod._rich_route = {}
+                prefix = f"prog{id(event)}"
+                ping_mod._rich_route[prefix] = (rich_raw, None)
+
+                import time as _time
+
+                res = await event._client.get_inline_bot_results(
+                    bot.me.id, f"{prefix}{_time.time()}"
+                )
+                if res.results:
+                    # edit message "..." jadi hasil inline rich (sekali)
+                    if not getattr(event, "prog_inline", None):
+                        sent = await event.reply_inline_bot_result(
+                            res.query_id, res.results[0].id
+                        )
+                        event.prog_inline = True
+                    # update payload — inline client fetch ulang query id baru
+                    return True
+                return False
+            except Exception:
+                return False
+
+        # 2) Userbot: progress bar HTML dengan ⬛⬜ + mono block
+        pct = current / total * 100 if total else 0
+        filled = round(pct / 10)
+        bar = "▰" * filled + "▱" * (10 - filled)
+        text = (
+            f"<b>⬆️ {title}</b>\n\n"
+            f"<b>{bar} {pct:.1f}%</b>\n"
+            f"<code>{self.fmtbyte(current)} / {self.fmtbyte(total)} — "
+            f"{self.fmtbyte(speed)}/s</code>"
+        )
+        await self.respond(event, text, reply_markup=self.ikm(("Cancel", b"0")))
+        return True
 
     async def respond(
         self,

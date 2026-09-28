@@ -25,15 +25,16 @@ class GenAI(Module):
         "e.g.": "Hello, World! ai",
     }
 
-    API_URL = "https://www.zpkece.cloud/v1/chat/completions"
-    DEFAULT_MODEL = "zp/deepseek/deepseek-v4-flash"
+    API_URL = "https://api.groq.com/openai/v1/chat/completions"
+    DEFAULT_MODEL = "openai/gpt-oss-120b"
 
     MAX_HISTORY = 12
     MAX_PROMPT_LENGTH = 12000
 
     async def on_starting(self) -> None:
         self.api_key = (
-            await self.getvar("AI_API_KEY")
+            await self.getvar("GROQ_API_KEY")
+            or await self.getvar("AI_API_KEY")
             or await self.getvar("API_SERVER_KEY")
         )
 
@@ -113,6 +114,79 @@ class GenAI(Module):
         return str(text)[
             :self.MAX_PROMPT_LENGTH
         ]
+
+    async def send_rich_ai(
+        self,
+        event,
+        title: str,
+        rows: list,
+        answer: str,
+        query_prefix: str = "genai",
+    ) -> bool:
+        """Kartu jawaban AI gaya ChatGPT: judul + tabel meta + isi jawaban."""
+        try:
+            bot = self.client.bot
+            import richpyro as rp
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+            )
+            from selfbot.methods.format import Format
+            from pyrogram.enums import ButtonStyle
+
+            trows = [
+                [
+                    rp.table_cell(rp.bold("Parameter"), is_header=True, align="left"),
+                    rp.table_cell(rp.bold("Nilai"), is_header=True, align="left"),
+                ]
+            ]
+            for k, v in rows:
+                trows.append(
+                    [rp.table_cell(rp.bold(str(k)), align="left"), rp.table_cell(str(v), align="left")]
+                )
+
+            blocks = [
+                rp.heading(rp.bold(title), size=3),
+                rp.table(trows, bordered=True, striped=True, compact=True),
+                rp.divider(),
+                rp.para(answer),
+                rp.buttons(
+                    rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=ButtonStyle.DANGER)
+                ),
+            ]
+
+            rich_raw = await rp.blocks_message(*blocks).write(client=bot)
+
+            ping_mod = self.client.modules.get("Ping")
+            if ping_mod is None:
+                return False
+            fmt = Format.__new__(Format)
+            fmt.client = self.client
+            fmt.logger = self.client.logger
+            fmt._ensure_rich_handler(
+                ping_mod, rawfn, InputBotInlineMessageRichMessage, InputBotInlineResult
+            )
+            if getattr(ping_mod, "_rich_route", None) is None:
+                ping_mod._rich_route = {}
+            ping_mod._rich_route[query_prefix] = (rich_raw, None)
+
+            import datetime as _dt
+
+            now = _dt.datetime.now(_dt.UTC)
+            res = await event._client.get_inline_bot_results(
+                bot.me.id, f"{query_prefix}{now.timestamp()}"
+            )
+            if not res or not res.results:
+                return False
+
+            await asyncio.gather(
+                event.reply_inline_bot_result(res.query_id, res.results[0].id),
+                event.delete(),
+            )
+            return True
+        except Exception:
+            return False
 
     async def ask(self, messages):
         payload = {
@@ -324,16 +398,18 @@ class GenAI(Module):
                     + "..."
                 )
 
-            if len(answer) <= 400:
-                rich_rows = [("Model", "Gemini"), ("Waktu", elapsed)]
-                if await self.send_rich(
-                    event,
-                    "🤖 AI Assistant",
-                    rich_rows,
-                    note=answer,
-                    query_prefix="genai",
-                ):
-                    return
+            rich_rows = [
+                ("Model", self.model.split("/")[-1]),
+                ("Panjang Jawaban", f"{len(answer)} karakter"),
+            ]
+            if await self.send_rich_ai(
+                event,
+                "🤖 Jawaban AI",
+                rich_rows,
+                answer,
+                query_prefix="genai",
+            ):
+                return
 
             await self.respond(
                 event,

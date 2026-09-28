@@ -148,14 +148,17 @@ class Format:
             import richpyro as rp
             from pyrogram.enums import ButtonStyle
 
-            # Tabel via richpyro — judul jadi baris colspan pertama (center di semua klien)
-            trows = [[rp.table_cell(rp.bold("Parameter"), is_header=True, align="center"),
-                      rp.table_cell(rp.bold("Keterangan"), is_header=True, align="center")]]
+            # Panel card modern: heading + divider + tabel compact + catatan
+            trows = [[rp.table_cell(rp.bold("Parameter"), is_header=True, align="left"),
+                      rp.table_cell(rp.bold("Keterangan"), is_header=True, align="left")]]
             for k, v in rows:
-                trows.append([rp.table_cell(str(k), align="left"), rp.table_cell(str(v), align="left")])
-            trows.insert(0, [rp.table_cell(rp.bold(title), is_header=True, colspan=2, align="center")])
+                trows.append([rp.table_cell(rp.bold(str(k)), align="left"),
+                              rp.table_cell(str(v), align="left")])
 
-            blocks = []
+            blocks = [
+                rp.heading(rp.bold(title), size=3),
+                rp.divider(),
+            ]
             # Blok media (video/foto) di atas tabel kalau ada
             if media_file:
                 try:
