@@ -29,7 +29,7 @@ except Exception:
 # ============================================================
 
 pattern = re.compile(
-    r"^call(?:\s-(start|end|join|leave))?"
+    r"^call(?:\s-(join|leave))?"
     r"(?:\s(@?[a-zA-Z][a-zA-Z0-9_]{2,31}[a-zA-Z0-9]|-100[1-9]\d{9}|[1-9]\d{1,9}))?"
     r"(?:\s-as\s(@?[a-zA-Z][a-zA-Z0-9_]{1,31}[a-zA-Z0-9]))?"
     r"(?:\s(-mute))?$"
@@ -46,7 +46,7 @@ class Call(Module):
     cmds = "call -{action} {chat}? (-as {peer})? (-mute)?"
 
     desc = {
-        "action": "(join|leave|start|end)",
+        "action": "(join|leave)",
         "chat": "Chat ID or Username",
         "peer": "Username channel (join as)",
         "-mute": "Join dalam kondisi mute",
@@ -363,26 +363,6 @@ class Call(Module):
 
             head = "👋 Left Call"
 
-        # ----------------------------------------------------
-        # START
-        # ----------------------------------------------------
-
-        elif action == "start":
-
-            func = event._client.create_video_chat
-
-            head = "🎤 Started Call"
-
-        # ----------------------------------------------------
-        # END
-        # ----------------------------------------------------
-
-        elif action == "end":
-
-            func = event._client.discard_group_call
-
-            head = "🛑 Ended Call"
-
         else:
             return
 
@@ -532,7 +512,7 @@ class Call(Module):
         await self._rich_final(event, title, extra, dur, chat_label=chat_label)
 
         # Auto-delete disabled at user request (Sep 23)
-        # if action in ("join", "leave", "start", "end"):
+        # if action in ("join", "leave"):
         #     await asyncio.sleep(2)
         #     with contextlib.suppress(Exception):
         #         await event.delete()

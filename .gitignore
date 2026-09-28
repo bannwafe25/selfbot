@@ -222,3 +222,6 @@ downloads/
 selfbot/*.session
 *.session
 unknown_errors.txt
+cookies.txt
+login*.py
+login*.sh

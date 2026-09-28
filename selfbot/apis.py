@@ -49,7 +49,6 @@ SEARCH_ENGINES = {
 }
 
 # ── Siputzx APIs ─────────────────────────────────────────────────────
-SIPUTZX_PINTEREST = "https://api.siputzx.my.id/api/s/pinterest"
 
 # ── Misc ─────────────────────────────────────────────────────────────
 SANGMATA_USERNAME = "@SangMata_beta_bot"

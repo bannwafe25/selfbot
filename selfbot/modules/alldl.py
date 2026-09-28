@@ -64,9 +64,7 @@ class AllDL(Module):
             if "tiktok.com" in url.lower():
                 media_file, title, provider = await self._tiktok(url)
             elif "instagram.com" in url.lower() or "instagr.am" in url.lower():
-                media_file, title, provider = await self._ytdlp_dl(
-                    url, "IG", {"format": "best/bestvideo+bestaudio/best"}
-                )
+                media_file, title, provider = await self._ig(url)
             else:
                 cookie_file = os.environ.get("YTDLP_COOKIES") or "/home/agentuser/cookies.txt"
                 if not os.path.isfile(cookie_file):
@@ -156,6 +154,20 @@ class AllDL(Module):
         out = download_dir / f"tiktok_{d.get('id', int(datetime.datetime.now(datetime.UTC).timestamp()))}.mp4"
         await self._download(str(play), out)
         return out, title, "TikTok"
+
+    async def _ig(self, url: str):
+        from selfbot.igdl import igdl
+
+        loop = asyncio.get_running_loop()
+        download_dir = Path("downloads")
+        download_dir.mkdir(parents=True, exist_ok=True)
+        out = download_dir / f"ig_{int(now_ts())}.mp4"
+
+        def run():
+            return igdl(url, str(out))
+
+        code, size = await loop.run_in_executor(None, run)
+        return out, f"Instagram reel {code}", "Instagram"
 
     async def _ytdlp_dl(self, url: str, tag: str, extra: dict):
         loop = asyncio.get_running_loop()
