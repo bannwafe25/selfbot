@@ -66,18 +66,13 @@ class Ping(Module):
         markup = self.ikm(
             [[("Ping!", "data", b"ping")], [("🗑 Tutup", "data", b"0")]]
         )
-        # Rich table via INLINE bot — raw handler dipasang di group -2
-        # (dieksekusi sebelum framework handler di group -1)
+        # Rich table via INLINE bot — helper bersama send_rich_blocks (format.py)
         if isinstance(event, Message):
             try:
-                app_ms = re.sub(r"[^0-9.]", "", str(app)) or app
                 import richpyro as rp
-                from pyrogram.enums import ButtonStyle
 
                 app_ms = re.sub(r"[^0-9.]", "", str(app)) or app
                 bot_ms = re.sub(r"[^0-9.]", "", str(bot)) or bot
-
-                uptime = self.fmtsec(now, human=True) if hasattr(self, "fmtsec") else "-"
 
                 trows = [
                     [rp.table_cell(rp.bold("🏓 Pong!"), is_header=True, colspan=2, align="center")],
@@ -94,78 +89,11 @@ class Ping(Module):
                 ]
                 blocks = [
                     rp.table(trows, bordered=True, striped=True, compact=False),
-                    rp.buttons(
-                        rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)
-                    ),
                 ]
 
-                botc = self.client.bot
-                from pyrogram.raw import functions as rawfn
-                from pyrogram.raw.types import (
-                    InputBotInlineMessageRichMessage,
-                    InputBotInlineResult,
-                )
-
-                rich_raw = await rp.blocks_message(*blocks).write(client=bot)
-                close_raw = None
-
-                from pyrogram.handlers import RawUpdateHandler
-
-                # Pastikan handler BERSAMA + route siap
-                if getattr(self, "_rich_route", None) is None:
-                    self._rich_route = {}
-                if getattr(self, "_rich_handler", None) is None:
-                    from pyrogram.raw.types import UpdateBotInlineQuery as _UBIQ
-
-                    async def _shared_answer(_c, update, users, chats):
-                        if not isinstance(update, _UBIQ):
-                            return
-                        q = str(update.query)
-                        for mod, payload in getattr(self, "_rich_route", {}).items():
-                            if q.startswith(mod):
-                                p_rich, p_close = payload
-                                try:
-                                    await botc.invoke(
-                                        rawfn.messages.SetInlineBotResults(
-                                            query_id=update.query_id,
-                                            results=[
-                                                InputBotInlineResult(
-                                                    id=str(update.query_id),
-                                                    type="article",
-                                                    title="Result",
-                                                    send_message=InputBotInlineMessageRichMessage(
-                                                        rich_message=p_rich,
-                                                    ),
-                                                )
-                                            ],
-                                            cache_time=0,
-                                        ),
-                                    )
-                                except Exception as exc:
-                                    self.logger.warning(f"shared rich {mod} failed: {exc!r}")
-                                return
-
-                    self._rich_handler = RawUpdateHandler(_shared_answer)
-                    disp = botc.dispatcher
-                    if -2 not in disp.groups:
-                        disp.groups[-2] = []
-                        disp.groups = dict(sorted(disp.groups.items()))
-                    disp.groups[-2].append(self._rich_handler)
-                self._rich_route["ping"] = (rich_raw, None)
-                self._rich_mode = True
-                try:
-                    res = await event._client.get_inline_bot_results(
-                        botc.me.id, f"ping{now.timestamp()}"
-                    )
-                finally:
-                    self._rich_mode = False
-                if res.results:
-                    await asyncio.gather(
-                        event.reply_inline_bot_result(
-                            res.query_id, res.results[0].id
-                        ),
-                        event.delete(),
-                    )
+                if await self.send_rich_blocks(event, blocks, query_prefix="ping"):
+                    with contextlib.suppress(Exception):
+                        await event.delete()
                     return
                 # Markup tanpa tombol — kosongkan
                 markup = None

@@ -125,15 +125,12 @@ class GenAI(Module):
     ) -> bool:
         """Kartu jawaban AI gaya ChatGPT: judul + tabel meta + isi jawaban."""
         try:
-            bot = self.client.bot
             import richpyro as rp
-            from pyrogram.raw import functions as rawfn
-            from pyrogram.raw.types import (
-                InputBotInlineMessageRichMessage,
-                InputBotInlineResult,
-            )
             from selfbot.methods.format import Format
-            from pyrogram.enums import ButtonStyle
+
+            fmt = Format.__new__(Format)
+            fmt.client = self.client
+            fmt.logger = self.client.logger
 
             trows = [
                 [
@@ -151,40 +148,9 @@ class GenAI(Module):
                 rp.table(trows, bordered=True, striped=True, compact=True),
                 rp.divider(),
                 rp.para(answer),
-                rp.buttons(
-                    rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)
-                ),
             ]
 
-            rich_raw = await rp.blocks_message(*blocks).write(client=bot)
-
-            ping_mod = self.client.modules.get("Ping")
-            if ping_mod is None:
-                return False
-            fmt = Format.__new__(Format)
-            fmt.client = self.client
-            fmt.logger = self.client.logger
-            fmt._ensure_rich_handler(
-                ping_mod, rawfn, InputBotInlineMessageRichMessage, InputBotInlineResult
-            )
-            if getattr(ping_mod, "_rich_route", None) is None:
-                ping_mod._rich_route = {}
-            ping_mod._rich_route[query_prefix] = (rich_raw, None)
-
-            import datetime as _dt
-
-            now = _dt.datetime.now(_dt.UTC)
-            res = await event._client.get_inline_bot_results(
-                bot.me.id, f"{query_prefix}{now.timestamp()}"
-            )
-            if not res or not res.results:
-                return False
-
-            await asyncio.gather(
-                event.reply_inline_bot_result(res.query_id, res.results[0].id),
-                event.delete(),
-            )
-            return True
+            return await fmt.send_rich_blocks(event, blocks, query_prefix=query_prefix)
         except Exception:
             return False
 

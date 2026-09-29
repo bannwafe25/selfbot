@@ -62,14 +62,7 @@ class SGB(Module):
                 safe = safe[:3600] + "..."
 
             # Format ala SangMata: kartu teks terstruktur (list), bukan tabel k/v
-            import asyncio as _aio
-            import contextlib as _cl
             import richpyro as rp
-            from pyrogram.raw import functions as rawfn
-            from pyrogram.raw.types import (
-                InputBotInlineMessageRichMessage,
-                InputBotInlineResult,
-            )
 
             lines = [ln.strip() for ln in result.strip().splitlines() if ln.strip()]
             blocks = [
@@ -80,30 +73,9 @@ class SGB(Module):
                 blocks.append(rp.para(rp.italic(ln)))
             blocks.append(rp.divider())
             blocks.append(rp.para(rp.bold(f"🕒 {self.fmtsec(now)}")))
-            blocks.append(rp.buttons(rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=rp.Style.DANGER)))
 
-            try:
-                bot = self.client.bot
-                rich_raw = await rp.blocks_message(*blocks).write(client=bot)
-                ping_mod = self.client.modules.get("Ping")
-                route = getattr(ping_mod, "_rich_route", None)
-                if route is None and ping_mod is not None:
-                    self._ensure_rich_handler(ping_mod, rawfn, InputBotInlineMessageRichMessage, InputBotInlineResult)
-                    route = getattr(ping_mod, "_rich_route", None)
-                if route is not None:
-                    route["sgb"] = (rich_raw, None)
-                    res = await event._client.get_inline_bot_results(
-                        bot.me.id, f"sgb{now.timestamp()}"
-                    )
-                    if res.results:
-                        await _aio.gather(
-                            event.reply_inline_bot_result(res.query_id, res.results[0].id),
-                            event.delete(),
-                        )
-                        return
-            except Exception as e:
-                with _cl.suppress(Exception):
-                    self.logger.warning(f"sgb rich failed, fallback html: {e!r}")
+            if await self.send_rich_blocks(event, blocks, query_prefix="sgb"):
+                return
 
             await self.respond(
                 event,
