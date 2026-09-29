@@ -113,6 +113,7 @@ class Help(Module):
         "terminal": ("⚙️", "Sistem"),
         "sendmod": ("⚙️", "Sistem"),
         "call": ("📞", "Voice Call"),
+        "music": ("🎵", "Voice Call"),
         "tts": ("🎙", "Voice Call"),
         "help": ("📖", "Bantuan"),
     }

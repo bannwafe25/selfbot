@@ -193,6 +193,36 @@ class Telegram(abc.ABC):
 
             raise
 
+        # Client assistant (untuk music/voice call) — opsional:
+        # pakai string session dari DB kalau ada
+        self.assistant = None
+        try:
+            kv = await self.db.kv_store.find_one(
+                {"_id": "assistant_session_string"}
+            )
+            if kv and kv.get("value"):
+                self.assistant = Client(
+                    name="assistant",
+                    api_id=31019298,
+                    api_hash="f80a208b8cd4709c30c26ceacae9e1be",
+                    app_version="2.2 K",
+                    device_model="Chrome 143",
+                    workdir="./selfbot/",
+                    parse_mode=ParseMode.HTML,
+                    sleep_threshold=25,
+                    client_platform=ClientPlatform.ANDROID,
+                    session_string=kv["value"],
+                    link_preview_options=LinkPreviewOptions(is_disabled=True),
+                )
+                await self.assistant.start()
+                self.logger.info(
+                    f"Assistant ready: {self.assistant.me.first_name} "
+                    f"(id {self.assistant.me.id})"
+                )
+        except RPCError as e:
+            self.logger.warning(f"Assistant gagal start: {e.__class__.__name__}: {e}")
+            self.assistant = None
+
         self.config.pop("BOT_TOKEN", None)
         await asyncio.gather(
             self.app.resolve_peer(self.bot.me.username), asyncio.to_thread(self.loads)
