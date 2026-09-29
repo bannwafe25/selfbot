@@ -147,7 +147,7 @@ class Info(Module):
             blocks.append(
                 rp.buttons(
                     rp.url_btn(rp.bold("🔗 Buka Profil"), f"tg://user?id={user.id}"),
-                    rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=__import__("pyrogram.enums", fromlist=["ButtonStyle"]).ButtonStyle.DANGER),
+                    rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=__import__("pyrogram.enums", fromlist=["ButtonStyle"]).ButtonStyle.DANGER),
                 )
             )
 

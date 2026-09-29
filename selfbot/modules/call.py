@@ -113,7 +113,7 @@ class Call(Module):
     # --------------------------------------------------------
 
     async def _rich_final(self, event: Message, title: str, extra: list, dur: float, chat_label: str = "-"):
-        """Kirim hasil call sebagai blok collapsible (details) + tombol Close."""
+        """Kirim hasil call sebagai blok collapsible (details) + tombol Tutup."""
         import richpyro as rp
         from pyrogram.enums import ButtonStyle
 
@@ -147,7 +147,7 @@ class Call(Module):
             rp.table(trows, bordered=True, striped=True, compact=False),
             rp.expandable_quote(rp.italic(f"Waktu eksekusi {dur:.2f}s")),
             rp.buttons(
-                rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=ButtonStyle.DANGER)
+                rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)
             ),
         ]
 

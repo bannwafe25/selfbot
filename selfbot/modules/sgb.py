@@ -80,7 +80,7 @@ class SGB(Module):
                 blocks.append(rp.para(rp.italic(ln)))
             blocks.append(rp.divider())
             blocks.append(rp.para(rp.bold(f"🕒 {self.fmtsec(now)}")))
-            blocks.append(rp.buttons(rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=rp.Style.DANGER)))
+            blocks.append(rp.buttons(rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=rp.Style.DANGER)))
 
             try:
                 bot = self.client.bot

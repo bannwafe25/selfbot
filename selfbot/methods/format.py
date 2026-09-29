@@ -65,7 +65,7 @@ class Format:
         """Kirim rich message dari blok bebas (tanpa tabel wajib).
 
         blocks = list of richpyro blocks (para, details, photo_block, buttons, ...).
-        Tombol 🗑 Close otomatis ditambah kalau belum ada blok buttons.
+        Tombol 🗑 Tutup otomatis ditambah kalau belum ada blok buttons.
         Return True kalau sukses, False kalau perlu fallback HTML.
         """
         import datetime as _dt
@@ -177,7 +177,7 @@ class Format:
                 # Blockquote (garis biru vertikal)
                 blocks.append(rp.expandable_quote(rp.italic(note)))
 
-            # Tombol rich: Close (merah) + custom tambahan
+            # Tombol rich: Tutup (merah) + custom tambahan
             rich_btns = [rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)]
             for btext, bdata, bstyle in (buttons or []):
                 rich_btns.append(rp.btn(rp.bold(btext), callback_data=bdata, style=bstyle or ButtonStyle.PRIMARY))

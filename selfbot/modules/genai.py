@@ -152,7 +152,7 @@ class GenAI(Module):
                 rp.divider(),
                 rp.para(answer),
                 rp.buttons(
-                    rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=ButtonStyle.DANGER)
+                    rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)
                 ),
             ]
 

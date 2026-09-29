@@ -294,7 +294,7 @@ class Help(Module):
         for i in range(0, len(btns), 2):
             blocks.append(rp.buttons(*btns[i : i + 2], align="center"))
 
-        # Nav bawah: Close + Channel jadi 1 baris biar ga numpuk
+        # Nav bawah: Tutup + Channel jadi 1 baris biar ga numpuk
         blocks.append(
             rp.buttons(
                 rp.btn("🗑 Tutup", callback_data=b"0", style=rp.Style.DANGER),

@@ -335,7 +335,7 @@ class AnimePic(Module):
                                     ).encode(),
                                 ),
                                 RichMessageButton(
-                                    text=RichTextBold("🗑 Close"),
+                                    text=RichTextBold("🗑 Tutup"),
                                     style=ButtonStyle.DANGER,
                                     callback_data=b"0",
                                 ),
@@ -459,7 +459,7 @@ class AnimePic(Module):
                                     ).encode(),
                                 ),
                                 RichMessageButton(
-                                    text=RichTextBold("🗑 Close"),
+                                    text=RichTextBold("🗑 Tutup"),
                                     style=ButtonStyle.DANGER,
                                     callback_data=b"0",
                                 ),
