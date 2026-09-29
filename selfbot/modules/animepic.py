@@ -1005,7 +1005,7 @@ class AnimePic(Module):
         payload = self.build_callback_payload(tag, moe_tag)
         return self.ikm([[
             ("Refresh", "data", f"animepic/next/{payload}", "G"),
-            ("Close",   "data", b"0", "R"),
+            ("🗑 Tutup", "data", b"0", "R"),
         ]])
 
     def build_caption_rich(

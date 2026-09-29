@@ -64,7 +64,7 @@ class Ping(Module):
             ),
         )
         markup = self.ikm(
-            [[("Ping!", "data", b"ping")], [("Close", "data", b"0")]]
+            [[("Ping!", "data", b"ping")], [("🗑 Tutup", "data", b"0")]]
         )
         # Rich table via INLINE bot — raw handler dipasang di group -2
         # (dieksekusi sebelum framework handler di group -1)

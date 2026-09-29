@@ -129,7 +129,7 @@ class PPCouple(Module):
             )
             kb = self.ikm([
                 [("🔄 Refresh", "data", b"ppcouple/next"),
-                 ("Close", "data", b"0")],
+                 ("🗑 Tutup", "data", b"0")],
             ])
 
             results = [
@@ -164,7 +164,7 @@ class PPCouple(Module):
             )
             kb = self.ikm([
                 [("🔄 Refresh", "data", b"ppcouple/next"),
-                 ("Close", "data", b"0")],
+                 ("🗑 Tutup", "data", b"0")],
             ])
 
             # Determine if this is cowo or cewe based on current caption

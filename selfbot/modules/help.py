@@ -88,7 +88,6 @@ class Help(Module):
         "alldl": ("📥", "Media & Unduhan"),
         "toss": ("📤", "Media & Unduhan"),
         "ytdl": ("📥", "Media & Unduhan"),
-        "tts": ("🎙", "Media & Unduhan"),
         "upload": ("📥", "Media & Unduhan"),
         "sticker": ("🎨", "Kreatif"),
         "brat": ("🎨", "Kreatif"),
@@ -114,6 +113,7 @@ class Help(Module):
         "terminal": ("⚙️", "Sistem"),
         "sendmod": ("⚙️", "Sistem"),
         "call": ("📞", "Voice Call"),
+        "tts": ("🎙", "Voice Call"),
         "help": ("📖", "Bantuan"),
     }
 
@@ -184,7 +184,7 @@ class Help(Module):
                     self.ikm(
                         [
                             ("« Back", "data", f"help/page/{self.maps[name]}"),
-                            ("Close", "data", b"0"),
+                            ("🗑 Tutup", "data", b"0"),
                         ]
                     ),
                     self.mods[name],
@@ -196,7 +196,7 @@ class Help(Module):
             ]
             await self.answer(
                 event,
-                self.ikm(("Close", "data", b"0")),
+                self.ikm(("🗑 Tutup", "data", b"0"))
                 (
                     f"<code>No Module with Name '{name}'</code>\n\n"
                     "<b>Available Modules:</b>\n"
@@ -297,7 +297,7 @@ class Help(Module):
         # Nav bawah: Close + Channel jadi 1 baris biar ga numpuk
         blocks.append(
             rp.buttons(
-                rp.btn("🗑 ✕ Tutup", callback_data=b"0", style=rp.Style.DANGER),
+                rp.btn("🗑 Tutup", callback_data=b"0", style=rp.Style.DANGER),
                 RichMessageButton(
                     text=rp.bold("📢 Channel"),
                     style=ButtonStyle.SUCCESS,
@@ -360,7 +360,7 @@ class Help(Module):
                     callback_data=b"help/cat/back",
                     style=rp.Style.SUCCESS,
                 ),
-                rp.btn("🗑 ✕ Tutup", callback_data=b"0", style=rp.Style.DANGER),
+                rp.btn("🗑 Tutup", callback_data=b"0", style=rp.Style.DANGER),
                 align="center",
             )
         )
@@ -426,7 +426,7 @@ class Help(Module):
         blocks.append(rp.divider())
         blocks.append(
             rp.buttons(
-                rp.btn("🗑 ✕ Tutup", callback_data=b"0", style=rp.Style.DANGER),
+                rp.btn("🗑 Tutup", callback_data=b"0", style=rp.Style.DANGER),
                 RichMessageButton(
                     text=rp.bold("📢 Channel"),
                     style=ButtonStyle.SUCCESS,
@@ -561,7 +561,7 @@ class Help(Module):
                 reply_markup=self.ikm(
                     [
                         ("« Back", "data", f"help/page/{page}".encode(), "B"),
-                        ("Close", "data", b"0"),
+                        ("🗑 Tutup", "data", b"0"),
                     ]
                 ),
             )
@@ -695,7 +695,7 @@ class Help(Module):
         if idx > 0:
             nav.append((f"« ({idx})", "data", f"help/page/{idx - 1}".encode(), "G"))
 
-        nav.append(("Close", "data", b"0"))
+        nav.append(("🗑 Tutup", "data", b"0"))
         if idx < len(self.ikbs) - 1:
             nav.append((f"({idx + 2}) »", "data", f"help/page/{idx + 1}".encode(), "G"))
 

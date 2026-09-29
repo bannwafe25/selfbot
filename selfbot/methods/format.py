@@ -86,7 +86,7 @@ class Format:
             if not any(isinstance(b, InputRichBlockButtons) for b in bl):
                 bl.append(
                     rp.buttons(
-                        rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=ButtonStyle.DANGER)
+                        rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)
                     )
                 )
 
@@ -178,7 +178,7 @@ class Format:
                 blocks.append(rp.expandable_quote(rp.italic(note)))
 
             # Tombol rich: Close (merah) + custom tambahan
-            rich_btns = [rp.btn(rp.bold("🗑 Close"), callback_data=b"0", style=ButtonStyle.DANGER)]
+            rich_btns = [rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)]
             for btext, bdata, bstyle in (buttons or []):
                 rich_btns.append(rp.btn(rp.bold(btext), callback_data=bdata, style=bstyle or ButtonStyle.PRIMARY))
             blocks.append(rp.buttons(*rich_btns))
