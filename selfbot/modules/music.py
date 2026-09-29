@@ -344,15 +344,26 @@ class Music(Module):
             try:
                 import richpyro as rp
 
-                blocks = [
-                    rp.para(rp.bold(f"{emoji} Now Playing")),
-                    rp.divider(),
-                    rp.para(rp.bold("🎵 Title: "), rp.link(title, yt_link)),
-                    rp.para(rp.bold("⏱ Duration: "), dur_txt),
-                    rp.para(rp.bold("📺 Channel: "), author),
-                    rp.para(rp.bold("🎚 Mode: "), "Video" if is_video else "Audio"),
-                    rp.para(rp.bold("🙋 Requested: "), "Assistant"),
+                trows = [
+                    [rp.table_cell(rp.bold(f"{emoji} Now Playing"), is_header=True, colspan=2, align="center")],
+                    [rp.table_cell(rp.bold("🎵 Title"), align="left"),
+                     rp.table_cell(rp.link(title, yt_link), align="left")],
+                    [rp.table_cell(rp.bold("⏱ Duration"), align="left"),
+                     rp.table_cell(dur_txt, align="left")],
+                    [rp.table_cell(rp.bold("📺 Channel"), align="left"),
+                     rp.table_cell(author, align="left")],
+                    [rp.table_cell(rp.bold("🎚 Mode"), align="left"),
+                     rp.table_cell("Video" if is_video else "Audio", align="left")],
+                    [rp.table_cell(rp.bold("🙋 Requested"), align="left"),
+                     rp.table_cell("Assistant", align="left")],
                 ]
+                blocks = [rp.table(trows, bordered=True, striped=True, compact=False)]
+                from pyrogram.enums import ButtonStyle as _BS
+                blocks.append(rp.buttons(
+                    rp.btn(rp.bold("⏭ Skip"), callback_data=b"music:skip", style=_BS.PRIMARY),
+                    rp.btn(rp.bold("⏹ Stop"), callback_data=b"music:stop", style=_BS.DANGER),
+                    rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=_BS.DANGER),
+                ))
                 rich_done = await self.send_rich_blocks(event, blocks, query_prefix="music")
             except Exception as e:
                 with contextlib.suppress(Exception):
@@ -373,7 +384,20 @@ class Music(Module):
             f"<b>By:</b> Assistant",
         )
 
-    async def _do_skip(self, event: Message) -> None:
+    @handler(filters.regex(r"^music:(skip|stop)$"), 1)
+    async def on_inline_callback(self, event) -> None:
+        """Callback tombol rich Skip/Stop dari kartu Now Playing."""
+        from pyrogram.types import CallbackQuery
+
+        if not isinstance(event, CallbackQuery):
+            return
+        action = (event.data if isinstance(event.data, str) else event.data.decode()).split(":", 1)[1]
+        if action == "skip":
+            await self._do_skip(event)
+        elif action == "stop":
+            await self._do_stop(event)
+
+    async def _do_skip(self, event) -> None:
         try:
             call = await self._get_call()
             if self.current_chat:
