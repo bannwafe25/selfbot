@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import html
 import random
@@ -39,19 +40,26 @@ class AnimeQuote(Module):
             episode = ""
 
             ep_text = f" • {episode}" if episode else ""
-            rich_rows = [
-                ("Karakter", f"— {char}"),
-                ("Anime", f"{anime}{ep_text}"),
-                ("Waktu", self.fmtsec(now)),
-            ]
-            if await self.send_rich(
-                event,
-                "📖 Anime Quote",
-                rich_rows,
-                note=f"“{quote}”",
-                query_prefix="animequote",
-            ):
-                return
+            try:
+                import richpyro as rp
+                from pyrogram.enums import ButtonStyle as _BS
+
+                blocks = [
+                    rp.heading(rp.bold("📖 Anime Quote"), size=2),
+                    rp.divider(),
+                    rp.para(rp.italic(f"“{quote}”")),
+                    rp.para(rp.bold(f"— {char}")),
+                    rp.para(rp.italic(f"{anime}{ep_text}")),
+                    rp.buttons(
+                        rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=_BS.DANGER),
+                    ),
+                ]
+                if await self.send_rich_blocks(event, blocks, query_prefix="animequote"):
+                    with contextlib.suppress(Exception):
+                        await event.delete()
+                    return
+            except Exception:
+                pass
 
             text = (
                 f"<b>Anime Quote</b>\n\n"
