@@ -11,7 +11,7 @@ from selfbot.listener import handler
 from selfbot.module import Module
 
 MUSIC_PATTERN = re.compile(
-    r"^(?:play|vplay|skip|stop)(?:\s+([\s\S]+))?$", re.IGNORECASE
+    r"^(?:play|vplay|stop)(?:\s+([\s\S]+))?$", re.IGNORECASE
 )
 
 YT_SEARCH_URL = "https://www.youtube.com/results"
@@ -121,11 +121,10 @@ def _download_media(video_id: str, dest: str, video: bool) -> None:
 
 class Music(Module):
     name = "Music Assistant"
-    cmds = "play|vplay <judul> | skip | stop"
+    cmds = "play|vplay <judul> | stop"
     desc = {
         "play <judul>": "Assistant join VC & putar AUDIO dari YouTube.",
         "vplay <judul>": "Assistant join VC & putar VIDEO dari YouTube.",
-        "skip": "Stop lagu sekarang (assistant keluar VC).",
         "stop": "Stop lagu & assistant keluar VC.",
         "e.g.": "play melukis senja | vplay melukis senja",
     }
@@ -215,10 +214,6 @@ class Music(Module):
 
         if action == "stop":
             await self._do_stop(event)
-            return
-
-        if action in ("skip",):
-            await self._do_skip(event)
             return
 
         # play / vplay
@@ -366,7 +361,6 @@ class Music(Module):
                 blocks = [rp.table(trows, bordered=True, striped=True, compact=False)]
                 from pyrogram.enums import ButtonStyle as _BS
                 blocks.append(rp.buttons(
-                    rp.btn(rp.bold("⏭ Skip"), callback_data=b"music:skip", style=_BS.PRIMARY),
                     rp.btn(rp.bold("⏹ Stop"), callback_data=b"music:stop", style=_BS.DANGER),
                     rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=_BS.DANGER),
                 ))
@@ -390,33 +384,16 @@ class Music(Module):
             f"<b>By:</b> Assistant",
         )
 
-    @handler(filters.regex(r"^music:(skip|stop)$"), 1)
+    @handler(filters.regex(r"^music:stop$"), 1)
     async def on_inline_callback(self, event) -> None:
-        """Callback tombol rich Skip/Stop dari kartu Now Playing."""
+        """Callback tombol rich Stop dari kartu Now Playing."""
         from pyrogram.types import CallbackQuery
 
         if not isinstance(event, CallbackQuery):
             return
         action = (event.data if isinstance(event.data, str) else event.data.decode()).split(":", 1)[1]
-        if action == "skip":
-            await self._do_skip(event)
-        elif action == "stop":
+        if action == "stop":
             await self._do_stop(event)
-
-    async def _do_skip(self, event) -> None:
-        try:
-            chat_id = self.current_chat
-            if chat_id:
-                self.play_token += 1  # batalkan watcher lama
-                call = await self._get_call()
-                with contextlib.suppress(Exception):
-                    await call.leave_call(chat_id)
-                self.current_chat = None
-                await self._status(event, "<code>⏭ Skipped.</code>")
-            else:
-                await self._status(event, "<code>Tidak ada lagu yang diputar.</code>")
-        except Exception as e:
-            await self._status(event, f"❌ <code>{e}</code>")
 
     async def _do_stop(self, event) -> None:
         try:
