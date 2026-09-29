@@ -65,7 +65,7 @@ class RichTextCopyable(_RichText):
         return _praw.types.TextFixed(text=await _RichText._write(client, self.text))
 
 
-pattern = re.compile(r"^help/?(mod|info|page|cat)?(?:/([\w\-]+))?$")
+pattern = re.compile(r"^help/?(mod|info|page|cat|catpage)?(?:/([\w\-]+))?$")
 
 
 class Help(Module):
@@ -228,7 +228,7 @@ class Help(Module):
             return self._blocks_by_category(quote, category)
 
         # Mode 1 (utama): DAFTAR KATEGORI — klik salah satu buat lihat modulnya
-        return self._blocks_category_index(quote)
+        return self._blocks_category_index(quote, page)
 
     def _group_by_category(self) -> dict:
         """Kelompokkan modul: {nama_kategori: (icon, [modul, ...])}"""
@@ -240,37 +240,46 @@ class Help(Module):
             groups[cname][1].append(mod)
         return groups
 
-    def _blocks_category_index(self, quote: str) -> list:
-        """Halaman utama: grid tombol per kategori."""
+    def _blocks_category_index(self, quote: str, page: int = 0) -> list:
+        """Halaman utama: heading + info + TABEL kategori + grid tombol rich (dipaging)."""
         import richpyro as rp
 
         groups = self._group_by_category()
         # urut alfabetis biar posisi tombol konsisten (ga loncat-loncat)
         ordered = sorted(groups.items(), key=lambda kv: kv[0].lower())
         total_mods = sum(len(v[1]) for _, v in ordered)
+        per = 5
+        pages = max(1, -(-len(ordered) // per))
+        page = max(0, min(page, pages - 1))
+        chunk = ordered[page * per : (page + 1) * per]
 
         blocks = [
             rp.heading(rp.bold("📖 Menu Bantuan Selfbot"), size=2),
             rp.para(
                 rp.italic(
-                    f"Pilih kategori — {len(ordered)} kategori, "
-                    f"{total_mods} modul"
+                    f"📚 Halaman {page + 1}/{pages} — Total {total_mods} modul "
+                    f"· 🔑 Prefix: (tanpa prefix)"
                 )
             ),
             rp.divider(),
         ]
 
-        # Banner: foto di atas menu (gantiin tabel biar kartu lebih ringkes)
-        BANNER = "https://qu.ax/x/IsBaX.jpg"
-        if BANNER:
-            with contextlib.suppress(Exception):
-                blocks.append(
-                    rp.photo_block(
-                        InputMediaPhoto(BANNER),
-                        cap=rp.caption(rp.italic(f"{len(ordered)} kategori · {total_mods} modul")),
-                    )
-                )
-            blocks.append(rp.divider())
+        # TABEL ringkasan kategori (ala Eyang Subur): Kategori | Jumlah
+        trows = [
+            [
+                rp.table_cell(rp.bold("Kategori"), is_header=True, align="left"),
+                rp.table_cell(rp.bold("Jumlah"), is_header=True, align="center"),
+            ]
+        ]
+        for cname, (icon, mods) in chunk:
+            trows.append(
+                [
+                    rp.table_cell(rp.bold(f"{icon} {cname}"), align="left"),
+                    rp.table_cell(str(len(mods)), align="center"),
+                ]
+            )
+        blocks.append(rp.table(trows, bordered=True, striped=True, compact=False))
+        blocks.append(rp.divider())
 
         # Tombol kategori: 2 per baris, label DIPENDEKIN biar lebar mirip semua
         SHORT = {
@@ -281,7 +290,7 @@ class Help(Module):
             "Voice Call": "Voice",
         }
         btns = []
-        for cname, (icon, mods) in ordered:
+        for cname, (icon, mods) in chunk:
             key = cname.lower().replace(" ", "-").replace("&", "")
             label = SHORT.get(cname, cname)
             btns.append(
@@ -295,10 +304,16 @@ class Help(Module):
         for i in range(0, len(btns), 2):
             blocks.append(rp.buttons(*btns[i : i + 2], align="center"))
 
-        # Nav bawah: Tutup + Channel jadi 1 baris biar ga numpuk
+        # Nav bawah: Prev / Next / Tutup
+        nav = []
+        if page > 0:
+            nav.append(rp.btn(rp.bold("« Prev"), callback_data=f"help/catpage/{page - 1}".encode(), style=rp.Style.SUCCESS))
+        if page < pages - 1:
+            nav.append(rp.btn(rp.bold("Next »"), callback_data=f"help/catpage/{page + 1}".encode(), style=rp.Style.SUCCESS))
+        nav.append(rp.btn("🗑 Tutup", callback_data=b"0", style=rp.Style.DANGER))
+        blocks.append(rp.buttons(*nav, align="center"))
         blocks.append(
             rp.buttons(
-                rp.btn("🗑 Tutup", callback_data=b"0", style=rp.Style.DANGER),
                 RichMessageButton(
                     text=rp.bold("📢 Channel"),
                     style=ButtonStyle.SUCCESS,
@@ -507,6 +522,13 @@ class Help(Module):
                         blocks=self._mod_rich_blocks(val)
                     ).write(client=self.client.bot)
                     # Detail modul polos: tanpa tombol apa pun
+                    await self._edit_inline_rich(event, rich_raw, None)
+                    return
+                if act == "catpage":
+                    quote = await self._get_quote()
+                    rich_raw = await InputRichMessage(
+                        blocks=self._blocks_category_index(quote, int(val))
+                    ).write(client=self.client.bot)
                     await self._edit_inline_rich(event, rich_raw, None)
                     return
                 if act == "cat":
