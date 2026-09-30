@@ -2,8 +2,6 @@ import asyncio
 import contextlib
 import datetime
 import html
-import io
-import json
 import os
 import re
 import tempfile
@@ -15,65 +13,54 @@ from pyrogram.types import InputMediaPhoto, Message, ReplyParameters
 from selfbot.listener import handler
 from selfbot.module import Module
 
-# .pin {query} — cari gambar via Bing Images (Pinterest diblok 403)
+# .pin {query} — cari gambar Pinterest via api.siputzx.my.id
 pattern = re.compile(r"^\.?(pin|pinterest|img)(?:\s+([\s\S]+))?$", re.IGNORECASE)
 
+API = "https://api.siputzx.my.id/api/s/pinterest"
 UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/131.0 Safari/537.36"
 )
 
 
-def _search(query: str, limit: int = 6) -> list[dict]:
-    """Scrape Bing Images → [{murl, turl, t, purl}] — sync, jalankan di executor."""
-    with httpx.Client(
-        headers={"User-Agent": UA, "Accept-Language": "en-US,en;q=0.9"},
-        follow_redirects=True,
-        timeout=25,
-    ) as c:
-        r = c.get(
-            "https://www.bing.com/images/search",
-            params={"q": query, "form": "HDRSC2", "first": "1"},
+async def _search(client: httpx.AsyncClient, query: str, limit: int = 6) -> list[dict]:
+    r = await client.get(API, params={"query": query}, timeout=30)
+    r.raise_for_status()
+    data = r.json()
+    if not data.get("status"):
+        return []
+    out = []
+    for p in data.get("data", []):
+        url = p.get("image_url") or ""
+        if not url or url.endswith(".mp4"):
+            continue
+        out.append(
+            {
+                "img": url,
+                "title": (p.get("grid_title") or p.get("description") or "").strip()[:120],
+                "pin": p.get("pin") or "",
+            }
         )
-        items = re.findall(r'm="({.*?})"', r.text)
-        out = []
-        for it in items:
-            try:
-                j = json.loads(
-                    it.replace("&quot;", '"').replace("&amp;", "&")
-                )
-            except Exception:
-                continue
-            if j.get("murl") and j.get("turl"):
-                out.append(
-                    {
-                        "murl": j["murl"],  # full image
-                        "turl": j["turl"],  # thumbnail
-                        "t": (j.get("t") or "")[:120],
-                        "purl": j.get("purl", ""),
-                    }
-                )
-            if len(out) >= limit:
-                break
-        return out
+        if len(out) >= limit:
+            break
+    return out
 
 
-async def _fetch_bytes(client: httpx.AsyncClient, url: str, *, thumb=False):
-    headers = {"User-Agent": UA}
-    if thumb:
-        headers["Referer"] = "https://www.bing.com/"
-    r = await client.get(url, headers=headers, timeout=20)
+async def _dl(client: httpx.AsyncClient, url: str):
+    r = await client.get(url, headers={"User-Agent": UA}, timeout=25)
     if r.status_code == 200 and r.content:
-        return r.content
+        ext = ".png" if ".png" in url else ".jpg"
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
+            f.write(r.content)
+            return f.name
     return None
 
 
 class Pin(Module):
-    name = "Image Search"
+    name = "Pinterest"
     cmds = ".pin {query}"
     desc = {
-        "query": "Cari gambar di web via Bing Images (pengganti Pinterest, 403).",
-        "Note": "Kirim 1-6 foto sebagai album + judul. .img = alias.",
+        "query": "Cari foto Pinterest via api.siputzx.my.id, album 6 foto.",
         "e.g.": ".pin wallpaper anime 4k",
     }
 
@@ -87,32 +74,26 @@ class Pin(Module):
             await self.respond(event, "<b>Cara pakai:</b> <code>.pin {query}</code>")
             return
 
-        status = await self.respond(event, "<code>🔍 Mencari gambar...</code>")
+        status = await self.respond(event, "<code>📌 Mencari di Pinterest...</code>")
         now = datetime.datetime.now(datetime.UTC)
-        loop = asyncio.get_running_loop()
 
         try:
-            results = await loop.run_in_executor(None, _search, query)
+            async with httpx.AsyncClient(follow_redirects=True) as hc:
+                results = await _search(hc, query)
         except Exception as e:
-            await self.respond(event, f"<b>Search gagal:</b> <code>{html.escape(str(e)[:150])}</code>")
+            await self.respond(event, f"<b>API gagal:</b> <code>{html.escape(str(e)[:150])}</code>")
             return
         if not results:
             with contextlib.suppress(Exception):
                 await status.edit("<b>Gak ketemu.</b> Coba query lain.")
             return
 
-        # download foto (murl dulu, fallback turl)
         media = []
         async with httpx.AsyncClient(follow_redirects=True) as hc:
-            for r in results[:6]:
-                data = await _fetch_bytes(hc, r["murl"]) or await _fetch_bytes(
-                    hc, r["turl"], thumb=True
-                )
-                if not data:
-                    continue
-                with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
-                    f.write(data)
-                    media.append((f.name, r["t"]))
+            for r in results:
+                path = await _dl(hc, r["img"])
+                if path:
+                    media.append((path, r["title"]))
 
         if not media:
             with contextlib.suppress(Exception):
@@ -123,9 +104,9 @@ class Pin(Module):
             await status.delete()
 
         cap = (
-            f"<b>🖼 {html.escape(query[:80])}</b>\n"
-            f"<i>{len(media)} hasil · Bing Images</i>\n\n"
-            f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
+            f"<b>📌 Pinterest — {html.escape(query[:80])}</b>\n"
+            f"<i>{len(media)} hasil</i>\n\n"
+            f"<b><blockquote>{now.strftime('%d %b %Y · %H:%M')}</blockquote></b>"
         )
 
         if len(media) == 1:
@@ -142,15 +123,10 @@ class Pin(Module):
                 await event.delete()
             return
 
-        # album — tiap foto caption judul, foto pertama caption header
-        group = []
-        for i, (path, title) in enumerate(media):
-            group.append(
-                InputMediaPhoto(
-                    path,
-                    caption=cap if i == 0 else html.escape(title or "​"),
-                )
-            )
+        group = [
+            InputMediaPhoto(path, caption=cap if i == 0 else html.escape(title or "​"))
+            for i, (path, title) in enumerate(media)
+        ]
         try:
             await event._client.send_media_group(
                 event.chat.id, group,
