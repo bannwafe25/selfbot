@@ -23,7 +23,7 @@ UA = (
 )
 
 
-async def _search(client: httpx.AsyncClient, query: str, limit: int = 6) -> list[dict]:
+async def _search(client: httpx.AsyncClient, query: str, limit: int = 10) -> list[dict]:
     r = await client.get(API, params={"query": query}, timeout=30)
     r.raise_for_status()
     data = r.json()
@@ -64,6 +64,28 @@ class Pin(Module):
         "e.g.": ".pin wallpaper anime 4k",
     }
 
+    # ── Rich slideshow via inline bot (pola animepic/ping) ──────────────────
+    async def _send_rich_slideshow(self, event: Message, query: str, urls: list[str], now) -> bool:
+        try:
+            import richpyro as rp
+            from pyrogram.enums import ButtonStyle
+
+            bot = self.client.bot
+            blocks = [
+                rp.slideshow(*[rp.photo_block(u) for u in urls[:10]]),
+                rp.heading(rp.bold(f"📌 Pinterest — {html.escape(query[:60])}"), size=4),
+                rp.para(rp.italic(f"{len(urls)} hasil · {now.strftime('%d %b %Y %H:%M')}")),
+                rp.buttons(
+                    rp.btn(rp.bold("🔄 Refresh"), callback_data=f"pin/ref/{query}".encode(), style=ButtonStyle.SUCCESS),
+                    rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER),
+                ),
+            ]
+            return await self.send_rich_blocks(event, blocks, query_prefix=f"pin{now.timestamp()}")
+        except Exception as e:
+            with contextlib.suppress(Exception):
+                self.logger.warning(f"pin rich failed: {e!r}")
+            return False
+
     @handler(filters.regex(pattern) & filters.outgoing, 1)
     async def on_message_out(self, event: Message) -> None:
         match = pattern.match(event.text or "")
@@ -88,9 +110,19 @@ class Pin(Module):
                 await status.edit("<b>Gak ketemu.</b> Coba query lain.")
             return
 
+        urls = [r["img"] for r in results]
+
+        # ── Jalur rich: slideshow geser + tombol Refresh/Tutup ──
+        if await self._send_rich_slideshow(event, query, urls, now):
+            with contextlib.suppress(Exception):
+                await status.delete()
+            with contextlib.suppress(Exception):
+                await event.delete()
+            return
+
         media = []
         async with httpx.AsyncClient(follow_redirects=True) as hc:
-            for r in results:
+            for r in results[:6]:
                 path = await _dl(hc, r["img"])
                 if path:
                     media.append((path, r["title"]))
@@ -148,3 +180,47 @@ class Pin(Module):
                     os.remove(path)
             with contextlib.suppress(Exception):
                 await event.delete()
+
+    @handler(filters.regex(r"^pin/ref/(.+)$"), 1)
+    async def on_inline_callback(self, event) -> None:
+        """Tombol 🔄 Refresh — cari ulang & rebuild slideshow."""
+        from pyrogram.types import CallbackQuery
+
+        if not isinstance(event, CallbackQuery):
+            return
+        try:
+            await event.answer("Mencari ulang...")
+            query = event.matches[0].group(1).decode()[:120]
+            now = datetime.datetime.now(datetime.UTC)
+            async with httpx.AsyncClient(follow_redirects=True) as hc:
+                results = await _search(hc, query)
+            if not results:
+                await event.answer("Gak ketemu hasil baru.", show_alert=True)
+                return
+            urls = [r["img"] for r in results]
+
+            import richpyro as rp
+            from pyrogram.enums import ButtonStyle
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import InputBotInlineMessageRichMessage
+            from pyrogram.utils import unpack_inline_message_id
+
+            rich = rp.blocks_message(
+                rp.slideshow(*[rp.photo_block(u) for u in urls[:10]]),
+                rp.heading(rp.bold(f"📌 Pinterest — {html.escape(query[:60])}"), size=4),
+                rp.para(rp.italic(f"{len(urls)} hasil · {now.strftime('%d %b %Y %H:%M')}")),
+                rp.buttons(
+                    rp.btn(rp.bold("🔄 Refresh"), callback_data=f"pin/ref/{query}".encode(), style=ButtonStyle.SUCCESS),
+                    rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER),
+                ),
+            )
+            rich_raw = await rich.write(client=self.client.bot)
+            await self.client.bot.invoke(
+                rawfn.messages.EditInlineBotMessage(
+                    id=unpack_inline_message_id(event.inline_message_id),
+                    rich_message=rich_raw,
+                )
+            )
+        except Exception as e:
+            with contextlib.suppress(Exception):
+                await event.answer(f"Error: {html.escape(str(e)[:100])}", show_alert=True)
