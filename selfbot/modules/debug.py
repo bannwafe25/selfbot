@@ -68,6 +68,16 @@ class Debug(Module):
     async def on_started(self) -> None:
         if hasattr(self.client, "call"):
             self.kwargs["call"] = self.client.call
+        # music/VC: expose PyTgCalls assistant + MediaStream utk e/ debug
+        try:
+            music = self.client.modules.get("Music")
+            if music is not None and getattr(music, "call", None) is not None:
+                self.kwargs["music"] = music
+                self.kwargs["call"] = music.call
+                from pytgcalls.types import MediaStream  # noqa: F401
+                self.kwargs["MediaStream"] = MediaStream
+        except Exception:
+            pass
 
     @handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
