@@ -106,18 +106,42 @@ class Gcast(Module):
             if DELAY:
                 await asyncio.sleep(DELAY)
 
-        lines = [
-            f"✅ Berhasil: <b>{ok}</b>",
-            f"❌ Gagal: <b>{len(fail)}</b>",
+        # === Kartu rich: ringkasan hasil ===
+        rich_rows = [
+            ("Target", f"{total} grup"),
+            ("Berhasil", f"✅ {ok}"),
+            ("Gagal", f"❌ {len(fail)}"),
         ]
         if skipped:
-            lines.insert(0, f"🚫 Di-skip (blacklist): <b>{skipped}</b>")
+            rich_rows.insert(0, ("Di-skip (blacklist)", f"🚫 {skipped}"))
+        if fail:
+            rich_rows.append(("Error (contoh)", fail[0][:60]))
+
+        sum_lines = []
+        if skipped:
+            sum_lines.append(f"🚫 Di-skip (blacklist): <b>{skipped}</b>")
+        sum_lines.append(f"✅ Berhasil: <b>{ok}</b>")
+        sum_lines.append(f"❌ Gagal: <b>{len(fail)}</b>")
         if fail:
             shown = "\n".join(f"<code>{html.escape(f)}</code>" for f in fail[:5])
-            lines.append(f"\nDetail:\n{shown}")
-        lines.append(f"\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>")
+            sum_lines.append(f"\nDetail:\n{shown}")
+
+        rich_ok = await self.send_rich(
+            event,
+            "📢 Gcast Selesai",
+            rich_rows,
+            note=self.fmtsec(now),
+            query_prefix="gcast",
+        )
         with contextlib.suppress(Exception):
-            await status.edit("<b>📢 Gcast selesai</b>\n\n" + "\n".join(lines))
+            await status.delete()
+        if not rich_ok:
+            await self.respond(
+                event, "<b>📢 Gcast selesai</b>\n\n" + "\n".join(sum_lines)
+            )
+            return
+        with contextlib.suppress(Exception):
+            await event.delete()
 
     async def _resend(self, chat_id: int, reply: Message, caption: str) -> None:
         """Kirim ulang media tanpa forward header."""

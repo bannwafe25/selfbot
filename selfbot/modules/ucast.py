@@ -85,16 +85,36 @@ class Ucast(Module):
             if DELAY:
                 await asyncio.sleep(DELAY)
 
-        lines = [
+        # === Kartu rich ===
+        rich_rows = [
+            ("Target", f"{total} chat"),
+            ("Berhasil", f"✅ {ok}"),
+            ("Gagal", f"❌ {len(fail)}"),
+        ]
+        if fail:
+            rich_rows.append(("Error (contoh)", fail[0][:60]))
+
+        sum_lines = [
             f"✅ Berhasil: <b>{ok}</b>",
             f"❌ Gagal: <b>{len(fail)}</b>",
         ]
         if fail:
             shown = "\n".join(f"<code>{html.escape(f)}</code>" for f in fail[:5])
-            lines.append(f"\nDetail:\n{shown}")
-        lines.append(f"\n<b><blockquote>{self.fmtsec(now)}</blockquote></b>")
+            sum_lines.append(f"\nDetail:\n{shown}")
+
+        rich_ok = await self.send_rich(
+            event,
+            "📨 Ucast Selesai",
+            rich_rows,
+            note=self.fmtsec(now),
+            query_prefix="ucast",
+        )
         with contextlib.suppress(Exception):
-            await self._upd(status, "<b>📨 Ucast selesai</b>\n\n" + "\n".join(lines))
+            await self._upd(status, "<b>📨 Ucast selesai</b>")
+        if not rich_ok:
+            await self.respond(
+                event, "<b>📨 Ucast selesai</b>\n\n" + "\n".join(sum_lines)
+            )
 
     # --------------------------------------------------
     # Blacklist grup untuk gcast
