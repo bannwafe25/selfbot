@@ -68,11 +68,6 @@ class Debug(Module):
     async def on_started(self) -> None:
         if hasattr(self.client, "call"):
             self.kwargs["call"] = self.client.call
-        # PyTgCalls milik assistant (modul music) — expose kalau sudah ada
-        music = (getattr(self.client, "modules", None) or {}).get("Music")
-        if music is not None:
-            self.kwargs["music"] = music
-            self.kwargs.setdefault("call", None)
 
     @handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
