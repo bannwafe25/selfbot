@@ -88,7 +88,7 @@ class Help(Module):
         "alldl": ("📥", "Media & Unduhan"),
         "toss": ("📤", "Media & Unduhan"),
         "broadcast": ("📢", "Chat"),
-        "pin": ("🖼", "Riset & Pencarian"),
+        "khodam": ("🔮", "Fun & Hiburan"),
         "ytdl": ("📥", "Media & Unduhan"),
         "upload": ("📥", "Media & Unduhan"),
         "sticker": ("🎨", "Kreatif"),
