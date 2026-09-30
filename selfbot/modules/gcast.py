@@ -19,9 +19,9 @@ DELAY = 1  # jeda antar chat (detik), anti FloodWait
 BL_KEY = "gcast_blacklist"
 
 
-def _load_bl(client) -> set[int]:
+async def _load_bl(client) -> set[int]:
     """Blacklist grup (persist di MongoDB, diisi via .addbl)."""
-    doc = client.db[BL_KEY].find_one({"_id": "bl"})
+    doc = await client.db[BL_KEY].find_one({"_id": "bl"})
     return set(doc["ids"]) if doc else set()
 
 
@@ -68,7 +68,7 @@ class Gcast(Module):
         now = datetime.datetime.now(datetime.UTC)
 
         targets = []
-        bl = _load_bl(self.client)
+        bl = await _load_bl(self.client)
         skipped = 0
         async for dialog in self.client.app.get_dialogs(limit=None):
             chat = dialog.chat

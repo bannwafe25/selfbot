@@ -20,8 +20,8 @@ DELAY = 1  # detik antar chat, anti FloodWait
 BL_KEY = "gcast_blacklist"
 
 
-def _load_bl(client) -> set[int]:
-    doc = client.db[BL_KEY].find_one({"_id": "bl"})
+async def _load_bl(client) -> set[int]:
+    doc = await client.db[BL_KEY].find_one({"_id": "bl"})
     return set(doc["ids"]) if doc else set()
 
 
@@ -126,7 +126,7 @@ class Ucast(Module):
         if not match:
             return
         cmd, arg = match.group(1).lower(), match.group(2)
-        bl = _load_bl(self.client)
+        bl = await _load_bl(self.client)
 
         if cmd == "listbl":
             if not bl:
