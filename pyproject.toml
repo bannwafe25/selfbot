@@ -21,6 +21,7 @@ dependencies = [
     "instaloader>=4.13",
     "py-tgcalls>=2.3.3",
     "httpx>=0.28.1",
+    "h2>=4.4.1",
 ]
 
 [project.scripts]
