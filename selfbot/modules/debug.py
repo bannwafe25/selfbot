@@ -35,6 +35,7 @@ class Debug(Module):
     }
 
     async def on_starting(self) -> None:
+        self._appcall = None  # PyTgCalls milik AKUN UTAMA (app) — eksperimen VC
         self.kwargs = {
             "asyncio": asyncio,
             "datetime": datetime,
@@ -58,17 +59,18 @@ class Debug(Module):
             "listen": self.listen,
             "respond": self.respond,
             "progress": self.progress,
+            "appcall": self.app_call,  # PyTgCalls akun utama — await appcall()
         }
 
     async def on_started(self) -> None:
-        # music/VC: PyTgCalls assistant + MediaStream
+        # music/VC assistant (buat lagu) — PyTgCalls di atas akun assistant
         with contextlib.suppress(Exception):
             music = self.client.modules.get("Music")
             if music is not None and getattr(music, "call", None) is not None:
                 from pytgcalls.types import MediaStream
 
                 self.kwargs["music"] = music
-                self.kwargs["call"] = music.call
+                self.kwargs["musiccall"] = music.call
                 self.kwargs["MediaStream"] = MediaStream
 
     # ── Handlers ──────────────────────────────────────────────────────────
@@ -134,6 +136,15 @@ class Debug(Module):
             await self.client.app.delete_messages(cid, mid)
 
     # ── Core ──────────────────────────────────────────────────────────────
+    async def app_call(self):
+        """PyTgCalls di atas AKUN UTAMA (app) — lazy build sekali."""
+        if self._appcall is None:
+            from pytgcalls import PyTgCalls
+
+            self._appcall = PyTgCalls(self.client.app)
+            await self._appcall.start()
+        return self._appcall
+
     async def _run(self, code: str, event: Message) -> tuple[str, str]:
         """Eksekusi kode → (output, waktu)."""
         kw = dict(self.kwargs)
