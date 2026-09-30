@@ -62,7 +62,8 @@ class Gcast(Module):
         targets = []
         async for dialog in self.client.app.get_dialogs(limit=None):
             chat = dialog.chat
-            if chat and chat.type in (ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL):
+            # grup & supergroup doang — channel/saved message dilewati
+            if chat and chat.type in (ChatType.GROUP, ChatType.SUPERGROUP):
                 targets.append(chat.id)
 
         total = len(targets)
