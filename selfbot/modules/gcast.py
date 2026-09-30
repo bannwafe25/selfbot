@@ -14,7 +14,7 @@ from selfbot.module import Module
 pattern = re.compile(r"^\.?gcast(?:\s+([\s\S]+))?$", re.IGNORECASE | re.DOTALL)
 
 # Chat yang dilewati (id chat_id lo sendiri / saved messages ditangani terpisah)
-DELAY = 3  # detik antar chat, anti FloodWait
+DELAY = 0  # jeda antar chat (detik), 0 = tanpa delay
 
 
 class Gcast(Module):
@@ -90,7 +90,8 @@ class Gcast(Module):
                         f"<b>📢 Gcast</b>\n\n"
                         f"Progress: <code>{i}/{total}</code> · ✅ {ok} · ❌ {len(fail)}"
                     )
-            await asyncio.sleep(DELAY)
+            if DELAY:
+                await asyncio.sleep(DELAY)
 
         lines = [
             f"✅ Berhasil: <b>{ok}</b>",
