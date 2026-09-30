@@ -20,6 +20,7 @@ dependencies = [
     "yt-dlp>=2026.2.21",
     "instaloader>=4.13",
     "py-tgcalls>=2.3.3",
+    "httpx>=0.28.1",
 ]
 
 [project.scripts]
