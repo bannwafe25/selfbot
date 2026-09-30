@@ -25,7 +25,7 @@ yt_id_pattern = re.compile(r'"videoId":"([A-Za-z0-9_-]{11})"')
 
 
 class YtDL(Module):
-    name = "YtDL"
+    name = "Yt Download"
     cmds = "song|vsong (-d|--doc|-v|--voice)? {query}"
     desc = {
         "query": "A YouTube link, video ID, or title search query.",
