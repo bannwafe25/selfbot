@@ -25,8 +25,8 @@ async def _load_bl(client) -> set[int]:
     return set(doc["ids"]) if doc else set()
 
 
-def _save_bl(client, ids: set[int]) -> None:
-    client.db[BL_KEY].replace_one({"_id": "bl"}, {"ids": list(ids)}, upsert=True)
+async def _save_bl(client, ids: set[int]) -> None:
+    await client.db[BL_KEY].replace_one({"_id": "bl"}, {"ids": list(ids)}, upsert=True)
 
 
 class Ucast(Module):
@@ -163,11 +163,11 @@ class Ucast(Module):
 
         if cmd == "addbl":
             bl.add(target)
-            _save_bl(self.client, bl)
+            await _save_bl(self.client, bl)
             await self.respond(event, f"<b>🚫 Blacklisted:</b> <code>{target}</code>")
         else:
             bl.discard(target)
-            _save_bl(self.client, bl)
+            await _save_bl(self.client, bl)
             await self.respond(event, f"<b>✅ Unblacklisted:</b> <code>{target}</code>")
 
     async def _upd(self, status, text: str) -> None:
