@@ -54,9 +54,12 @@ async def _collect(client, kind: str):
                     skipped += 1
                     continue
                 targets.append(chat.id)
-        else:  # ucast: private chat doang, bot dilewati
-            if chat.type == ChatType.PRIVATE and not chat.bot:
-                targets.append(chat.id)
+        else:  # ucast: private chat manusia doang
+            # Pyrogram Chat gak punya atribut is_bot — heuristik via username
+            if chat.type == ChatType.PRIVATE and chat.id > 0:
+                uname = str(getattr(chat, "username", "") or "").lower()
+                if not uname.endswith("bot"):
+                    targets.append(chat.id)
     return targets, skipped
 
 
