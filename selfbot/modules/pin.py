@@ -69,10 +69,13 @@ class Pin(Module):
         try:
             import richpyro as rp
             from pyrogram.enums import ButtonStyle
+            from pyrogram.types import InputMediaPhoto
 
             bot = self.client.bot
             blocks = [
-                rp.slideshow(*[rp.photo_block(u) for u in urls[:10]]),
+                rp.slideshow(
+                    *[rp.photo_block(InputMediaPhoto(u)) for u in urls[:10]]
+                ),
                 rp.heading(rp.bold(f"📌 Pinterest — {html.escape(query[:60])}"), size=4),
                 rp.para(rp.italic(f"{len(urls)} hasil · {now.strftime('%d %b %Y %H:%M')}")),
                 rp.buttons(
@@ -203,10 +206,13 @@ class Pin(Module):
             from pyrogram.enums import ButtonStyle
             from pyrogram.raw import functions as rawfn
             from pyrogram.raw.types import InputBotInlineMessageRichMessage
+            from pyrogram.types import InputMediaPhoto
             from pyrogram.utils import unpack_inline_message_id
 
             rich = rp.blocks_message(
-                rp.slideshow(*[rp.photo_block(u) for u in urls[:10]]),
+                rp.slideshow(
+                    *[rp.photo_block(InputMediaPhoto(u)) for u in urls[:10]]
+                ),
                 rp.heading(rp.bold(f"📌 Pinterest — {html.escape(query[:60])}"), size=4),
                 rp.para(rp.italic(f"{len(urls)} hasil · {now.strftime('%d %b %Y %H:%M')}")),
                 rp.buttons(
