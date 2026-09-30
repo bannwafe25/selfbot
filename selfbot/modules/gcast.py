@@ -14,7 +14,7 @@ from selfbot.module import Module
 pattern = re.compile(r"^\.?gcast(?:\s+([\s\S]+))?$", re.IGNORECASE | re.DOTALL)
 
 # Chat yang dilewati (id chat_id lo sendiri / saved messages ditangani terpisah)
-DELAY = 0  # jeda antar chat (detik), 0 = tanpa delay
+DELAY = 1  # jeda antar chat (detik), anti FloodWait
 
 
 class Gcast(Module):
