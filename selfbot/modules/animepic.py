@@ -283,13 +283,21 @@ class AnimePic(Module):
             from pyrogram.types import (
                 InputMediaAnimation,
                 InputMediaPhoto,
+                InputRichBlockAnimation,
+                InputRichBlockButtons,
+                InputRichBlockParagraph,
+                InputRichBlockPhoto,
+                InputRichBlockSlideshow,
+                InputRichMessage,
+                RichMessageButton,
+                RichTextBold,
+                RichTextItalic,
             )
-            import richpyro as rp
             from pyrogram.enums import ButtonStyle
 
             try:
                 if self._is_gif_url(result[0]):
-                    media_block = rp.animation_block(
+                    media_block = InputRichBlockAnimation(
                         animation=InputMediaAnimation(result[0])
                     )
                 else:
@@ -298,12 +306,14 @@ class AnimePic(Module):
                     urls = [result[0]] + [r[0] for r in multi if r[0] != result[0]]
                     urls = urls[:self._SLIDESHOW_MAX]
                     if len(urls) > 1:
-                        media_block = rp.slideshow(*[
-                            rp.photo_block(photo=InputMediaPhoto(u))
-                            for u in urls
-                        ])
+                        media_block = InputRichBlockSlideshow(
+                            blocks=[
+                                InputRichBlockPhoto(photo=InputMediaPhoto(u))
+                                for u in urls
+                            ]
+                        )
                     else:
-                        media_block = rp.photo_block(
+                        media_block = InputRichBlockPhoto(
                             photo=InputMediaPhoto(result[0])
                         )
                 rich = InputRichMessage(
@@ -396,14 +406,22 @@ class AnimePic(Module):
             from pyrogram.types import (
                 InputMediaAnimation,
                 InputMediaPhoto,
+                InputRichBlockAnimation,
+                InputRichBlockButtons,
+                InputRichBlockParagraph,
+                InputRichBlockPhoto,
+                InputRichBlockSlideshow,
+                InputRichMessage,
+                RichMessageButton,
+                RichTextBold,
+                RichTextItalic,
             )
-            import richpyro as rp
             from pyrogram.enums import ButtonStyle
             from pyrogram.utils import unpack_inline_message_id
 
             try:
                 if self._is_gif_url(result[0]):
-                    media_block = rp.animation_block(
+                    media_block = InputRichBlockAnimation(
                         animation=InputMediaAnimation(result[0])
                     )
                 else:
@@ -412,28 +430,44 @@ class AnimePic(Module):
                     urls = [result[0]] + [r[0] for r in multi if r[0] != result[0]]
                     urls = urls[:self._SLIDESHOW_MAX]
                     if len(urls) > 1:
-                        media_block = rp.slideshow(*[
-                            rp.photo_block(photo=InputMediaPhoto(u))
-                            for u in urls
-                        ])
+                        media_block = InputRichBlockSlideshow(
+                            blocks=[
+                                InputRichBlockPhoto(photo=InputMediaPhoto(u))
+                                for u in urls
+                            ]
+                        )
                     else:
-                        media_block = rp.photo_block(
+                        media_block = InputRichBlockPhoto(
                             photo=InputMediaPhoto(result[0])
                         )
-                blocks = [
-                    media_block,
-                    rp.para(self.build_caption_rich(
-                        self.fmtsec(now), *result[1:]
-                    )),
-                    rp.buttons(
-                        rp.btn(rp.bold("🔄 Refresh"), callback_data=(
-                            f"animepic/next/"
-                            f"{self.build_callback_payload(tag, moe_tag)}"
-                        ).encode(), style=ButtonStyle.SUCCESS),
-                        rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER),
-                    ),
-                ]
-                rich_raw = await rp.blocks_message(*blocks).write(client=bot, chat_id=bot.me.id)
+                rich = InputRichMessage(
+                    blocks=[
+                        media_block,
+                        InputRichBlockParagraph(
+                            text=self.build_caption_rich(
+                                self.fmtsec(now), *result[1:]
+                            )
+                        ),
+                        InputRichBlockButtons(
+                            [
+                                RichMessageButton(
+                                    text=RichTextBold("🔄 Refresh"),
+                                    style=ButtonStyle.SUCCESS,
+                                    callback_data=(
+                                        f"animepic/next/"
+                                        f"{self.build_callback_payload(tag, moe_tag)}"
+                                    ).encode(),
+                                ),
+                                RichMessageButton(
+                                    text=RichTextBold("🗑 Tutup"),
+                                    style=ButtonStyle.DANGER,
+                                    callback_data=b"0",
+                                ),
+                            ]
+                        ),
+                    ]
+                )
+                rich_raw = await rich.write(client=bot, chat_id=bot.me.id)
                 await bot.invoke(
                     rawfn.messages.EditInlineBotMessage(
                         id=unpack_inline_message_id(event.inline_message_id),

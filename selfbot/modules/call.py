@@ -146,15 +146,47 @@ class Call(Module):
         blocks = [
             rp.table(trows, bordered=True, striped=True, compact=False),
             rp.expandable_quote(rp.italic(f"Waktu eksekusi {dur:.2f}s")),
+            rp.buttons(
+                rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)
+            ),
         ]
 
-        from selfbot.methods.format import Format
+        try:
+            bot = self.client.bot
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+            )
+            from pyrogram.handlers import RawUpdateHandler
+            from pyrogram.raw.types import UpdateBotInlineQuery
 
-        fmt = Format.__new__(Format)
-        fmt.client = self.client
-        fmt.logger = self.client.logger
-        if await fmt.send_rich_blocks(event, blocks, query_prefix="call"):
-            return
+            rich_raw = await rp.blocks_message(*blocks).write(client=bot)
+
+            ping_mod = self.client.modules.get("Ping")
+            route = getattr(ping_mod, "_rich_route", None) if ping_mod else None
+            if route is None and ping_mod is not None:
+                self._ensure_rich_handler(
+                    ping_mod,
+                    rawfn,
+                    InputBotInlineMessageRichMessage,
+                    InputBotInlineResult,
+                )
+                route = getattr(ping_mod, "_rich_route", None)
+            if route is not None:
+                route["call"] = (rich_raw, None)
+
+                res = await event._client.get_inline_bot_results(
+                    bot.me.id, f"call{datetime.datetime.now(datetime.UTC).timestamp()}"
+                )
+                if res and res.results:
+                    await asyncio.gather(
+                        event.reply_inline_bot_result(res.query_id, res.results[0].id),
+                        event.delete(),
+                    )
+                    return
+        except Exception as e:
+            self.logger.warning(f"call rich failed, fallback html: {e!r}")
 
         lines = [f"  <code>{_l}</code>" for _l in extra]
         await self._rich_status(event, title, lines)
