@@ -87,6 +87,7 @@ class Help(Module):
         # Media & unduhan
         "alldl": ("📥", "Media & Unduhan"),
         "toss": ("📤", "Media & Unduhan"),
+        "gcast": ("📢", "Chat"),
         "ytdl": ("📥", "Media & Unduhan"),
         "upload": ("📥", "Media & Unduhan"),
         "sticker": ("🎨", "Kreatif"),
