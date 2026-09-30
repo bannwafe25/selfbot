@@ -37,7 +37,7 @@ class Extender(abc.ABC):
             self.logger.error(f"{e.__class__.__name__}: {e}")
         else:
             self.modules[mod.__class__.__name__] = mod
-            self.logger.info(f"{mod.__class__.__name__} Loaded")
+            self.logger.info(f"{getattr(mod, 'name', mod.__class__.__name__)} Loaded")
 
     def unload(self, mod: Module) -> None:
         try:
