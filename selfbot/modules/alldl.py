@@ -156,18 +156,49 @@ class AllDL(Module):
         return out, title, "TikTok"
 
     async def _ig(self, url: str):
-        from selfbot.igdl import igdl
+        # Highlight/story link → convert ke /p/ shortcode biar API bisa resolve
+        m = re.search(r"story_media_id=(\d+)", url)
+        if m:
+            alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+            n = int(m.group(1).split("_")[0])
+            code = ""
+            while n:
+                code = alphabet[n % 64] + code
+                n //= 64
+            url = f"https://www.instagram.com/p/{code}/"
 
-        loop = asyncio.get_running_loop()
         download_dir = Path("downloads")
         download_dir.mkdir(parents=True, exist_ok=True)
         out = download_dir / f"ig_{int(now_ts())}.mp4"
 
-        def run():
-            return igdl(url, str(out))
+        async def fetch():
+            r = await self.client.http.post(
+                "https://ig.parth.qzz.io/v1/download",
+                json={"url": url},
+                timeout=120,
+            )
+            return json.loads(r.text)
 
-        code, size = await loop.run_in_executor(None, run)
-        return out, f"Instagram reel {code}", "Instagram"
+        data = (await fetch()).get("data") or {}
+        media = data.get("downloadUrl")
+        if not media:
+            raise RuntimeError(
+                "IG: API gagal (private, deleted, atau post gak tersedia)."
+            )
+
+        async def dl():
+            async with self.client.http.stream("GET", media, timeout=300) as resp:
+                if resp.status_code != 200:
+                    raise RuntimeError(f"IG download failed: HTTP {resp.status_code}")
+                with out.open("wb") as handle:
+                    async for chunk in resp.aiter_bytes(chunk_size=65536):
+                        if chunk:
+                            handle.write(chunk)
+
+        await dl()
+        code = data.get("shortcode") or "instagram"
+        title = (data.get("caption") or f"Instagram {code}")[:200]
+        return out, title, "Instagram"
 
     async def _ytdlp_dl(self, url: str, tag: str, extra: dict):
         loop = asyncio.get_running_loop()
