@@ -109,7 +109,6 @@ class Help(Module):
         "risearch": ("🔍", "Riset & Pencarian"),
         "genai": ("🤖", "AI"),
         # Sistem / dev
-        "debug": ("⚙️", "Sistem"),
         "restart": ("⚙️", "Sistem"),
         "terminal": ("⚙️", "Sistem"),
         "sendmod": ("⚙️", "Sistem"),
