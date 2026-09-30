@@ -16,6 +16,14 @@ pattern = re.compile(r"^\.?gcast(?:\s+([\s\S]+))?$", re.IGNORECASE | re.DOTALL)
 # Chat yang dilewati (id chat_id lo sendiri / saved messages ditangani terpisah)
 DELAY = 1  # jeda antar chat (detik), anti FloodWait
 
+BL_KEY = "gcast_blacklist"
+
+
+def _load_bl(client) -> set[int]:
+    """Blacklist grup (persist di MongoDB, diisi via .addbl)."""
+    doc = client.db[BL_KEY].find_one({"_id": "bl"})
+    return set(doc["ids"]) if doc else set()
+
 
 class Gcast(Module):
     name = "Gcast"
@@ -60,16 +68,21 @@ class Gcast(Module):
         now = datetime.datetime.now(datetime.UTC)
 
         targets = []
+        bl = _load_bl(self.client)
+        skipped = 0
         async for dialog in self.client.app.get_dialogs(limit=None):
             chat = dialog.chat
             # grup & supergroup doang — channel/saved message dilewati
             if chat and chat.type in (ChatType.GROUP, ChatType.SUPERGROUP):
+                if chat.id in bl:
+                    skipped += 1
+                    continue
                 targets.append(chat.id)
 
         total = len(targets)
         if not total:
             with contextlib.suppress(Exception):
-                await status.edit("<b>Gagal:</b> gak ada grup/channel ditemukan.")
+                await status.edit("<b>Gagal:</b> gak ada grup ditemukan.")
             return
 
         ok, fail = 0, []
@@ -97,6 +110,8 @@ class Gcast(Module):
             f"✅ Berhasil: <b>{ok}</b>",
             f"❌ Gagal: <b>{len(fail)}</b>",
         ]
+        if skipped:
+            lines.insert(0, f"🚫 Di-skip (blacklist): <b>{skipped}</b>")
         if fail:
             shown = "\n".join(f"<code>{html.escape(f)}</code>" for f in fail[:5])
             lines.append(f"\nDetail:\n{shown}")

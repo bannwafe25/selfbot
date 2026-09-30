@@ -88,6 +88,7 @@ class Help(Module):
         "alldl": ("📥", "Media & Unduhan"),
         "toss": ("📤", "Media & Unduhan"),
         "gcast": ("📢", "Chat"),
+        "ucast": ("📨", "Chat"),
         "ytdl": ("📥", "Media & Unduhan"),
         "upload": ("📥", "Media & Unduhan"),
         "sticker": ("🎨", "Kreatif"),
