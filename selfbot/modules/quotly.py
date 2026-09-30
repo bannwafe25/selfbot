@@ -23,7 +23,8 @@ COLOR_NAMES = {
 }
 
 PATTERN = re.compile(
-    r"^(?:q|quotly)(?:\s+(\S+))?(?:\s+(\d+))?\s*$", re.IGNORECASE
+    r"^(?:q|quotly)(?:\s+(quoted|png|p|\d+|red|blue|green|yellow|orange|purple|pink|black|white|gray|grey|teal|#[0-9a-fA-F]{6}))?((?:\s+.*)?)$",
+    re.IGNORECASE,
 )
 
 
@@ -178,6 +179,46 @@ class Quotly(Module):
                     continue
         raise last_err or RuntimeError("quote api gagal semua")
 
+    async def _quote_text(self, event: Message, text: str, color: str) -> None:
+        """q <teks> — quote dari teks yang diketik langsung (avatar userbot)."""
+        me = await self.client.app.get_me()
+        name = " ".join(filter(None, [me.first_name, me.last_name])) or "Me"
+        payload = {
+            "chatId": event.chat.id if event.chat else 1,
+            "from": {"id": me.id, "name": name, "photo": {}},
+            "text": text,
+            "avatar": True,
+        }
+        try:
+            photo = await self.client.app.download_memory(me.id, in_memory=True)
+            payload["from"]["photo"] = {
+                "url": "data:image/jpeg;base64,"
+                + base64.b64encode(photo.getvalue()).decode()
+            }
+        except Exception:
+            payload["from"].pop("photo", None)
+
+        await event.edit("<code>Membuat quote...</code>")
+        try:
+            img_bytes, ext = await self._generate([payload], color, False)
+        except Exception as e:
+            return await event.edit(f"<b>Quote gagal:</b> <code>{html.escape(str(e))}</code>")
+
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as f:
+            f.write(img_bytes)
+            out_path = Path(f.name)
+        try:
+            if ext == "webp":
+                await event.reply_sticker(out_path)
+            else:
+                await event.reply_photo(out_path)
+            await event.delete()
+        finally:
+            out_path.unlink(missing_ok=True)
+
     @handler(filters.regex(PATTERN), 1)
     async def on_message_out(self, event: Message) -> None:
         import asyncio as _asyncio
@@ -185,11 +226,17 @@ class Quotly(Module):
         m = PATTERN.match(str(event.content or "").strip())
         if not m:
             return
-        color_arg, count_arg = m.group(1), m.group(2)
+        color_arg = m.group(1)
+        rest = (m.group(2) or "").strip()
+
+        # "q <teks>" (bukan reply): quote langsung dari teks yang diketik
+        if not event.reply_to_message and rest and not rest.isdigit():
+            return await self._quote_text(event, rest, _pick_color(color_arg))
 
         if not event.reply_to_message:
-            return await event.edit("<b>Reply ke pesan dulu.</b>")
+            return await event.edit("<b>Reply ke pesan dulu, atau: q &lt;teks&gt;</b>")
 
+        count_arg = rest.split()[0] if rest.split() else None
         count = min(max(int(count_arg or 1), 1), 10)
         as_png = bool(color_arg and color_arg.lower() in ("png", "p"))
         if as_png and not count_arg:
