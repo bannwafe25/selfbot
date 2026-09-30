@@ -30,7 +30,11 @@ async def _search(client: httpx.AsyncClient, query: str, limit: int = 10) -> lis
     if not data.get("status"):
         return []
     out = []
-    for p in data.get("data", []):
+    pool = [p for p in data.get("data", []) if (p.get("image_url") or "") and not (p.get("image_url") or "").endswith(".mp4")]
+    # API balikin urutan sama tiap request — acak biar Refresh dapet foto beda
+    import random
+    random.shuffle(pool)
+    for p in pool:
         url = p.get("image_url") or ""
         if not url or url.endswith(".mp4"):
             continue
