@@ -106,14 +106,10 @@ class Debug(Module):
         status = await self.respond(event, "<code>...</code>", reply=True)
         out, rtt = await self._run(code, event)
         with contextlib.suppress(Exception):
-            await status.delete()
-        if not await self._send_rich_debug(event, out, rtt):
-            with contextlib.suppress(Exception):
-                await self.respond(
-                    event,
-                    self._fmt(out, rtt),
-                    reply_markup=self.ikm(("🗑 Del", "data", b"0")),
-                )
+            await status.edit(
+                self._fmt(out, rtt),
+                reply_markup=self.ikm(("🗑 Del", "data", b"0")),
+            )
         if strip_cmd:
             with contextlib.suppress(Exception):
                 await event.delete()
@@ -181,60 +177,3 @@ class Debug(Module):
         if len(out) > 3800:
             text += f"\n<i>… terpotong ({len(out)} chars total)</i>"
         return f"{text}\n<b><blockquote>{rtt}</blockquote></b>"
-
-    async def _send_rich_debug(self, event, out: str, rtt: str) -> bool:
-        """Kartu rich: expandable quote buat output panjang + meta. Fallback False kalau gagal."""
-        try:
-            bot = self.client.bot
-            import richpyro as rp
-            from pyrogram.raw import functions as rawfn
-            from pyrogram.raw.types import (
-                InputBotInlineMessageRichMessage,
-                InputBotInlineResult,
-            )
-            from selfbot.methods.format import Format
-            from pyrogram.enums import ButtonStyle
-
-            is_error = out.startswith("Traceback")
-            blocks = [
-                rp.heading(
-                    rp.bold("🧪 Debug" + (" — ERROR" if is_error else "")),
-                    size=3,
-                ),
-                rp.expandable_quote(out[:3500]),
-                rp.divider(),
-                rp.para(rp.bold("⏱ "), rtt),
-                rp.buttons(
-                    rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)
-                ),
-            ]
-
-            rich_raw = await rp.blocks_message(*blocks).write(client=bot)
-
-            ping_mod = self.client.modules.get("Ping")
-            if ping_mod is None:
-                return False
-            fmt = Format.__new__(Format)
-            fmt.client = self.client
-            fmt.logger = self.client.logger
-            fmt._ensure_rich_handler(
-                ping_mod, rawfn, InputBotInlineMessageRichMessage, InputBotInlineResult
-            )
-            if getattr(ping_mod, "_rich_route", None) is None:
-                ping_mod._rich_route = {}
-            ping_mod._rich_route["debugrun"] = (rich_raw, None)
-
-            import datetime as _dt
-            now = _dt.datetime.now(_dt.UTC)
-            res = await event._client.get_inline_bot_results(
-                bot.me.id, f"debugrun{now.timestamp()}"
-            )
-            if not res or not res.results:
-                return False
-            await asyncio.gather(
-                event.reply_inline_bot_result(res.query_id, res.results[0].id),
-            )
-            return True
-        except Exception as e:
-            self.logger.warning("rich debug failed: %r", e)
-            return False
