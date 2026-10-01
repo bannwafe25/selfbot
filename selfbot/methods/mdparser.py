@@ -2,33 +2,35 @@
 import re
 import richpyro as rp
 
-# token: code(`...`), bold(**...** atau __...__), italic(*...* atau _..._), strike(~~...~~)
+# token pakai alternasi (|) — grup: 1=fence 2=code 3=bold 4=strike 5=underline 6=italic
 TOKEN = re.compile(
-    r"(`[^`\n]+`)"                       # inline code
-    r"(\*\*[^*\n]+\*\*)"
-    r"(__[^_\n]+__)"
-    r"(~~[^~\n]+~~)"
-    r"(\*[^*\n]+\*)"
-    r"(```)"                             # fence marker (ditangani terpisah)
+    r"(```)"                                # fence (ditangani pemanggil, di-skip di inline)
+    r"|(`[^`\n]+`)"                          # inline code
+    r"|(\*\*[^*\n]+\*\*)"                    # bold
+    r"|(~~[^~\n]+~~)"                        # strike
+    r"|(__[^_\n]+__)"                        # underline
+    r"|(\*[^*\n]+\*)"                        # italic
 )
 
 def _inline(text):
-    """string → list RichText"""
+    """string → list RichText (teks polos = str, format = RichText object)"""
     out, pos = [], 0
     for m in TOKEN.finditer(text):
         if m.start() > pos:
             out.append(text[pos:m.start()])
-        tok = m.group(0)
-        if tok.startswith("`") and not tok.startswith("```"):
-            out.append(rp.code(tok[1:-1]))
-        elif tok.startswith("**"):
-            out.append(rp.bold(tok[2:-2]))
-        elif tok.startswith("__"):
-            out.append(rp.underline(tok[2:-2]))
-        elif tok.startswith("~~"):
-            out.append(rp.strike(tok[2:-2]))
-        else:  # *italic*
-            out.append(rp.italic(tok[1:-1]))
+        fence, code, bold, strike, under, ital = m.groups()
+        if fence:
+            continue  # fence ditangani level blok
+        if code:
+            out.append(rp.code(code[1:-1]))
+        elif bold:
+            out.append(rp.bold(bold[2:-2]))
+        elif strike:
+            out.append(rp.strike(strike[2:-2]))
+        elif under:
+            out.append(rp.underline(under[2:-2]))
+        else:
+            out.append(rp.italic(ital[1:-1]))
         pos = m.end()
     if pos < len(text):
         out.append(text[pos:])
