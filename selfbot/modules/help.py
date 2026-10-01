@@ -81,7 +81,6 @@ class Help(Module):
         "admintool": ("🛠", "Admin Tools"),
         "purge": ("🛠", "Admin Tools"),
         "delete": ("🛠", "Admin Tools"),
-        "afk": ("💬", "Chat"),
         "notes": ("💬", "Chat"),
         "quotly": ("💬", "Chat"),
         # Media & unduhan
