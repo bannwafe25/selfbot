@@ -149,20 +149,8 @@ class GenAI(Module):
             from selfbot.methods.mdparser import md_to_blocks
             from pyrogram.enums import ButtonStyle
 
-            trows = [
-                [
-                    rp.table_cell(rp.bold("Parameter"), is_header=True, align="left"),
-                    rp.table_cell(rp.bold("Nilai"), is_header=True, align="left"),
-                ]
-            ]
-            for k, v in rows:
-                trows.append(
-                    [rp.table_cell(rp.bold(str(k)), align="left"), rp.table_cell(str(v), align="left")]
-                )
-
             blocks = [
                 rp.heading(rp.bold(title), size=3),
-                rp.table(trows, bordered=True, striped=True, compact=True),
                 rp.divider(),
                 # jawaban AI berformat markdown → render jadi blok rich asli
                 *md_to_blocks(answer),
