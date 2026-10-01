@@ -37,8 +37,13 @@ class SGB(Module):
             )
             return
 
+        client = event._client
         try:
-            result = await self._ask_sangmata(event._client, target, timeout=15)
+            # selalu kirim user_id integer — lebih reliable daripada username
+            if isinstance(target, str):
+                target = (await client.get_users(target)).id
+
+            result = await self._ask_sangmata(client, target, timeout=15)
             if not result:
                 await self.respond(
                     event, "<code>No response from @SangMata_BOT (timeout).</code>"
@@ -125,6 +130,14 @@ class SGB(Module):
                 event,
                 f"<b>SGB failed</b>\n\n<code>{html.escape(str(e)[:300])}</code>",
             )
+        finally:
+            # bersihkan riwayat chat dengan bot biar gak numpuk
+            with contextlib.suppress(Exception):
+                peer = await client.resolve_peer(SANGMATA_USERNAME)
+                from pyrogram.raw import functions as rawfn2
+                await client.invoke(
+                    rawfn2.messages.DeleteHistory(peer=peer, max_id=0, revoke=True)
+                )
 
     def _extract_target(self, event: Message) -> int | str | None:
         args = (pattern.match(str(event.content).strip()).group(1) or "").strip()
