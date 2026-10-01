@@ -10,7 +10,9 @@ import pyrogram.raw as _raw  # noqa: E402
 
 
 async def _item_write_fixed(self, *, client, chat_id=None, photos=None, documents=None, ordered=False):
-    blocks = await RichText._write(client, self.blocks)
+    # RichText._write di sini dipanggil per-item — jangan sekali untuk seluruh list,
+    # karena hasil list-nya TextConcat (salah tipe untuk field blocks).
+    blocks = [await RichText._write(client, b) for b in self.blocks]
     if ordered:
         return _raw.types.PageListOrderedItemBlocks(
             checkbox=self.has_checkbox, checked=self.is_checked, blocks=blocks, value=self.value,
