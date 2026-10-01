@@ -112,10 +112,10 @@ class Help(Module):
         "restart": ("⚙️", "Sistem"),
         "terminal": ("⚙️", "Sistem"),
         "sendmod": ("⚙️", "Sistem"),
-        "call": ("📞", "Bantuan"),
-        "music": ("🎵", "Bantuan"),
-        "tts": ("🎙", "Bantuan"),
-        "help": ("📖", "Bantuan"),
+        "call": ("📞", "Help"),
+        "music": ("🎵", "Help"),
+        "tts": ("🎙", "Help"),
+        "help": ("📖", "Help"),
     }
 
     @classmethod
