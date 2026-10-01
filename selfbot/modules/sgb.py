@@ -66,6 +66,46 @@ class SGB(Module):
             if len(safe) > 3600:
                 safe = safe[:3600] + "..."
 
+            # Kartu rich polos: heading + divider + isi teks lurus (tanpa italic/quote)
+            import asyncio as _aio
+            import richpyro as rp
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+            )
+
+            blocks = [
+                rp.heading(rp.bold("🔍 History"), size=3),
+                rp.divider(),
+                rp.para(result.strip()[:3600]),
+            ]
+
+            try:
+                bot = self.client.bot
+                rich_raw = await rp.blocks_message(*blocks).write(client=bot)
+                ping_mod = self.client.modules.get("Ping")
+                route = getattr(ping_mod, "_rich_route", None)
+                if route is None and ping_mod is not None:
+                    self._ensure_rich_handler(
+                        ping_mod, rawfn, InputBotInlineMessageRichMessage, InputBotInlineResult
+                    )
+                    route = getattr(ping_mod, "_rich_route", None)
+                if route is not None:
+                    route["sgb"] = (rich_raw, None)
+                    res = await event._client.get_inline_bot_results(
+                        bot.me.id, f"sgb{now.timestamp()}"
+                    )
+                    if res.results:
+                        await _aio.gather(
+                            event.reply_inline_bot_result(res.query_id, res.results[0].id),
+                            event.delete(),
+                        )
+                        return
+            except Exception as e:
+                with contextlib.suppress(Exception):
+                    self.logger.warning(f"sgb rich failed, fallback html: {e!r}")
+
             await self.respond(
                 event,
                 (
