@@ -26,6 +26,7 @@ class GenAI(Module):
     }
 
     API_URL = "https://api.groq.com/openai/v1/chat/completions"
+    API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
     DEFAULT_MODEL = "openai/gpt-oss-120b"
 
     MAX_HISTORY = 12
@@ -37,6 +38,12 @@ class GenAI(Module):
             or await self.getvar("AI_API_KEY")
             or await self.getvar("API_SERVER_KEY")
         )
+        self.provider = "groq"
+
+        or_key = await self.getvar("OPENROUTER_API_KEY")
+        if or_key:
+            self.api_key = or_key
+            self.provider = "openrouter"
 
         if not self.api_key:
             self.logger.error(
@@ -196,6 +203,8 @@ class GenAI(Module):
             "stream": False,
         }
 
+        url = self.API_URL_OPENROUTER if self.provider == "openrouter" else self.API_URL
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -203,7 +212,7 @@ class GenAI(Module):
         }
 
         response = await self.client.http.post(
-            self.API_URL,
+            url,
             headers=headers,
             json=payload,
             timeout=120,
