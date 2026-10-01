@@ -146,25 +146,15 @@ class GenAI(Module):
                     [rp.table_cell(rp.bold(str(k)), align="left"), rp.table_cell(str(v), align="left")]
                 )
 
-            thinking_text = None
-            if getattr(self, "_last_thinking", None):
-                thinking_text = self._last_thinking
-                self._last_thinking = None
-
             blocks = [
                 rp.heading(rp.bold(title), size=3),
                 rp.table(trows, bordered=True, striped=True, compact=True),
                 rp.divider(),
-            ]
-            if thinking_text:
-                blocks.append(rp.thinking(thinking_text))
-                blocks.append(rp.divider())
-            blocks.append(rp.para(answer))
-            blocks.append(
+                rp.para(answer),
                 rp.buttons(
                     rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)
-                )
-            )
+                ),
+            ]
 
             rich_raw = await rp.blocks_message(*blocks).write(client=bot)
 
@@ -206,12 +196,6 @@ class GenAI(Module):
             "stream": False,
         }
 
-        # Minta reasoning-style summary untuk blok "thinking" (model reasoning only).
-        self._last_thinking = None
-        model_name = str(self.model or "")
-        if "gpt-oss" in model_name or "deepseek" in model_name or "qwen3" in model_name:
-            payload["reasoning_format"] = "parsed"
-
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -240,22 +224,6 @@ class GenAI(Module):
             )
 
         data = response.json()
-
-        # Groq reasoning model: reasoning terpisah dari content (reasoning_format=parsed)
-        self._last_thinking = None
-        try:
-            msg0 = data["choices"][0].get("message", {})
-            reasoning = msg0.get("reasoning")
-            if not reasoning:
-                reasoning = msg0.get("reasoning_content")
-            if reasoning:
-                reasoning = str(reasoning).strip()
-                if len(reasoning) > 500:
-                    reasoning = reasoning[:500] + "..."
-                if reasoning:
-                    self._last_thinking = reasoning
-        except Exception:
-            pass
 
         choices = data.get("choices")
 
