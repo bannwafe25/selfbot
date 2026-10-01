@@ -112,9 +112,9 @@ class Help(Module):
         "restart": ("⚙️", "Sistem"),
         "terminal": ("⚙️", "Sistem"),
         "sendmod": ("⚙️", "Sistem"),
-        "call": ("📞", "Voice Call"),
-        "music": ("🎵", "Voice Call"),
-        "tts": ("🎙", "Voice Call"),
+        "call": ("📞", "Bantuan"),
+        "music": ("🎵", "Bantuan"),
+        "tts": ("🎙", "Bantuan"),
         "help": ("📖", "Bantuan"),
     }
 
