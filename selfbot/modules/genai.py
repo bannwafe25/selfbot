@@ -121,9 +121,10 @@ class GenAI(Module):
         title: str,
         rows: list,
         answer: str,
+        reasoning: str | None = None,
         query_prefix: str = "genai",
     ) -> bool:
-        """Kartu jawaban AI gaya ChatGPT: judul + tabel meta + isi jawaban."""
+        """Kartu jawaban AI gaya ChatGPT: judul + tabel meta + isi jawaban + spoiler reasoning."""
         try:
             bot = self.client.bot
             import richpyro as rp
@@ -153,10 +154,16 @@ class GenAI(Module):
                 rp.table(trows, bordered=True, striped=True, compact=True),
                 rp.divider(),
                 rp.para(answer),
+            ]
+            if reasoning:
+                blocks.append(rp.divider())
+                blocks.append(rp.para(rp.bold("💭 Proses mikir:")))
+                blocks.append(rp.spoiler(reasoning))
+            blocks.append(
                 rp.buttons(
                     rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)
                 ),
-            ]
+            )
 
             rich_raw = await rp.blocks_message(*blocks).write(client=bot)
 
@@ -424,15 +431,9 @@ class GenAI(Module):
                     + "..."
                 )
 
-            # Reasoning model → tampilkan proses mikir sebagai spoiler.
+            # Reasoning model → tampilkan proses mikir sebagai blok spoiler di kartu.
             reasoning = getattr(self, "_last_thinking", None)
             self._last_thinking = None
-            if reasoning:
-                answer = (
-                    f"{answer}\n\n"
-                    f"💭 <b>Proses mikir:</b>\n"
-                    f"<tg-spoiler>{html.escape(reasoning)}</tg-spoiler>"
-                )
 
             rich_rows = [
                 ("Model", self.model.split("/")[-1]),
@@ -443,6 +444,7 @@ class GenAI(Module):
                 "🤖 Jawaban AI",
                 rich_rows,
                 answer,
+                reasoning=reasoning,
                 query_prefix="genai",
             ):
                 return
