@@ -51,5 +51,5 @@ SEARCH_ENGINES = {
 # ── Siputzx APIs ─────────────────────────────────────────────────────
 
 # ── Misc ─────────────────────────────────────────────────────────────
-SANGMATA_USERNAME = "@SangMata_beta_bot"
+SANGMATA_USERNAME = "@SangMata_BOT"
 YASIR_REGDATE = "https://yasirapi.eu.org/register_date"

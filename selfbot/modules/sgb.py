@@ -20,7 +20,7 @@ class SGB(Module):
     name = "SangMata"
     cmds = "sgb {user_id|username}?"
     desc = {
-        "Info": "Get user history info from @SangMata_beta_bot.",
+        "Info": "Get user history info from @SangMata_BOT.",
         "?": "Optional (reply to user message or provide target).",
         "e.g.": "sgb @username",
     }
@@ -41,7 +41,7 @@ class SGB(Module):
             result = await self._ask_sangmata(event._client, target, timeout=15)
             if not result:
                 await self.respond(
-                    event, "<code>No response from @SangMata_beta_bot (timeout).</code>"
+                    event, "<code>No response from @SangMata_BOT (timeout).</code>"
                 )
                 return
 
@@ -116,7 +116,7 @@ class SGB(Module):
         except UserIsBlocked:
             await self.respond(
                 event,
-                "<code>Please unblock @SangMata_beta_bot first.</code>",
+                "<code>Please unblock @SangMata_BOT first.</code>",
             )
         except RPCError as e:
             await self.respond(event, f"<code>{html.escape(str(e)[:300])}</code>")
