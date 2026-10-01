@@ -27,6 +27,7 @@ class GenAI(Module):
 
     API_URL = "https://api.groq.com/openai/v1/chat/completions"
     API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
+    API_URL_XKIRO = "https://api.xkiro.com/v1/chat/completions"
     DEFAULT_MODEL = "openai/gpt-oss-120b"
 
     MAX_HISTORY = 12
@@ -44,6 +45,11 @@ class GenAI(Module):
         if or_key:
             self.api_key = or_key
             self.provider = "openrouter"
+
+        xk_key = await self.getvar("XKIRO_API_KEY")
+        if xk_key:
+            self.api_key = xk_key
+            self.provider = "xkiro"
 
         if not self.api_key:
             self.logger.error(
@@ -203,7 +209,10 @@ class GenAI(Module):
             "stream": False,
         }
 
-        url = self.API_URL_OPENROUTER if self.provider == "openrouter" else self.API_URL
+        url = {
+            "openrouter": self.API_URL_OPENROUTER,
+            "xkiro": self.API_URL_XKIRO,
+        }.get(self.provider, self.API_URL)
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
