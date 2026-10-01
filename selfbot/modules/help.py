@@ -307,9 +307,9 @@ class Help(Module):
         # Nav bawah: Prev / Next / Tutup
         nav = []
         if page > 0:
-            nav.append(rp.btn(rp.bold("« Prev"), callback_data=f"help/catpage/{page - 1}".encode(), style=rp.Style.SUCCESS))
+            nav.append(rp.btn(rp.bold("◀️ Prev"), callback_data=f"help/catpage/{page - 1}".encode(), style=rp.Style.SUCCESS))
         if page < pages - 1:
-            nav.append(rp.btn(rp.bold("Next »"), callback_data=f"help/catpage/{page + 1}".encode(), style=rp.Style.SUCCESS))
+            nav.append(rp.btn(rp.bold("Next ▶️"), callback_data=f"help/catpage/{page + 1}".encode(), style=rp.Style.SUCCESS))
         nav.append(rp.btn("🗑 Tutup", callback_data=b"0", style=rp.Style.DANGER))
         blocks.append(rp.buttons(*nav, align="center"))
         blocks.append(
