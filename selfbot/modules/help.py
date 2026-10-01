@@ -352,14 +352,12 @@ class Help(Module):
             desc = getattr(mod, "desc", None)
             if isinstance(desc, dict) and desc:
                 det.append(
-                    rp.bullet_list(
+                    # bullet manual — blok list bawaan bermasalah di rich inline
+                    rp.para(
                         *[
-                            rp.list_item(
-                                rp.para(
-                                    f"{k}: {v}" if isinstance(v, str) else str(k)
-                                )
-                            )
+                            item
                             for k, v in list(desc.items())[:MAX_DESC]
+                            for item in (rp.bold(f"{k}: " if not isinstance(v, str) else f"{k}: "), f"{v}\n" if isinstance(v, str) else "\n")
                         ]
                     )
                 )
@@ -418,16 +416,12 @@ class Help(Module):
                 desc = getattr(mod, "desc", None)
                 if isinstance(desc, dict) and desc:
                     det.append(
-                        rp.bullet_list(
+                        # bullet manual — blok list bawaan bermasalah di rich inline
+                        rp.para(
                             *[
-                                rp.list_item(
-                                    rp.para(
-                                        f"{k}: {v}"
-                                        if isinstance(v, str)
-                                        else str(k)
-                                    )
-                                )
+                                item
                                 for k, v in list(desc.items())[:MAX_DESC]
+                                for item in (rp.bold(f"{k}: "), f"{v}\n")
                             ]
                         )
                     )
