@@ -18,12 +18,11 @@ pattern = re.compile(r"^sgb(?:\s+(.+))?$", re.IGNORECASE)
 
 class SGB(Module):
     name = "SangMata"
-    cmds = "sgb {user_id|username|all <user_id>}?"
+    cmds = "sgb {user_id|username}?"
     desc = {
-        "Info": "Get user history info from @SangMata_BOT.",
+        "Info": "Get user history (allhistory) from @SangMata_BOT — free, no daily quota.",
         "?": "Optional (reply to user message or provide target).",
-        "all": "Free mode via allhistory — no daily quota (needs user_id).",
-        "e.g.": "sgb @username · sgb all 123456789",
+        "e.g.": "sgb @username",
     }
 
     @handler(filters.regex(pattern), 1)
@@ -40,24 +39,11 @@ class SGB(Module):
 
         client = event._client
         try:
-            # mode allhistory: `sgb all <user_id>` — gratis, gak makan kuota harian
-            allmode = False
-            if isinstance(target, str) and target.lower().startswith("all "):
-                allmode = True
-                target = target.split(None, 1)[1].strip()
-                if not target.lstrip("-").isdigit():
-                    await self.respond(
-                        event,
-                        "<code>sgb all butuh user_id angka, bukan username. Contoh: sgb all 123456789</code>",
-                    )
-                    return
-
-            # selalu kirim user_id integer — lebih reliable daripada username
-            if not allmode and isinstance(target, str):
+            # ambil user_id: dari argumen angka, username, atau reply — semua lewat allhistory (gratis)
+            if isinstance(target, str):
                 target = (await client.get_users(target)).id
 
-            bot_text = f"allhistory {target}" if allmode else str(target)
-            result = await self._ask_sangmata(client, bot_text, timeout=20)
+            result = await self._ask_sangmata(client, f"allhistory {target}", timeout=20)
             if not result:
                 await self.respond(
                     event, "<code>No response from @SangMata_BOT (timeout).</code>"
