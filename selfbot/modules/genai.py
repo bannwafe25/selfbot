@@ -188,7 +188,8 @@ class GenAI(Module):
                 event.delete(),
             )
             return True
-        except Exception:
+        except Exception as e:
+            self.logger.warning("shared rich genai failed: %r", e)
             return False
 
     async def ask(self, messages):
