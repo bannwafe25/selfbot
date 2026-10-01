@@ -12,12 +12,49 @@ from selfbot.listener import handler
 from selfbot.module import Module
 
 pattern = re.compile(
-    r"^\.?(gcast|ucast|addbl|delbl|listbl)(?:\s+([\s\S]+))?$",
+    r"^\.?(gcast|ucast|addbl|delbl|listbl|cancel)(?:\s+([\s\S]+))?$",
     re.IGNORECASE | re.DOTALL,
 )
 
 DELAY = 1  # jeda antar chat (detik), anti FloodWait
 BL_KEY = "gcast_blacklist"
+
+# ---------- task manager broadcast (bisa di-.cancel) ----------
+class _Task:
+    def __init__(self):
+        self._tasks: dict[int, bool] = {}
+        self._next = 0
+
+    def start(self) -> int:
+        self._next += 1
+        self._tasks[self._next] = True
+        return self._next
+
+    def end(self, tid: int) -> None:
+        self._tasks.pop(tid, None)
+
+    def active(self, tid: int) -> bool:
+        return self._tasks.get(tid, False)
+
+    def cancel(self, tid: int) -> bool:
+        if tid in self._tasks:
+            self._tasks[tid] = False
+            return True
+        return False
+
+
+TASK = _Task()
+
+# penanda error biar rekapnya enak dibaca
+_ERR_LABEL = {
+    "SlowmodeWait": "Grup timer",
+    "ChatWriteForbidden": "Telah dimute",
+    "Forbidden": "AntiSpam grup aktif",
+    "ChatSendPlainForbidden": "Gak bisa kirim teks di grup",
+    "UserBannedInChannel": "Akun limit",
+    "PeerIdInvalid": "Grup invalid",
+    "ChannelPrivate": "Grup private",
+}
 
 
 async def _load_bl(client) -> set[int]:
@@ -89,6 +126,19 @@ class Broadcast(Module):
             await self._blacklist(event, cmd, arg)
             return
 
+        # ---------- cancel task broadcast ----------
+        if cmd == "cancel":
+            try:
+                tid = int(arg.split()[0])
+            except (ValueError, IndexError):
+                await self.respond(event, "<b>Cara pakai:</b> <code>.cancel {task_id}</code>")
+                return
+            if TASK.cancel(tid):
+                await self.respond(event, f"<b>🛑 Task #{tid} dibatalkan.</b>")
+            else:
+                await self.respond(event, f"<b>Gak ada task aktif #{tid}.</b>")
+            return
+
         # ---------- gcast / ucast ----------
         reply_msg = event.reply_to_message
         use_media = False
@@ -108,37 +158,51 @@ class Broadcast(Module):
         icon = "📢" if cmd == "gcast" else "📨"
         noun = "grup" if cmd == "gcast" else "private chat"
 
+        task_id = TASK.start()
         status = await self.respond(event, f"<code>🔍 Mengumpulkan {noun}...</code>")
         now = datetime.datetime.now(datetime.UTC)
 
         targets, skipped = await _collect(self.client, cmd)
         total = len(targets)
         if not total:
+            TASK.end(task_id)
             with contextlib.suppress(Exception):
                 await status.edit(f"<b>Gagal:</b> gak ada {noun} ditemukan.")
             return
 
         ok, fail = 0, []
-        for i, chat_id in enumerate(targets, 1):
-            try:
-                if cmd == "gcast" and reply_msg:
-                    if use_media:
-                        await reply_msg.copy(chat_id)
+        error_text = ""
+        cancelled = False
+        try:
+            for i, chat_id in enumerate(targets, 1):
+                if not TASK.active(task_id):
+                    cancelled = True
+                    break
+                try:
+                    if cmd == "gcast" and reply_msg:
+                        if use_media:
+                            await reply_msg.copy(chat_id)
+                        else:
+                            await self._resend(chat_id, reply_msg, text)
                     else:
-                        await self._resend(chat_id, reply_msg, text)
-                else:
-                    await self.client.app.send_message(chat_id, text)
-                ok += 1
-            except Exception as e:
-                fail.append(str(e)[:80])
-            if i % 5 == 0 or i == total:
-                with contextlib.suppress(Exception):
-                    await status.edit(
-                        f"<b>{label}</b>\n\n"
-                        f"Progress: <code>{i}/{total}</code> · ✅ {ok} · ❌ {len(fail)}"
-                    )
-            if DELAY:
-                await asyncio.sleep(DELAY)
+                        await self.client.app.send_message(chat_id, text)
+                    ok += 1
+                except Exception as e:
+                    ename = type(e).__name__
+                    label_err = _ERR_LABEL.get(ename, str(e)[:60])
+                    fail.append(f"{label_err}: <code>{chat_id}</code>")
+                    error_text += f"{label_err}: {chat_id}\n"
+                if i % 5 == 0 or i == total:
+                    with contextlib.suppress(Exception):
+                        await status.edit(
+                            f"<b>{label}</b> #<code>{task_id}</code>\n\n"
+                            f"Progress: <code>{i}/{total}</code> · ✅ {ok} · ❌ {len(fail)}\n"
+                            f"<i>Cancel: <code>.cancel {task_id}</code></i>"
+                        )
+                if DELAY:
+                    await asyncio.sleep(DELAY)
+        finally:
+            TASK.end(task_id)
 
         # ---------- kartu rich ----------
         rich_rows = [
@@ -146,12 +210,14 @@ class Broadcast(Module):
             ("Berhasil", f"✅ {ok}"),
             ("Gagal", f"❌ {len(fail)}"),
         ]
+        if cancelled:
+            rich_rows.insert(0, ("Status", "🛑 Dibatalkan"))
         if cmd == "gcast" and skipped:
             rich_rows.insert(0, ("Di-skip (blacklist)", f"🚫 {skipped}"))
-        if fail:
-            rich_rows.append(("Error (contoh)", fail[0][:60]))
 
         sum_lines = []
+        if cancelled:
+            sum_lines.append("🛑 <b>Dibatalkan</b>")
         if cmd == "gcast" and skipped:
             sum_lines.append(f"🚫 Di-skip (blacklist): <b>{skipped}</b>")
         sum_lines.append(f"✅ Berhasil: <b>{ok}</b>")
