@@ -18,11 +18,12 @@ pattern = re.compile(r"^sgb(?:\s+(.+))?$", re.IGNORECASE)
 
 class SGB(Module):
     name = "SangMata"
-    cmds = "sgb {user_id|username}?"
+    cmds = "sgb {user_id|username|all <user_id>}?"
     desc = {
         "Info": "Get user history info from @SangMata_BOT.",
         "?": "Optional (reply to user message or provide target).",
-        "e.g.": "sgb @username",
+        "all": "Free mode via allhistory — no daily quota (needs user_id).",
+        "e.g.": "sgb @username · sgb all 123456789",
     }
 
     @handler(filters.regex(pattern), 1)
@@ -39,11 +40,24 @@ class SGB(Module):
 
         client = event._client
         try:
+            # mode allhistory: `sgb all <user_id>` — gratis, gak makan kuota harian
+            allmode = False
+            if isinstance(target, str) and target.lower().startswith("all "):
+                allmode = True
+                target = target.split(None, 1)[1].strip()
+                if not target.lstrip("-").isdigit():
+                    await self.respond(
+                        event,
+                        "<code>sgb all butuh user_id angka, bukan username. Contoh: sgb all 123456789</code>",
+                    )
+                    return
+
             # selalu kirim user_id integer — lebih reliable daripada username
-            if isinstance(target, str):
+            if not allmode and isinstance(target, str):
                 target = (await client.get_users(target)).id
 
-            result = await self._ask_sangmata(client, target, timeout=15)
+            bot_text = f"allhistory {target}" if allmode else str(target)
+            result = await self._ask_sangmata(client, bot_text, timeout=20)
             if not result:
                 await self.respond(
                     event, "<code>No response from @SangMata_BOT (timeout).</code>"
