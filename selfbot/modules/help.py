@@ -106,7 +106,7 @@ class Help(Module):
         "speedtest": ("📊", "Info & Sistem"),
         "sgb": ("🔍", "Riset & Pencarian"),
         "risearch": ("🔍", "Riset & Pencarian"),
-        "genai": ("🤖", "AI"),
+        "genai": ("💬", "Chat"),
         # Sistem / dev
         "debug": ("⚙️", "Sistem"),
         "restart": ("⚙️", "Sistem"),
