@@ -89,7 +89,9 @@ def md_to_blocks(md: str, max_len: int = 8000):
         m = re.match(r"^\s*[-*]\s+(.*)", line)
         if m:
             flush()
-            blocks.append(rp.bullet_list(rp.list_item(*_inline(m.group(1)))))
+            # blok list bawaan (InputRichBlockList) ditolak Telegram di rich inline
+            # (400 RICH_MESSAGE_BLOCK_UNEXPECTED) → pakai paragraf dengan bullet manual
+            blocks.append(rp.para("• ", *_inline(m.group(1))))
             i += 1
             continue
         buf.append(line)
