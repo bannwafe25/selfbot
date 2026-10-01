@@ -146,6 +146,7 @@ class GenAI(Module):
                 InputBotInlineResult,
             )
             from selfbot.methods.format import Format
+            from selfbot.methods.mdparser import md_to_blocks
             from pyrogram.enums import ButtonStyle
 
             trows = [
@@ -163,7 +164,8 @@ class GenAI(Module):
                 rp.heading(rp.bold(title), size=3),
                 rp.table(trows, bordered=True, striped=True, compact=True),
                 rp.divider(),
-                rp.para(answer),
+                # jawaban AI berformat markdown → render jadi blok rich asli
+                *md_to_blocks(answer),
                 rp.buttons(
                     rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)
                 ),
