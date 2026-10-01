@@ -211,12 +211,28 @@ class GenAI(Module):
             "Accept": "application/json",
         }
 
-        response = await self.client.http.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=120,
-        )
+        # Retry ringan utk rate-limit free pool (429) — coba 2x dengan jeda.
+        import asyncio as _aio
+        last_err = None
+        for attempt in range(3):
+            response = await self.client.http.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=120,
+            )
+
+            if response.status_code == 429 and attempt < 2:
+                wait = 3 * (attempt + 1)
+                self.logger.warning(
+                    "rate-limited (429), retry %d dalam %ds", attempt + 1, wait
+                )
+                await _aio.sleep(wait)
+                last_err = response
+                continue
+            break
+        else:
+            response = last_err
 
         if response.status_code != 200:
             try:
