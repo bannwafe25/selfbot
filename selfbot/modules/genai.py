@@ -146,17 +146,25 @@ class GenAI(Module):
                     [rp.table_cell(rp.bold(str(k)), align="left"), rp.table_cell(str(v), align="left")]
                 )
 
-            # Blok thinking DITOLAK Telegram utk inline rich message
-            # (RICH_MESSAGE_BLOCK_UNSUPPORTED) — jangan dipakai.
+            thinking_text = None
+            if getattr(self, "_last_thinking", None):
+                thinking_text = self._last_thinking
+                self._last_thinking = None
+
             blocks = [
                 rp.heading(rp.bold(title), size=3),
                 rp.table(trows, bordered=True, striped=True, compact=True),
                 rp.divider(),
-                rp.para(answer),
+            ]
+            if thinking_text:
+                blocks.append(rp.thinking(thinking_text))
+                blocks.append(rp.divider())
+            blocks.append(rp.para(answer))
+            blocks.append(
                 rp.buttons(
                     rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=ButtonStyle.DANGER)
-                ),
-            ]
+                )
+            )
 
             rich_raw = await rp.blocks_message(*blocks).write(client=bot)
 
@@ -233,9 +241,7 @@ class GenAI(Module):
 
         data = response.json()
 
-        # Groq reasoning model: reasoning dipisah dari content (reasoning_format=parsed).
-        # Blok thinking Telegram ditolak untuk inline rich message, jadi reasoning
-        # ditampilkan sebagai spoiler di bawah jawaban.
+        # Groq reasoning model: reasoning terpisah dari content (reasoning_format=parsed)
         self._last_thinking = None
         try:
             msg0 = data["choices"][0].get("message", {})
@@ -422,16 +428,6 @@ class GenAI(Module):
                 answer = (
                     answer[:3500]
                     + "..."
-                )
-
-            # Reasoning model → tampilkan proses mikir sebagai spoiler.
-            reasoning = getattr(self, "_last_thinking", None)
-            self._last_thinking = None
-            if reasoning:
-                answer = (
-                    f"{answer}\n\n"
-                    f"💭 <b>Proses mikir:</b>\n"
-                    f"<tg-spoiler>{html.escape(reasoning)}</tg-spoiler>"
                 )
 
             rich_rows = [
