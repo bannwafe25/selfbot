@@ -2,6 +2,25 @@
 import re
 import richpyro as rp
 
+# ===== monkeypatch bug library =====
+# InputRichBlockListItem.write bawaan: (1) nerusin chat_id/photos/documents ke RichText*.write
+# yang cuma nerima client → TypeError, (2) str polos di blocks gak dikonversi → AttributeError.
+from pyrogram.types import InputRichBlockListItem, RichText  # noqa: E402
+import pyrogram.raw as _raw  # noqa: E402
+
+
+async def _item_write_fixed(self, *, client, chat_id=None, photos=None, documents=None, ordered=False):
+    blocks = await RichText._write(client, self.blocks)
+    if ordered:
+        return _raw.types.PageListOrderedItemBlocks(
+            checkbox=self.has_checkbox, checked=self.is_checked, blocks=blocks, value=self.value,
+        )
+    return _raw.types.PageListItemBlocks(blocks=blocks)
+
+
+InputRichBlockListItem.write = _item_write_fixed
+# ===== end monkeypatch =====
+
 # token pakai alternasi (|) — grup: 1=fence 2=code 3=bold 4=strike 5=underline 6=italic
 TOKEN = re.compile(
     r"(```)"                                # fence (ditangani pemanggil, di-skip di inline)
