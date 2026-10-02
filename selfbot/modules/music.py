@@ -79,29 +79,34 @@ def _download_media(video_id: str, dest: str, video: bool) -> None:
     """Download media: OneGrab dulu, fallback yt-dlp."""
     import urllib.request
 
-    cdn = _onegrab_url(video_id, True)  # selalu minta versi video (audio-only = t.me link, gak berguna)
-    if not cdn:
-        cdn = _onegrab_url(video_id, False)
-    if cdn:
-        last_err = None
-        for attempt in range(3):
-            try:
-                req = urllib.request.Request(cdn, headers={"User-Agent": "Mozilla/5.0"})
-                with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
-                    while True:
-                        chunk = r.read(262144)
-                        if not chunk:
-                            break
-                        f.write(chunk)
-                if os.path.exists(dest) and os.path.getsize(dest) > 10000:
-                    return
-            except Exception as e:
-                last_err = e
-                with contextlib.suppress(Exception):
-                    os.remove(dest)
-                # CDN link kadang sekali pakai — minta URL baru
-                cdn = _onegrab_url(video_id, True) or cdn
-        raise last_err or RuntimeError("download gagal")
+    last_err = None
+    for attempt in range(6):
+        # Ambil CDN link; googlevideo = link diblok (403 di server ini) → minta ulang
+        cdn = _onegrab_url(video_id, True) or _onegrab_url(video_id, False)
+        if cdn and "googlevideo.com" in cdn:
+            last_err = RuntimeError("cdn googlevideo diblok, minta link lain")
+            continue
+        if not cdn:
+            last_err = RuntimeError("OneGrab gak kasi cdn url")
+            continue
+        try:
+            req = urllib.request.Request(cdn, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=90) as r, open(dest, "wb") as f:
+                while True:
+                    chunk = r.read(262144)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+            if os.path.exists(dest) and os.path.getsize(dest) > 10000:
+                return
+            last_err = RuntimeError("file terlalu kecil / kosong")
+        except Exception as e:
+            last_err = e
+            with contextlib.suppress(Exception):
+                os.remove(dest)
+
+    if last_err:
+        raise last_err
 
     import yt_dlp
 
