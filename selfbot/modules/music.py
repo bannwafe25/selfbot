@@ -316,12 +316,42 @@ class Music(Module):
 
         # Kalau VC lagi jalan di chat ini → masuk antrian, bukan main langsung
         if self.current_chat == chat_id and self.queue:
+            url = f"https://www.youtube.com/watch?v={vid}"
             self.queue.append({"vid": vid, "title": title, "author": author,
-                               "is_video": is_video, "url": f"https://www.youtube.com/watch?v={vid}",
+                               "is_video": is_video, "url": url,
                                "dur": "-"})
+            pos = len(self.queue)
+            rich_done = False
+            if isinstance(event, Message):
+                try:
+                    import richpyro as rp
+
+                    trows = [
+                        [rp.table_cell(rp.bold("➕ Masuk Antrian"), is_header=True, colspan=2, align="center")],
+                        [rp.table_cell(rp.bold("🎵 Title"), align="left"),
+                         rp.table_cell(rp.link(title, url), align="left")],
+                        [rp.table_cell(rp.bold("📺 Channel"), align="left"),
+                         rp.table_cell(author, align="left")],
+                        [rp.table_cell(rp.bold("📃 Posisi"), align="left"),
+                         rp.table_cell(f"#{pos}", align="left")],
+                    ]
+                    blocks = [rp.table(trows, bordered=True, striped=True)]
+                    from pyrogram.enums import ButtonStyle as _BS
+                    blocks.append(rp.buttons(
+                        rp.btn(rp.bold("📃 Playlist"), callback_data=b"music:playlist", style=_BS.PRIMARY),
+                        rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=_BS.DANGER),
+                    ))
+                    rich_done = await self.send_rich_blocks(event, blocks, query_prefix="music")
+                except Exception as e:
+                    with contextlib.suppress(Exception):
+                        self.logger.warning(f"music rich failed: {e!r}")
+            if rich_done:
+                with contextlib.suppress(Exception):
+                    await event.delete()
+                return
             await self._status(
                 event,
-                f"<code>➕ Masuk antrian #{len(self.queue)}: {title}</code>",
+                f"<code>➕ Masuk antrian #{pos}: {title}</code>",
             )
             return
 
@@ -466,6 +496,8 @@ class Music(Module):
             await self._do_resume(event)
         elif action == "skip":
             await self._do_skip(event)
+        elif action == "playlist":
+            await self._do_playlist(event)
 
     async def _do_stop(self, event) -> None:
         try:
