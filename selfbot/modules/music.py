@@ -27,8 +27,33 @@ def _clean(s: str) -> str:
     return s.strip()
 
 
+def _arc_request(path: str, params: dict) -> dict:
+    """Request ke Arc API (api.arcmusic.fun) dengan api_key."""
+    import json
+    import urllib.parse
+    import urllib.request
+
+    api_key = os.getenv("ARC_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("ARC_API_KEY belum di-set di .env")
+    params = {**params, "api_key": api_key}
+    url = "https://api.arcmusic.fun" + path + "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read().decode("utf-8", "ignore"))
+
+
 def _yt_search(query: str) -> tuple[str, str, str] | None:
-    """Cari video di YouTube: return (video_id, title, author) atau None."""
+    """Cari video di YouTube via Arc API, fallback scrape HTML."""
+    try:
+        d = _arc_request("/youtube/v2/search", {"query": query, "limit": 1})
+        results = d.get("results") or []
+        if results:
+            r0 = results[0]
+            return r0["video_id"], r0["title"], r0.get("channel", "")
+    except Exception:
+        pass
+
     import urllib.parse
     import urllib.request
 
@@ -117,12 +142,80 @@ def _loader_to(video_id: str, dest: str, video: bool) -> None:
         raise RuntimeError("loader.to file kosong/kecil")
 
 
-def _download_media(video_id: str, dest: str, video: bool) -> None:
-    """Download media: OneGrab dulu, lalu loader.to, fallback yt-dlp."""
+def _arc_download(video_id: str, dest: str, video: bool) -> None:
+    """Download via Arc API (api.arcmusic.fun): instant CDN cache atau job polling."""
+    import json
+    import time
     import urllib.request
 
+    d = _arc_request("/youtube/v2/download", {"query": video_id, "isVideo": "true" if video else "false"})
+    cdn = None
+    if d.get("job_id") is None and d.get("result", {}).get("success"):
+        cdn = d["result"].get("cdn")
+    elif d.get("job_id"):
+        jid = d["job_id"]
+        for _ in range(45):  # max ±3 menit
+            time.sleep(4)
+            p = _arc_request("/youtube/jobStatus", {"job_id": jid})
+            job = p.get("job", {})
+            st = job.get("status")
+            if st == "done":
+                res = job.get("result") or {}
+                if not res.get("success"):
+                    raise RuntimeError(f"Arc job error: {str(res)[:120]}")
+                cdn = res.get("cdn")
+                break
+            if st == "error":
+                raise RuntimeError(f"Arc job gagal: {str(job)[:120]}")
+    if not cdn:
+        raise RuntimeError("Arc API gak kasi cdn")
+    # cdn bisa berupa link t.me (perlu embed scrape) atau file langsung
+    if cdn.startswith("https://t.me/") or cdn.startswith("https://telegram.me/"):
+        cdn = _tme_media_url(cdn)
+    req = urllib.request.Request(cdn, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=180) as r, open(dest, "wb") as f:
+        while True:
+            chunk = r.read(262144)
+            if not chunk:
+                break
+            f.write(chunk)
+    if not os.path.exists(dest) or os.path.getsize(dest) < 10000:
+        raise RuntimeError("Arc file kosong/kecil")
+
+
+def _tme_media_url(tme_link: str) -> str:
+    """Ambil URL file langsung dari halaman embed t.me (bot view)."""
+    import urllib.request
+
+    embed = tme_link.split("?")[0].rstrip("/") + "?embed=1&mode=tme"
+    html_text = urllib.request.urlopen(
+        urllib.request.Request(embed, headers={"User-Agent": "Mozilla/5.0"}), timeout=30
+    ).read().decode("utf-8", "ignore")
+    m = re.search(r'"url":"(https://cdn-[\d]+\.telesco\.pe[^"]+)"', html_text)
+    if not m:
+        m = re.search(r'src="(https://cdn[\d.-]*\.telesco\.pe[^"]+)"', html_text)
+    if not m:
+        raise RuntimeError(f"gak nemu file di embed {tme_link}")
+    return m.group(1).replace("\\/", "/")
+
+
+def _download_media(video_id: str, dest: str, video: bool) -> None:
+    """Download media: Arc API dulu, lalu loader.to & OneGrab, fallback yt-dlp."""
     last_err = None
-    for attempt in range(6):
+
+    # Arc API (prioritas)
+    try:
+        _arc_download(video_id, dest, video)
+        if os.path.exists(dest) and os.path.getsize(dest) > 10000:
+            return
+    except Exception as e:
+        last_err = e
+        with contextlib.suppress(Exception):
+            os.remove(dest)
+
+    import urllib.request
+
+    for attempt in range(4):
         # Ambil CDN link; googlevideo = link diblok (403 di server ini) → minta ulang
         cdn = _onegrab_url(video_id, True) or _onegrab_url(video_id, False)
         if cdn and "googlevideo.com" in cdn:
