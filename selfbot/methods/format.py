@@ -61,11 +61,13 @@ class Format:
         event,
         blocks: list,
         query_prefix: str = "rich",
+        chat_id: int | None = None,
     ) -> bool:
         """Kirim rich message dari blok bebas (tanpa tabel wajib).
 
         blocks = list of richpyro blocks (para, details, photo_block, buttons, ...).
         Tombol 🗑 Tutup otomatis ditambah kalau belum ada blok buttons.
+        event=None (auto-next): kirim pesan rich baru ke chat VC aktif.
         Return True kalau sukses, False kalau perlu fallback HTML.
         """
         import datetime as _dt
@@ -113,6 +115,15 @@ class Format:
             )
             if not res or not res.results:
                 return False
+
+            if event is None:
+                # auto-next: kirim sebagai pesan baru via userbot ke chat VC
+                if not chat_id:
+                    return False
+                await self.client.app.send_inline_bot_result(
+                    chat_id, res.query_id, res.results[0].id,
+                )
+                return True
 
             await event.reply_inline_bot_result(res.query_id, res.results[0].id)
             return True

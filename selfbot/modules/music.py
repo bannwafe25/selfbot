@@ -714,7 +714,67 @@ class Music(Module):
             self.paused = False
             self.play_token += 1
             asyncio.ensure_future(self._wait_finish(self.current_chat, dest, self.play_token))
-            emoji = "🎬" if is_video else "🎵"
-            await self._status(event, f"<code>{emoji} Now Playing: {info['title']}</code>")
         except Exception as e:
             await self._status(event, f"❌ PyTgCalls: <code>{e}</code>")
+            return
+
+        # Update durasi hasil ffprobe
+        dur_txt = info.get("dur", "-")
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "ffprobe", "-v", "error", "-show_entries", "format=duration",
+                "-of", "csv=p=0", dest,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+            )
+            out, _ = await proc.communicate()
+            dur_s = int(float(out.decode().strip() or 0))
+            if dur_s:
+                dur_txt = f"{dur_s // 60}:{dur_s % 60:02d}"
+                info["dur"] = dur_txt
+        except Exception:
+            pass
+        if self.queue and self.queue[0].get("vid") == vid:
+            self.queue[0] = info
+
+        # Kartu rich "Now Playing" (juga untuk auto-next via event=None)
+        yt_link = info.get("url") or f"https://www.youtube.com/watch?v={vid}"
+        emoji = "🎬" if is_video else "🎵"
+        rich_done = False
+        try:
+            import richpyro as rp
+
+            trows = [
+                [rp.table_cell(rp.bold(f"{emoji} Now Playing"), is_header=True, colspan=2, align="center")],
+                [rp.table_cell(rp.bold("🎵 Title"), align="left"),
+                 rp.table_cell(rp.link(info["title"], yt_link), align="left")],
+                [rp.table_cell(rp.bold("⏱ Duration"), align="left"),
+                 rp.table_cell(dur_txt, align="left")],
+                [rp.table_cell(rp.bold("📺 Channel"), align="left"),
+                 rp.table_cell(info.get("author", "-"), align="left")],
+                [rp.table_cell(rp.bold("🎚 Mode"), align="left"),
+                 rp.table_cell("Video" if is_video else "Audio", align="left")],
+            ]
+            blocks = [rp.table(trows, bordered=True, striped=True, compact=False)]
+            from pyrogram.enums import ButtonStyle as _BS
+            blocks.append(rp.buttons(
+                rp.btn(rp.bold("⏹ Stop"), callback_data=b"music:stop", style=_BS.DANGER),
+                rp.btn(rp.bold("⏭ Skip"), callback_data=b"music:skip", style=_BS.PRIMARY),
+                rp.btn(rp.bold("⏸ Pause"), callback_data=b"music:pause", style=_BS.DEFAULT),
+                rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=_BS.DANGER),
+            ))
+            if event is not None:
+                rich_done = await self.send_rich_blocks(event, blocks, query_prefix="music")
+                if rich_done:
+                    with contextlib.suppress(Exception):
+                        await event.delete()
+                    return
+                await self._status(event, f"<code>{emoji} Now Playing: {info['title']}</code>")
+            else:
+                # auto-next: kirim kartu rich baru ke chat VC
+                rich_done = await self.send_rich_blocks(None, blocks, query_prefix="music", chat_id=self.current_chat)
+                if not rich_done:
+                    await self._status(None, f"<code>{emoji} Now Playing: {info['title']}</code>")
+        except Exception as e:
+            with contextlib.suppress(Exception):
+                self.logger.warning(f"music rich failed: {e!r}")
+            await self._status(event, f"<code>{emoji} Now Playing: {info['title']}</code>")
