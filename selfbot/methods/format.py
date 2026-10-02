@@ -110,7 +110,8 @@ class Format:
             ping_mod._rich_route[query_prefix] = (rich_raw, None)
 
             now = _dt.datetime.now(_dt.UTC)
-            res = await event._client.get_inline_bot_results(
+            _c = event._client if event is not None else self.client.app
+            res = await _c.get_inline_bot_results(
                 bot.me.id, f"{query_prefix}{now.timestamp()}"
             )
             if not res or not res.results:
@@ -211,7 +212,8 @@ class Format:
             ping_mod._rich_route[query_prefix] = (rich_raw, None)
 
             now = _dt.datetime.now(_dt.UTC)
-            res = await event._client.get_inline_bot_results(
+            _c = event._client if event is not None else self.client.app
+            res = await _c.get_inline_bot_results(
                 bot.me.id, f"{query_prefix}{now.timestamp()}"
             )
             if res.results:
