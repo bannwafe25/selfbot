@@ -25,42 +25,32 @@ class GenAI(Module):
         "e.g.": "Hello, World! ai",
     }
 
-    API_URL = "https://api.groq.com/openai/v1/chat/completions"
-    API_URL_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
-    API_URL_XKIRO = "https://api.xkiro.com/v1/chat/completions"
-    DEFAULT_MODEL = "openai/gpt-oss-120b"
-
     MAX_HISTORY = 12
     MAX_PROMPT_LENGTH = 12000
 
     async def on_starting(self) -> None:
-        self.api_key = (
-            await self.getvar("GROQ_API_KEY")
-            or await self.getvar("AI_API_KEY")
-            or await self.getvar("API_SERVER_KEY")
-        )
-        self.provider = "groq"
-
-        or_key = await self.getvar("OPENROUTER_API_KEY")
-        if or_key:
-            self.api_key = or_key
-            self.provider = "openrouter"
-
+        # Priority: XKIRO (qwen free, gak ada quota harian ketat) → Gemini
         xk_key = await self.getvar("XKIRO_API_KEY")
         if xk_key:
             self.api_key = xk_key
             self.provider = "xkiro"
+        else:
+            self.api_key = await self.getvar("GEMINI_API_KEY")
+            self.provider = "gemini"
 
         if not self.api_key:
-            self.logger.error(
-                "AI_API_KEY / API_SERVER_KEY not configured"
-            )
+            self.logger.error("XKIRO_API_KEY / GEMINI_API_KEY not configured")
             self.client.unload(self)
             return
 
+        default_model = (
+            "qwen/qwen3.7-max:free"
+            if self.provider == "xkiro"
+            else "gemini-3.5-flash"
+        )
         self.model = (
             await self.getvar("AI_MODEL")
-            or self.DEFAULT_MODEL
+            or default_model
         )
 
         self.history = collections.defaultdict(
@@ -200,89 +190,99 @@ class GenAI(Module):
             "stream": False,
         }
 
-        url = {
-            "openrouter": self.API_URL_OPENROUTER,
-            "xkiro": self.API_URL_XKIRO,
-        }.get(self.provider, self.API_URL)
-
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        }
-
-        # Retry ringan utk rate-limit free pool (429) — coba 2x dengan jeda.
-        import asyncio as _aio
-        last_err = None
-        for attempt in range(3):
+        if self.provider == "xkiro":
+            # OpenAI-compatible endpoint di xkiro.com
             response = await self.client.http.post(
-                url,
-                headers=headers,
-                json=payload,
+                "https://api.xkiro.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model,
+                    "messages": messages,
+                    "temperature": 0.7,
+                    "stream": False,
+                },
                 timeout=120,
             )
-
-            if response.status_code == 429 and attempt < 2:
-                wait = 3 * (attempt + 1)
-                self.logger.warning(
-                    "rate-limited (429), retry %d dalam %ds", attempt + 1, wait
+            if response.status_code != 200:
+                try:
+                    error = response.json().get("error", response.text)
+                except Exception:
+                    error = response.text
+                raise RuntimeError(
+                    f"HTTP {response.status_code}: {error}"
                 )
-                await _aio.sleep(wait)
-                last_err = response
-                continue
-            break
-        else:
-            response = last_err
-
-        if response.status_code != 200:
+            data = response.json()
             try:
-                data = response.json()
-                error = data.get(
-                    "error",
-                    data,
+                return data["choices"][0]["message"]["content"]
+            except (KeyError, IndexError):
+                raise RuntimeError(
+                    f"Format respons xKiro tidak dikenal: {data}"
                 )
-            except Exception:
-                error = response.text
 
-            raise RuntimeError(
-                f"HTTP {response.status_code}: {error}"
+        if self.provider == "gemini":
+            # Gemini native API: model di URL, key di header khusus,
+            # body pakai contents bukan messages.
+            gemini_url = (
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{self.model}:generateContent"
             )
+            contents = []
+            for m in messages:
+                role = "model" if m["role"] == "assistant" else "user"
+                contents.append(
+                    {"role": role, "parts": [{"text": m["content"]}]}
+                )
+            payload = {
+                "contents": contents,
+                "generationConfig": {"temperature": 0.7},
+            }
+            # flash-lite gak support thinkingBudget — hanya model pro/flash biasa
+            headers = {"x-goog-api-key": self.api_key}
 
-        data = response.json()
+            # Retry utk error sementara (429 rate-limit / 503 high demand /
+            # 400 lokasi yang kadang muncul acak) — coba 4x dengan jeda.
+            import asyncio as _aio
+            last_err = None
+            for attempt in range(4):
+                response = await self.client.http.post(
+                    gemini_url,
+                    headers=headers,
+                    json=payload,
+                    timeout=120,
+                )
+                if response.status_code == 429:
+                    # Quota habis — jangan retry, langsung gagal
+                    break
+                if response.status_code in (503, 400) and attempt < 3:
+                    self.logger.warning(
+                        "gemini %d (attempt %d), retry ntar %ds",
+                        response.status_code, attempt + 1, 2 * (attempt + 1),
+                    )
+                    await _aio.sleep(2 * (attempt + 1))
+                    last_err = response
+                    continue
+                break
+            else:
+                response = last_err
 
-        choices = data.get("choices")
-
-        if not choices:
-            raise RuntimeError(
-                "API tidak mengembalikan choices."
-            )
-
-        answer = (
-            choices[0]
-            .get("message", {})
-            .get("content")
-        )
-
-        if isinstance(answer, list):
-            parts = []
-
-            for item in answer:
-                if isinstance(item, dict):
-                    text = item.get("text")
-
-                    if text:
-                        parts.append(
-                            str(text)
-                        )
-
-            answer = "\n".join(parts)
-
-        if not answer:
-            raise RuntimeError(
-                "Jawaban AI kosong."
-            )
-
-        return str(answer).strip()
+            if response.status_code != 200:
+                try:
+                    error = response.json().get("error", response.text)
+                except Exception:
+                    error = response.text
+                raise RuntimeError(
+                    f"HTTP {response.status_code}: {error}"
+                )
+            data = response.json()
+            try:
+                return data["candidates"][0]["content"]["parts"][0]["text"]
+            except (KeyError, IndexError):
+                raise RuntimeError(
+                    f"Format respons Gemini tidak dikenal: {data}"
+                )
 
     @handler(
         filters.regex(pattern),
