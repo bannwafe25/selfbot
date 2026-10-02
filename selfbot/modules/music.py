@@ -427,7 +427,7 @@ class Music(Module):
                 blocks.append(rp.buttons(
                     rp.btn(rp.bold("⏹ Stop"), callback_data=b"music:stop", style=_BS.DANGER),
                     rp.btn(rp.bold("⏭ Skip"), callback_data=b"music:skip", style=_BS.PRIMARY),
-                    rp.btn(rp.bold("⏸ Pause"), callback_data=b"music:pause", style=_BS.SECONDARY),
+                    rp.btn(rp.bold("⏸ Pause"), callback_data=b"music:pause", style=_BS.DEFAULT),
                     rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=_BS.DANGER),
                 ))
                 rich_done = await self.send_rich_blocks(event, blocks, query_prefix="music")
