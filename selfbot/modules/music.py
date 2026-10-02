@@ -75,8 +75,50 @@ def _onegrab_url(video_id: str, video: bool) -> str | None:
     return data.get("cdnurl")
 
 
+def _loader_to(video_id: str, dest: str, video: bool) -> None:
+    """Download via loader.to (convert & download, bypass bot-check YouTube)."""
+    import json
+    import time
+    import urllib.parse
+    import urllib.request
+
+    UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/143.0.0.0"}
+    fmt = "360" if video else "mp3"
+    watch = urllib.parse.quote(f"https://www.youtube.com/watch?v={video_id}")
+    start = urllib.request.urlopen(
+        urllib.request.Request(f"https://loader.to/ajax/download.php?format={fmt}&url={watch}", headers=UA),
+        timeout=30,
+    )
+    d = json.loads(start.read())
+    prog_url = d.get("progress_url")
+    if not prog_url:
+        raise RuntimeError(f"loader.to gak kasi progress_url: {str(d)[:120]}")
+    dl_url = None
+    for _ in range(40):  # max ±3.5 menit
+        time.sleep(5)
+        try:
+            p = json.loads(urllib.request.urlopen(
+                urllib.request.Request(prog_url, headers=UA), timeout=45).read())
+        except Exception:
+            continue
+        dl_url = p.get("download_url") or None
+        if dl_url:
+            break
+    if not dl_url:
+        raise RuntimeError("loader.to timeout nunggu convert")
+    req = urllib.request.Request(dl_url, headers=UA)
+    with urllib.request.urlopen(req, timeout=180) as r, open(dest, "wb") as f:
+        while True:
+            chunk = r.read(262144)
+            if not chunk:
+                break
+            f.write(chunk)
+    if not os.path.exists(dest) or os.path.getsize(dest) < 10000:
+        raise RuntimeError("loader.to file kosong/kecil")
+
+
 def _download_media(video_id: str, dest: str, video: bool) -> None:
-    """Download media: OneGrab dulu, fallback yt-dlp."""
+    """Download media: OneGrab dulu, lalu loader.to, fallback yt-dlp."""
     import urllib.request
 
     last_err = None
@@ -104,6 +146,16 @@ def _download_media(video_id: str, dest: str, video: bool) -> None:
             last_err = e
             with contextlib.suppress(Exception):
                 os.remove(dest)
+
+    # loader.to: satu percobaan cepat sebelum nyerah ke yt-dlp
+    try:
+        _loader_to(video_id, dest, video)
+        if os.path.exists(dest) and os.path.getsize(dest) > 10000:
+            return
+    except Exception as e:
+        last_err = e
+        with contextlib.suppress(Exception):
+            os.remove(dest)
 
     if last_err:
         raise last_err
