@@ -11,7 +11,8 @@ from selfbot.listener import handler
 from selfbot.module import Module
 
 MUSIC_PATTERN = re.compile(
-    r"^(?:play|vplay|stop)(?:\s+([\s\S]+))?$", re.IGNORECASE
+    r"^(?:play|vplay|stop|pause|resume|skip|playlist|volume)(?:\s+([\s\S]+))?$",
+    re.IGNORECASE,
 )
 
 YT_SEARCH_URL = "https://www.youtube.com/results"
@@ -121,12 +122,17 @@ def _download_media(video_id: str, dest: str, video: bool) -> None:
 
 class Music(Module):
     name = "Music Assistant"
-    cmds = "play|vplay <judul> | stop"
+    cmds = "play|vplay <judul> | pause | resume | skip | playlist | volume <1-200> | stop"
     desc = {
         "play <judul>": "Assistant join VC & putar AUDIO dari YouTube.",
         "vplay <judul>": "Assistant join VC & putar VIDEO dari YouTube.",
+        "pause": "Pause lagu yang sedang diputar.",
+        "resume": "Lanjutkan lagu yang di-pause.",
+        "skip": "Lewati lagu, putar berikutnya di queue.",
+        "playlist": "Lihat lagu sekarang + antrian.",
+        "volume <n>": "Set volume 1-200.",
         "stop": "Stop lagu & assistant keluar VC.",
-        "e.g.": "play melukis senja | vplay melukis senja",
+        "e.g.": "play melukis senja | volume 150",
     }
 
     def __init__(self, *args, **kwargs):
@@ -134,6 +140,8 @@ class Music(Module):
         self.call = None          # PyTgCalls instance (milik assistant)
         self.current_chat = None  # chat_id VC aktif
         self.play_token = 0       # naik setiap play baru (batal watcher lama)
+        self.queue = []           # antrian: list f_info dict
+        self.paused = False
 
     async def _wait_finish(self, chat_id: int, dest: str, token: int) -> None:
         """Tunggu durasi media habis (ffprobe) lalu assistant keluar VC."""
@@ -155,6 +163,16 @@ class Music(Module):
             with contextlib.suppress(Exception):
                 import shutil
                 shutil.rmtree(os.path.dirname(dest), ignore_errors=True)
+            return
+        # Hapus lagu ini dari queue head
+        with contextlib.suppress(Exception):
+            if self.queue and self.queue[0].get("vid") and self.queue:
+                self.queue.pop(0)
+        # Masih ada antrian → auto-next, jangan keluar VC
+        if self.queue and self.current_chat == chat_id:
+            nxt = self.queue[0]
+            with contextlib.suppress(Exception):
+                await self._play_file(None, nxt)
             return
         # Assistant keluar VC
         if self.current_chat == chat_id:
@@ -185,8 +203,21 @@ class Music(Module):
     # ------------------------------------------------------
 
     async def _status(self, event: Message, text: str):
+        if event is None:
+            # auto-next tanpa event → kirim ke chat VC
+            if self.current_chat:
+                with contextlib.suppress(Exception):
+                    return await self.client.app.send_message(self.current_chat, text)
+            return None
         with contextlib.suppress(Exception):
             return await event.edit_text(text)
+        with contextlib.suppress(Exception):
+            return await event.edit_message_text(text)
+        with contextlib.suppress(Exception):
+            cid = getattr(getattr(event, "message", None), "chat", None) or getattr(event, "chat", None)
+            if cid:
+                return await self.client.app.send_message(cid.id, text)
+        return None
 
     def _is_group(self, chat) -> bool:
         t = str(getattr(chat, "type", "")).lower()
@@ -214,6 +245,23 @@ class Music(Module):
 
         if action == "stop":
             await self._do_stop(event)
+            return
+
+        # kontrol VC simpel
+        if action == "pause":
+            await self._do_pause(event)
+            return
+        if action == "resume":
+            await self._do_resume(event)
+            return
+        if action == "volume":
+            await self._do_volume(event, query)
+            return
+        if action == "playlist":
+            await self._do_playlist(event)
+            return
+        if action == "skip":
+            await self._do_skip(event)
             return
 
         # play / vplay
@@ -265,6 +313,18 @@ class Music(Module):
 
         # 3. Download
         kind = "video" if is_video else "audio"
+
+        # Kalau VC lagi jalan di chat ini → masuk antrian, bukan main langsung
+        if self.current_chat == chat_id and self.queue:
+            self.queue.append({"vid": vid, "title": title, "author": author,
+                               "is_video": is_video, "url": f"https://www.youtube.com/watch?v={vid}",
+                               "dur": "-"})
+            await self._status(
+                event,
+                f"<code>➕ Masuk antrian #{len(self.queue)}: {title}</code>",
+            )
+            return
+
         await self._status(event, f"<code>⬇️ Downloading {kind}:</code> {title}")
         tmp_dir = tempfile.mkdtemp(prefix="music_")
         ext = "mp4" if is_video else "m4a"
@@ -339,6 +399,10 @@ class Music(Module):
         dur_s = int(float(out.decode().strip() or 0))
         dur_txt = f"{dur_s // 60}:{dur_s % 60:02d}" if dur_s else "-"
 
+        # Daftarkan sebagai "now playing" (queue[0])
+        self.queue.insert(0, {"vid": vid, "title": title, "author": author,
+                              "is_video": is_video, "url": yt_link, "dur": dur_txt})
+
         # Rich card ala TgMusic via send_rich_blocks; kalau gagal → HTML di bawah
         rich_done = False
         if isinstance(event, Message):
@@ -362,6 +426,8 @@ class Music(Module):
                 from pyrogram.enums import ButtonStyle as _BS
                 blocks.append(rp.buttons(
                     rp.btn(rp.bold("⏹ Stop"), callback_data=b"music:stop", style=_BS.DANGER),
+                    rp.btn(rp.bold("⏭ Skip"), callback_data=b"music:skip", style=_BS.PRIMARY),
+                    rp.btn(rp.bold("⏸ Pause"), callback_data=b"music:pause", style=_BS.SECONDARY),
                     rp.btn(rp.bold("🗑 Tutup"), callback_data=b"0", style=_BS.DANGER),
                 ))
                 rich_done = await self.send_rich_blocks(event, blocks, query_prefix="music")
@@ -384,9 +450,9 @@ class Music(Module):
             f"<b>By:</b> Assistant",
         )
 
-    @handler(filters.regex(r"^music:stop$"), 1)
+    @handler(filters.regex(r"^music:(stop|pause|resume|skip)$"), 1)
     async def on_inline_callback(self, event) -> None:
-        """Callback tombol rich Stop dari kartu Now Playing."""
+        """Callback tombol rich dari kartu Now Playing."""
         from pyrogram.types import CallbackQuery
 
         if not isinstance(event, CallbackQuery):
@@ -394,6 +460,12 @@ class Music(Module):
         action = (event.data if isinstance(event.data, str) else event.data.decode()).split(":", 1)[1]
         if action == "stop":
             await self._do_stop(event)
+        elif action == "pause":
+            await self._do_pause(event)
+        elif action == "resume":
+            await self._do_resume(event)
+        elif action == "skip":
+            await self._do_skip(event)
 
     async def _do_stop(self, event) -> None:
         try:
@@ -403,6 +475,116 @@ class Music(Module):
                 with contextlib.suppress(Exception):
                     await call.leave_call(self.current_chat)
                 self.current_chat = None
+            self.queue.clear()
+            self.paused = False
             await self._status(event, "<code>⏹ Stopped. Assistant keluar VC.</code>")
         except Exception as e:
             await self._status(event, f"❌ <code>{e}</code>")
+
+    # ------------------------------------------------------
+    # Queue & kontrol
+    # ------------------------------------------------------
+
+    def _now(self) -> dict | None:
+        return self.queue[0] if self.queue else None
+
+    async def _do_pause(self, event) -> None:
+        if not self.current_chat:
+            return await self._status(event, "<code>Gak ada media yang diputar.</code>")
+        try:
+            await (await self._get_call()).pause(self.current_chat)
+            self.paused = True
+            now = self._now() or {}
+            await self._status(event, f"<code>⏸ Paused: {now.get('title', '-')}</code>")
+        except Exception as e:
+            await self._status(event, f"❌ <code>{e}</code>")
+
+    async def _do_resume(self, event) -> None:
+        if not self.current_chat:
+            return await self._status(event, "<code>Gak ada media yang diputar.</code>")
+        try:
+            await (await self._get_call()).resume(self.current_chat)
+            self.paused = False
+            now = self._now() or {}
+            await self._status(event, f"<code>▶️ Resumed: {now.get('title', '-')}</code>")
+        except Exception as e:
+            await self._status(event, f"❌ <code>{e}</code>")
+
+    async def _do_volume(self, event, query: str) -> None:
+        if not self.current_chat:
+            return await self._status(event, "<code>Gak ada media yang diputar.</code>")
+        try:
+            val = int((query or "").strip().rstrip("%"))
+        except ValueError:
+            return await self._status(event, "<code>Usage: volume 1-200</code>")
+        if not 1 <= val <= 200:
+            return await self._status(event, "<code>Volume harus 1-200.</code>")
+        try:
+            await (await self._get_call()).change_volume(self.current_chat, val)
+            await self._status(event, f"<code>🔊 Volume: {val}%</code>")
+        except Exception as e:
+            await self._status(event, f"❌ <code>{e}</code>")
+
+    async def _do_playlist(self, event) -> None:
+        if not self.queue:
+            return await self._status(event, "<code>Queue kosong.</code>")
+        now = self.queue[0]
+        lines = ["<b>🎧 Now Playing</b>",
+                 f"🎵 <a href=\"{now.get('url', '')}\">{now.get('title', '-')}</a>",
+                 f"⏱ {now.get('dur', '-')} | 🎤 {now.get('author', '-')}", ""]
+        if len(self.queue) > 1:
+            lines.append("<b>📃 Queue</b>")
+            for i, t in enumerate(self.queue[1:], 1):
+                lines.append(f"{i}. <a href=\"{t.get('url', '')}\">{t.get('title', '-')}</a> ({t.get('dur', '-')})")
+        await self._status(event, "\n".join(lines))
+
+    async def _do_skip(self, event) -> None:
+        if not self.queue:
+            return await self._status(event, "<code>Queue kosong.</code>")
+        skipped = self.queue.pop(0)
+        if not self.queue:
+            await self._do_stop(event)
+            return
+        nxt = self.queue[0]
+        await self._status(event, f"<code>⏭ Skipped: {skipped.get('title', '-')}</code>")
+        await self._play_file(event, nxt)
+
+    async def _play_file(self, event, info: dict) -> None:
+        """Download + play sebuah item queue (dict dengan vid/title/author/is_video)."""
+        status = await self._status(event, f"<code>⬇️ Downloading: {info['title']}</code>")
+        vid = info["vid"]
+        is_video = info.get("is_video", False)
+        tmp_dir = tempfile.mkdtemp(prefix="music_")
+        ext = "mp4" if is_video else "m4a"
+        dest = os.path.join(tmp_dir, f"{vid}.{ext}")
+        try:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, _download_media, vid, dest, is_video)
+        except Exception as e:
+            await self._status(event, f"❌ Download gagal: <code>{e}</code>")
+            return
+        if not is_video:
+            audio_dest = os.path.join(tmp_dir, f"{vid}.m4a")
+            with contextlib.suppress(Exception):
+                proc = await asyncio.create_subprocess_exec(
+                    "ffmpeg", "-y", "-i", dest, "-vn", "-acodec", "copy", audio_dest,
+                    stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+                await proc.wait()
+                if os.path.exists(audio_dest) and os.path.getsize(audio_dest) > 10000:
+                    dest = audio_dest
+        try:
+            from pytgcalls.types import MediaStream
+            call = await self._get_call()
+            stream = MediaStream(
+                dest,
+                audio_flags=MediaStream.Flags.REQUIRED,
+                video_flags=MediaStream.Flags.REQUIRED if is_video else MediaStream.Flags.IGNORE,
+            )
+            await call.play(self.current_chat, stream)
+            self.paused = False
+            self.play_token += 1
+            asyncio.ensure_future(self._wait_finish(self.current_chat, dest, self.play_token))
+            emoji = "🎬" if is_video else "🎵"
+            await self._status(event, f"<code>{emoji} Now Playing: {info['title']}</code>")
+        except Exception as e:
+            await self._status(event, f"❌ PyTgCalls: <code>{e}</code>")
