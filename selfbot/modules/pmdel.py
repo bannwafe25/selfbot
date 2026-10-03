@@ -38,7 +38,7 @@ class PmDelete(Module):
             await event.edit("**PM Auto Delete:** OFF ❌")
 
     @handler(filters.incoming & filters.private, 5)
-    async def on_pm(self, event: Message) -> None:
+    async def on_message_in(self, event: Message) -> None:
         if not self.enabled:
             return
         with contextlib.suppress(Exception):
