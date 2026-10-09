@@ -77,6 +77,7 @@ class Help(Module):
     # Kategori + emoji per modul (key = nama file modul, lowercase)
     # catatan: icon = EMOJI SAJA (jangan dikasih nama kategori, ntar dobel di tombol)
     CATEGORY = {
+        "news": ("", "News"),
         "antibaile": ("", "Antibaile"),
         # Tools & utilitas
         "admintool": ("", "Admin Tools"),
