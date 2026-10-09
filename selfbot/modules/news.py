@@ -10,7 +10,7 @@ from selfbot.listener import handler
 from selfbot.module import Module
 
 pattern = re.compile(
-    r"^(news|berita)(?:\s+(cnn|cnbc|kumparan))?(?:\s+(\d+))?\s*$",
+    r"^news(?:\s+(cnn|cnbc|kumparan))?(?:\s+(\d+))?\s*$",
     re.IGNORECASE,
 )
 
@@ -23,7 +23,7 @@ FEEDS = {
 
 class News(Module):
     name = "News"
-    cmds = "{news|berita} {cnn|cnbc|kumparan}? {jumlah}?"
+    cmds = "news {cnn|cnbc|kumparan}? {jumlah}?"
     desc = {
         "sumber": "cnn / cnbc / kumparan (default: cnn)",
         "jumlah": "berapa berita (default 5, max 10)",
