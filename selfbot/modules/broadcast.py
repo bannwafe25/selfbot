@@ -113,7 +113,7 @@ class Broadcast(Module):
                 failed += 1
                 errors.append(f"{chat_id}: {str(e)[:40]}")
 
-            await asyncio.sleep(1.5)  # anti-flood jeda antar chat
+            await asyncio.sleep(0.3)  # jeda antar chat ala kontol
 
         report = (
             f"✅ <b>Broadcast selesai</b>\n\n"
