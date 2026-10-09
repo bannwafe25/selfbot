@@ -1,0 +1,89 @@
+==========================================================
+ PANDUAN DEPLOY ULANG SELFBOT
+ Repo: github.com/bannwafe25/selfbot
+==========================================================
+
+STEP 1 — CLONE REPO
+----------------------------------------------------------
+cd ~/apps
+git clone https://github.com/bannwafe25/selfbot.git
+cd selfbot
+
+* Kalau repo privat, login pakai GitHub PAT kamu.
+
+
+STEP 2 — INSTALL UV (kalau VPS baru belum ada)
+----------------------------------------------------------
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+
+STEP 3 — INSTALL DEPENDENCIES
+----------------------------------------------------------
+uv sync
+
+* Otomatis bikin venv + pasang Kurigram 2.2.26
+  dan semua package sesuai pyproject.toml.
+
+
+STEP 4 — BIKIN FILE .ENV
+----------------------------------------------------------
+cp .env.example .env
+nano .env
+
+Isi 3 yang penting:
+  MONGODB_URI=   -> link MongoDB Atlas kamu
+  BOT_TOKEN=     -> token bot dari @BotFather
+  GEMINI_API_KEY= -> untuk modul AI (aistudio.google.com)
+
+
+STEP 5 — TES JALAN MANUAL DULU
+----------------------------------------------------------
+uv run selfbot
+
+* Kalau muncul "Selfbot Started" -> aman.
+* Cache peers bakal rebuild sendiri di MongoDB.
+
+
+STEP 6 — BIAR AUTO JALAN (SYSTEMD SERVICE)
+----------------------------------------------------------
+sudo nano /etc/systemd/system/tg-selfbot.service
+
+Isi:
+
+[Unit]
+Description=TG Selfbot
+After=network-online.target
+
+[Service]
+WorkingDirectory=/root/apps/selfbot
+ExecStart=/root/.local/bin/uv run selfbot
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+* Sesuaikan WorkingDirectory & ExecStart
+  dengan lokasi install + user kamu.
+
+Lalu:
+sudo systemctl daemon-reload
+sudo systemctl enable --now tg-selfbot
+
+Lihat log live:
+sudo journalctl -u tg-selfbot -f
+
+
+==========================================================
+ CATATAN PENTING
+==========================================================
+1. Satu BOT_TOKEN cuma bisa dipakai 1 bot.
+   Kalau selfbot lama masih jalan di server lain,
+   matiin dulu: sudo systemctl stop tg-selfbot
+
+2. Session Telegram tersimpan di MongoDB.
+   Selama MONGODB_URI sama, nggak perlu
+   login ulang nomor HP.
+
+3. Jangan pernah commit .env / *.session ke repo.
+==========================================================

@@ -1,0 +1,91 @@
+import asyncio
+import datetime
+import html
+import io
+import re
+
+from pyrogram import filters
+from pyrogram.types import Message, InputMediaDocument
+
+from selfbot.listener import handler
+from selfbot.module import Module
+pattern = re.compile(r"^(?:sh|term|cmd)\s+(.+)$", re.IGNORECASE | re.DOTALL)
+
+class Terminal(Module):
+    name = "Terminal"
+    cmds = "sh|term|cmd {command}"
+    desc = {
+        "Info": "Execute shell commands on the host directly from Telegram.",
+        "command": "The shell command to execute.",
+        "e.g.": "sh uname -a",
+    }
+
+    @handler(filters.regex(pattern), 1)
+    async def on_message_out(self, event: Message) -> None:
+        match = pattern.match(event.text or event.caption or "")
+        if not match:
+            return
+
+        command = match.group(1).strip()
+        if not command:
+            await self.respond(event, "<code>Usage: sh {command}</code>")
+            return
+
+        await self.respond(event, f"<code>$ {html.escape(command)}</code>\n\n<b><blockquote>Processing...</blockquote></b>")
+        now = datetime.datetime.now(datetime.UTC)
+
+        try:
+            process = await asyncio.create_subprocess_shell(
+                command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            out = stdout.decode(errors="replace").strip()
+            err = stderr.decode(errors="replace").strip()
+            
+            result_text = ""
+            if out:
+                result_text += f"{out}\n"
+            if err:
+                result_text += f"[stderr]\n{err}\n"
+                
+            if not result_text:
+                result_text = "[No Output]"
+                
+            elapsed = self.fmtsec(now)
+
+            if len(result_text) > 3000:
+                with io.BytesIO(result_text.encode()) as doc:
+                    doc.name = "output.txt"
+                    await self.respond(
+                        event,
+                        InputMediaDocument(
+                            doc,
+                            caption=f"<code>$ {html.escape(command[:100])}...</code>\n\n<b><blockquote>Output too long, attached as file.</blockquote></b>\n\n<b><blockquote>{elapsed}</blockquote></b>",
+                        )
+                    )
+            else:
+                # Rich: judul command + output preformatted (monospace) + quote waktu
+                try:
+                    import richpyro as rp
+
+                    blocks = [
+                        rp.para(f"$ {command}"),
+                        rp.divider(),
+                        rp.preformatted(result_text or "(no output)", language="bash"),
+                        rp.expandable_quote(rp.italic(str(elapsed))),
+                    ]
+                    await self.send_rich_blocks(event, blocks, query_prefix="term")
+                except Exception as _re:
+                    self.logger.warning(f"terminal rich failed: {_re!r}")
+
+        except Exception as e:
+            await self.respond(
+                event,
+                f"<code>$ {html.escape(command)}</code>\n"
+                f"<blockquote><pre language=\"bash\">Error: {html.escape(str(e))}</pre></blockquote>\n\n"
+                f"<b><blockquote>{self.fmtsec(now)}</blockquote></b>"
+            )
