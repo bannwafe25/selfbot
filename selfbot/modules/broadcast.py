@@ -115,6 +115,22 @@ class Broadcast(Module):
 
             await asyncio.sleep(0.3)  # jeda antar chat ala kontol
 
+        rich_rows = [
+            ("Done", str(done)),
+            ("Failed", str(failed)),
+            ("Scope", scope),
+        ]
+        sent = False
+        try:
+            sent = await self.send_rich(
+                event, "Broadcast Selesai", rich_rows,
+                query_prefix="bcast",
+            )
+        except Exception:
+            sent = False
+        if sent:
+            return
+
         report = (
             f"✅ <b>Broadcast selesai</b>\n\n"
             f"  <b>Done</b>   : {done}\n"
