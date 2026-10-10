@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import html
 import re
+import time
 
 from pyrogram import filters
 from pyrogram.enums import ChatType
@@ -12,6 +13,7 @@ from pyrogram.errors import (
     Forbidden,
     SlowmodeWait,
     UserBannedInChannel,
+    UserDeactivatedBan,
 )
 from pyrogram.types import Message
 
@@ -56,6 +58,7 @@ class Broadcast(Module):
         m = BC_PATTERN.match(text)
         scope = (m.group(1) or "global").lower()
         inline_text = m.group(2)
+        start = time.time()
 
         # Sumber isi broadcast: reply > teks setelah command
         target = event.reply_to_message
@@ -77,7 +80,7 @@ class Broadcast(Module):
         )
 
         chat_ids = await self._collect_chats(scope)
-        done, failed = 0, 0
+        done, failed, blocked = 0, 0, 0
         errors: list[str] = []
 
         for chat_id in chat_ids:
@@ -98,6 +101,9 @@ class Broadcast(Module):
                     else:
                         await self.client.app.send_message(chat_id, inline_text)
                     done += 1
+            except (UserBannedInChannel, UserDeactivatedBan):
+                blocked += 1
+                errors.append(f"diblokir: {chat_id}")
             except ChannelPrivate:
                 failed += 1
             except ChatWriteForbidden:
@@ -106,9 +112,6 @@ class Broadcast(Module):
             except Forbidden:
                 failed += 1
                 errors.append(f"antispam: {chat_id}")
-            except UserBannedInChannel:
-                failed += 1
-                errors.append(f"akun limit: {chat_id}")
             except Exception as e:
                 failed += 1
                 errors.append(f"{chat_id}: {str(e)[:40]}")
@@ -116,9 +119,11 @@ class Broadcast(Module):
             await asyncio.sleep(0.3)  # jeda antar chat ala kontol
 
         rich_rows = [
-            ("Done", str(done)),
-            ("Failed", str(failed)),
-            ("Scope", scope),
+            ("🎯 Total", f"{len(chat_ids)} ({scope})"),
+            ("✅ Berhasil", str(done)),
+            ("🚫 Diblokir", str(blocked)),
+            ("❌ Gagal", str(failed)),
+            ("⏱️ Waktu", f"{time.time() - start:.2f}s"),
         ]
         sent = False
         try:
@@ -132,10 +137,12 @@ class Broadcast(Module):
             return
 
         report = (
-            f"✅ <b>Broadcast selesai</b>\n\n"
-            f"  <b>Done</b>   : {done}\n"
-            f"  <b>Failed</b> : {failed}\n"
-            f"  <b>Scope</b>  : {scope}\n"
+            f"✅ <b>Broadcast Selesai</b>\n\n"
+            f"  🎯 <b>Total</b>    : {len(chat_ids)} ({scope})\n"
+            f"  ✅ <b>Berhasil</b> : {done}\n"
+            f"  🚫 <b>Diblokir</b> : {blocked}\n"
+            f"  ❌ <b>Gagal</b>    : {failed}\n"
+            f"  ⏱️ <b>Waktu</b>    : {time.time() - start:.2f}s\n"
         )
         if errors:
             report += "\n<b>Detail gagal:</b>\n<code>" + html.escape("\n".join(errors[:10])) + "</code>"
