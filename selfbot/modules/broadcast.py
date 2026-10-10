@@ -119,11 +119,11 @@ class Broadcast(Module):
             await asyncio.sleep(0.3)  # jeda antar chat ala kontol
 
         rich_rows = [
-            ("🎯 Total", f"{len(chat_ids)} ({scope})"),
-            ("✅ Berhasil", str(done)),
-            ("🚫 Diblokir", str(blocked)),
-            ("❌ Gagal", str(failed)),
-            ("⏱️ Waktu", f"{time.time() - start:.2f}s"),
+            ("Total", f"{len(chat_ids)} ({scope})"),
+            ("Berhasil", str(done)),
+            ("Diblokir", str(blocked)),
+            ("Gagal", str(failed)),
+            ("Waktu", f"{time.time() - start:.2f}s"),
         ]
         sent = False
         try:
@@ -138,11 +138,11 @@ class Broadcast(Module):
 
         report = (
             f"✅ <b>Broadcast Selesai</b>\n\n"
-            f"  🎯 <b>Total</b>    : {len(chat_ids)} ({scope})\n"
-            f"  ✅ <b>Berhasil</b> : {done}\n"
-            f"  🚫 <b>Diblokir</b> : {blocked}\n"
-            f"  ❌ <b>Gagal</b>    : {failed}\n"
-            f"  ⏱️ <b>Waktu</b>    : {time.time() - start:.2f}s\n"
+            f"  <b>Total</b>    : {len(chat_ids)} ({scope})\n"
+            f"  <b>Berhasil</b> : {done}\n"
+            f"  <b>Diblokir</b> : {blocked}\n"
+            f"  <b>Gagal</b>    : {failed}\n"
+            f"  <b>Waktu</b>    : {time.time() - start:.2f}s\n"
         )
         if errors:
             report += "\n<b>Detail gagal:</b>\n<code>" + html.escape("\n".join(errors[:10])) + "</code>"
