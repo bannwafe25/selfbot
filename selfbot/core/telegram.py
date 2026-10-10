@@ -158,9 +158,7 @@ class Telegram(abc.ABC):
         if self.__idle__ and not self.__idle__.is_set():
             raise RuntimeError(f"{self.__class__.__name__} Started")
 
-        self.app = self.build(
-            "app", updates=(UpdateNewChannelMessage, UpdateNewMessage)
-        )
+        self.app = self.build("app")  # full parsers: fix updates loop mati
         try:
             await self.app.start()
         except RPCError as e:
@@ -200,6 +198,7 @@ class Telegram(abc.ABC):
             kv = await self.db.kv_store.find_one(
                 {"_id": "assistant_session_string"}
             )
+            # Assistant harus akun BERBEDA dari app (konflik updates kalau sama)
             if kv and kv.get("value"):
                 self.assistant = Client(
                     name="assistant",
