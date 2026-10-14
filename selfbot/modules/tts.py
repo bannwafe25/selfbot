@@ -14,31 +14,11 @@ from selfbot.module import Module
 
 TTS_PATTERN = re.compile(r"^tts(?:\s+([\s\S]+))?$", re.IGNORECASE)
 
-# Alias suara → kode bahasa Google Translate TTS (gratis, tanpa API key)
-VOICES = {
-    "ardi": "id",       # Indonesia
-    "gadis": "id",
-    "guy": "en",        # Inggris
-    "aria": "en",
-    "ana": "en",
-    "jenny": "en",
-    "osman": "tr",      # Turki
-    "keita": "ja",      # Jepang
-    "nanami": "ja",
-    "injoon": "ko",     # Korea
-    "sunhi": "ko",
-    "hamed": "ar",      # Arab
-    "salim": "ar",
-    "dmitry": "ru",     # Rusia
-    "elsa": "it",       # Italia
-    "carl": "de",       # Jerman
-    "henri": "fr",      # Perancis
-    "xiaoxiao": "zh-CN",  # Mandarin
-    "yunxi": "zh-CN",
-}
+# Kode bahasa Google Translate TTS (gratis, tanpa API key)
+LANGS = ["id", "en", "ja", "ko", "ar", "tr", "ru", "it", "de", "fr", "zh-CN", "es", "hi", "th"]
 
 DEFAULT_VOICE = "id"
-HELP_LINES = ", ".join(f"`{k}`" for k in VOICES)
+HELP_LINES = ", ".join(f"`{k}`" for k in LANGS)
 
 GOOGLE_TTS_URL = "https://translate.google.com/translate_tts"
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -47,10 +27,10 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 
 def _resolve(spec: str) -> str | None:
     spec = spec.strip().lower()
-    if spec in VOICES:
-        return VOICES[spec]
+    if spec in LANGS:
+        return spec
     # kode bahasa langsung: id, en, ja, zh-CN, dll
-    if re.match(r"^[a-z]{2}(-[A-Z]+)?$", spec):
+    if re.match(r"^[a-z]{2}(-[a-z]{2})?$", spec):
         return spec
     return None
 
