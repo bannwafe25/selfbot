@@ -861,47 +861,82 @@ class Music(Module):
         if self.queue and self.queue[0].get("vid") == vid:
             self.queue[0] = info
 
-        # Kartu rich " Now Playing" (juga untuk auto-next via event=None)
+        # Kartu "Now Playing" — thumbnail + caption (gaya ShrutixMusic)
         yt_link = info.get("url") or f"https://www.youtube.com/watch?v={vid}"
-        emoji = "" if is_video else ""
         rich_done = False
         try:
-            import richpyro as rp
-
-            trows = [
-                [rp.table_cell("Title", align="left"),
-                 rp.table_cell(info["title"], align="left")],
-                [rp.table_cell("Duration", align="left"),
-                 rp.table_cell(dur_txt, align="left")],
-                [rp.table_cell("Channel", align="left"),
-                 rp.table_cell(info.get("author", "-"), align="left")],
-                [rp.table_cell("Mode", align="left"),
-                 rp.table_cell("Video" if is_video else "Audio", align="left")],
-                [rp.table_cell("Requested", align="left"),
-                 rp.table_cell(info.get("req_by", "Assistant"), align="left")],
-            ]
-            blocks = [
-                rp.table([
-                    [rp.table_cell("Now Playing", is_header=True,
-                                   colspan=2, align="center")],
-                ], bordered=False, compact=False),
-                rp.divider(),
-                rp.table(trows, bordered=True, striped=True, compact=False),
-            ]
             from pyrogram.enums import ButtonStyle as _BS
-            blocks.append(rp.buttons(
-                rp.btn("Stop", callback_data=b"music:stop", style=_BS.DANGER),
-                rp.btn("Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
-                rp.btn("Pause", callback_data=b"music:pause", style=_BS.DEFAULT),
-                rp.btn("Tutup", callback_data=b"0", style=_BS.DANGER),
-            ))
+            from pyrogram.types import InlineKeyboardButton as _IKB, InlineKeyboardMarkup as _IKM
+
+            # 1. Unduh thumbnail YouTube (cache di /tmp)
+            thumb_path = None
+            if vid:
+                thumb_path = f"/tmp/mthumb_{vid}.jpg"
+                if not os.path.isfile(thumb_path):
+                    thumb_path = None
+                    aio = None
+                    try:
+                        import aiohttp as aio
+                    except Exception:
+                        aio = None
+                    if aio:
+                        async with aio.ClientSession(timeout=aio.ClientTimeout(total=10)) as ses:
+                            for name in ("maxresdefault", "sddefault", "hqdefault"):
+                                try:
+                                    async with ses.get(f"https://i.ytimg.com/vi/{vid}/{name}.jpg") as resp:
+                                        if resp.status != 200:
+                                            continue
+                                        raw = await resp.read()
+                                        if len(raw) < 3000:
+                                            continue
+                                        with open(thumb_path, "wb") as f:
+                                            f.write(raw)
+                                        break
+                                except Exception:
+                                    continue
+                        if not os.path.isfile(thumb_path):
+                            thumb_path = None
+                    else:
+                        thumb_path = None
+
+            # 2. Caption blockquote
+            cap = (
+                "<b>♪ Sekarang Diputar</b>\n"
+                f"<blockquote><b>{info['title']}</b>\n"
+                f"⏱ {dur_txt}  •  {info.get('author', '-')}\n"
+                f"🎧 {'Video' if is_video else 'Audio'}"
+                + (f"  •  Antrian: {len(self.queue)}" if self.queue else "")
+                + "</blockquote>"
+            )
+            kb = _IKM([
+                [
+                    _IKB("⏹ Stop", callback_data=b"music:stop"),
+                    _IKB("⏭ Skip", callback_data=b"music:skip"),
+                    _IKB("⏯ Pause", callback_data=b"music:pause"),
+                ],
+            ])
+            target_chat = self.current_chat if event is None else event.chat.id
+            if thumb_path:
+                msg = await self.client.app.send_photo(
+                    target_chat, thumb_path, caption=cap, reply_markup=kb,
+                )
+            else:
+                msg = await self.client.app.send_message(
+                    target_chat, cap, reply_markup=kb,
+                    disable_web_page_preview=True,
+                )
+            rich_done = True
             if event is not None:
-                await self.send_rich_blocks(event, blocks, query_prefix="music")
                 with contextlib.suppress(Exception):
                     await event.delete()
-            else:
-                # auto-next: kirim kartu rich baru ke chat VC
-                await self.send_rich_blocks(None, blocks, query_prefix="music", chat_id=self.current_chat)
         except Exception as e:
             with contextlib.suppress(Exception):
                 self.logger.warning(f"music rich failed: {e!r}")
+        if not rich_done:
+            # Fallback teks polos
+            cap = f"♪ <b>{info['title']}</b> ({dur_txt})"
+            if event is not None:
+                await event.edit(cap)
+            else:
+                with contextlib.suppress(Exception):
+                    await self.client.app.send_message(self.current_chat, cap)
