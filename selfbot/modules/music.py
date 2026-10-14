@@ -604,7 +604,7 @@ class Music(Module):
                 if thumb_url:
                     blocks.append(rp.photo_block(
                         rp.photo_media(thumb_url),
-                        cap=rp.caption(rp.heading("♪ Now Playing")),
+                        cap=rp.caption(rp.bold("♪ Now Playing")),
                     ))
                 blocks.append(rp.table([
                     [rp.table_cell("Title", align="left"),
@@ -897,7 +897,7 @@ class Music(Module):
             if thumb_url:
                 blocks.append(rp.photo_block(
                     rp.photo_media(thumb_url),
-                    cap=rp.caption(rp.heading("♪ Now Playing")),
+                    cap=rp.caption(rp.bold("♪ Now Playing")),
                 ))
             blocks.append(rp.table([
                 [rp.table_cell("Title", align="left"),
