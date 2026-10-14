@@ -122,6 +122,7 @@ class PinSearch(Module):
     # ------------------------------------------------------
 
     async def _rich_cmd(self, event: Message, query: str) -> None:
+        self.logger.warning(f"rpin dipanggil: {query!r}")
         if not query:
             return await event.edit("<b>Format:</b> <code>.rpin &lt;query&gt;</code>")
         status = await event.edit(f"<code>Membuat slideshow: {query}…</code>")
