@@ -109,3 +109,134 @@ class PinSearch(Module):
             f"📸 Foto: <code>{foto}</code> | 🎥 Video: <code>{video}</code>"
             f"{err}"
         )
+
+    # ------------------------------------------------------
+    # Rich slideshow: .rpin <query> → kartu geser + tombol
+    # ------------------------------------------------------
+
+    @handler(filters.regex(r"^(?:[.,?!]?)?(?:rpin|pinslide)(?:\s+([\s\S]+))?$", re.IGNORECASE), 1)
+    async def on_rich_cmd(self, event: Message) -> None:
+        m = self.RPIN_PATTERN.match(str(event.content).strip())
+        query = (m.group(1) or "").strip() if m else ""
+        if not query:
+            return await event.edit("<b>Format:</b> <code>.rpin &lt;query&gt;</code>")
+        status = await event.edit(f"<code>Membuat slideshow: {query}…</code>")
+        try:
+            items = await asyncio.get_event_loop().run_in_executor(
+                None, _fetch_json, query
+            )
+        except Exception as e:
+            return await status.edit(f"<b>API gagal:</b> <code>{e}</code>")
+        urls = []
+        for v in items:
+            u = v.get("image_url")
+            if u and u.lower().endswith((".jpg", ".jpeg", ".png")) and "i.pinimg.com" in u:
+                urls.append(u)
+        urls = urls[:10]
+        if len(urls) < 2:
+            return await status.edit("<b>Hasil foto terlalu sedikit buat slideshow.</b>")
+        await status.delete()
+
+        # Kirim via inline bot: register payload ke Music rich route lalu trigger inline
+        await self._send_rich_slideshow(event, query, urls)
+
+    RPIN_PATTERN = re.compile(r"^(?:[.,?!]?)?(?:rpin|pinslide)(?:\s+([\s\S]+))?$", re.IGNORECASE)
+
+    async def _send_rich_slideshow(self, event: Message, query: str, urls: list) -> None:
+        import datetime as _dt
+        try:
+            bot = self.client.bot
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+                InputBotInlineMessageMediaAuto,
+            )
+            from pyrogram.types import (
+                InputMediaPhoto,
+                InputRichBlockButtons,
+                InputRichBlockParagraph,
+                InputRichBlockPhoto,
+                InputRichBlockSlideshow,
+                InputRichMessage,
+                RichMessageButton,
+                RichTextBold,
+            )
+            from pyrogram.enums import ButtonStyle
+            import richpyro as rp
+
+            def build_rich(u: list) -> InputRichMessage:
+                return InputRichMessage(
+                    blocks=[
+                        InputRichBlockSlideshow(
+                            blocks=[InputRichBlockPhoto(photo=InputMediaPhoto(x)) for x in u]
+                        ),
+                        InputRichBlockParagraph(
+                            text=[RichTextBold(f"📌 Pinterest — {query}")]
+                        ),
+                        InputRichBlockButtons(
+                            [
+                                RichMessageButton(
+                                    text=RichTextBold(" Refresh"),
+                                    style=ButtonStyle.SUCCESS,
+                                    callback_data=f"pinsearch/next/{query}".encode(),
+                                ),
+                                RichMessageButton(
+                                    text=RichTextBold(" Tutup"),
+                                    style=ButtonStyle.DANGER,
+                                    callback_data=b"0",
+                                ),
+                            ]
+                        ),
+                    ]
+                )
+
+            # Jawab inline query asli dari userbot
+            res = await self.client.app.get_inline_bot_results(
+                bot.me.id, f"rpin{_dt.datetime.now(_dt.UTC).timestamp()}"
+            )
+            # Register rich payload via bot SetInlineBotResults gak bisa tanpa query_id asli;
+            # gunakan mekanisme Music rich route (shared handler) bila tersedia, else fallback HTML.
+            ping_mod = None
+            try:
+                ping_mod = self.client.modules.get("Ping")
+            except Exception:
+                pass
+            if ping_mod is None:
+                raise RuntimeError("rich route (Ping) gak tersedia")
+            rich_raw = await build_rich(urls).write(client=bot, chat_id=bot.me.id)
+            self._ensure_rich_handler(
+                ping_mod, rawfn, InputBotInlineMessageRichMessage, InputBotInlineResult
+            )
+            if getattr(ping_mod, "_rich_route", None) is None:
+                ping_mod._rich_route = {}
+            self._pin_route = {"query": query, "urls": urls}
+            ping_mod._rich_route["rpin"] = (rich_raw, None)
+            msg = await self.client.app.send_inline_bot_result(
+                event.chat.id, res.query_id, res.results[0].id
+            )
+            if msg:
+                self.np_msg = msg
+        except Exception as e:
+            self.logger.warning(f"rpin rich gagal: {e!r}")
+            with contextlib.suppress(Exception):
+                await event.reply(f"<b>Slideshow gagal:</b> <code>{str(e)[:100]}</code>\nFallback: <code>.pin {query}</code>")
+
+    @handler(filters.regex(r"^pinsearch/next/(.+)$"), 4)
+    async def on_inline_callback(self, event) -> None:
+        (query,) = event.matches[0].groups()
+        try:
+            await event.answer("Refresh…")
+            items = await asyncio.get_event_loop().run_in_executor(
+                None, _fetch_json, query
+            )
+            urls = []
+            for v in items:
+                u = v.get("image_url")
+                if u and u.lower().endswith((".jpg", ".jpeg", ".png")) and "i.pinimg.com" in u:
+                    urls.append(u)
+            import random
+            urls = random.sample(urls, min(10, len(urls))) if len(urls) > 10 else urls
+            await self._send_rich_slideshow(event.message if hasattr(event, "message") else event, query, urls)
+        except Exception as e:
+            self.logger.warning(f"rpin refresh gagal: {e!r}")
