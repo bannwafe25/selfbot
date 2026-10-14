@@ -83,7 +83,7 @@ def _shruti_download(video_id: str, dest: str, video: bool) -> None:
     if not api_key:
         raise RuntimeError("SHRUTI_API_KEY belum di-set di .env")
     q = urllib.parse.urlencode({
-        "video_id": video_id,
+        "url": video_id,
         "type": "video" if video else "audio",
         "api_key": api_key,
     })
