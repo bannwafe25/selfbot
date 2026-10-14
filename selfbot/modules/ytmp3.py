@@ -141,9 +141,10 @@ class YtMp3(Module):
         except Exception:
             pass
 
-        cap = f"<b>{html.escape(title or vid)}</b>"
+        t = html.escape((title or vid)[:200])
+        cap = f"<b>{t}</b>"
         if author:
-            cap += f"\n{html.escape(author)}"
+            cap += f"\n{html.escape(author[:100])}"
         if dur_s:
             cap += f"\n{dur_s // 60}:{dur_s % 60:02d}"
 
@@ -153,7 +154,7 @@ class YtMp3(Module):
             await self.client.app.send_audio(
                 event.chat.id, dest, caption=cap,
                 duration=dur_s or 0, performer=author or None,
-                title=(title or vid)[:60],
+                title=(title or vid)[:64],
             )
         except Exception as e:
             with contextlib.suppress(Exception):
