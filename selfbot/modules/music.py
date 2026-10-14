@@ -735,9 +735,9 @@ class Music(Module):
                 with contextlib.suppress(Exception):
                     await event.answer("Lagu gak ada di antrian.", show_alert=True)
                 return
-            # Naikin ke posisi 0 & skip lagu sekarang
+            # Naikin ke posisi 1 (setelah lagu yang sedang jalan), lalu skip
             item = self.queue.pop(idx)
-            self.queue.insert(0, item)
+            self.queue.insert(1, item)
             with contextlib.suppress(Exception):
                 await event.answer("▶ Memutar sekarang...")
             # event=None → kartu & status dikirim ke chat VC (callback query gak bisa dipakai lama)
