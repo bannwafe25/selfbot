@@ -592,37 +592,69 @@ class Music(Module):
                               "is_video": is_video, "url": yt_link, "dur": dur_txt,
                               "req_by": req_by})
 
-        # Kartu "Now Playing" — thumbnail + caption (gaya ShrutixMusic)
+        # Kartu "Now Playing" — RICH: thumbnail + table + tombol (gaya animepic)
         rich_done = False
         if isinstance(event, Message):
             try:
-                from pyrogram.types import InlineKeyboardButton as _IKB, InlineKeyboardMarkup as _IKM
+                import richpyro as rp
+                from pyrogram.enums import ButtonStyle as _BS
 
-                thumb_path = self._thumb_path(vid)
-                cap = (
-                    "<b>♪ Sekarang Diputar</b>\n"
-                    f"<blockquote><b>{title}</b>\n"
-                    f"⏱ {dur_txt}  •  {author}\n"
-                    f"🎧 {'Video' if is_video else 'Audio'}</blockquote>"
-                )
-                kb = _IKM([[
-                    _IKB("⏹ Stop", callback_data=b"music:stop"),
-                    _IKB("⏭ Skip", callback_data=b"music:skip"),
-                    _IKB("⏯ Pause", callback_data=b"music:pause"),
-                ]])
-                if thumb_path:
-                    await self.client.app.send_photo(
-                        event.chat.id, thumb_path, caption=cap, reply_markup=kb,
-                    )
-                else:
-                    await self.client.app.send_message(
-                        event.chat.id, cap, reply_markup=kb,
-                        disable_web_page_preview=True,
-                    )
-                rich_done = True
+                thumb_url = f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg" if vid else None
+                blocks = []
+                if thumb_url:
+                    blocks.append(rp.photo_block(
+                        rp.photo_media(thumb_url),
+                        caption=rp.caption(rp.heading("♪ Now Playing")),
+                    ))
+                blocks.append(rp.table([
+                    [rp.table_cell("Title", align="left"),
+                     rp.table_cell(title, align="left")],
+                    [rp.table_cell("Duration", align="left"),
+                     rp.table_cell(dur_txt, align="left")],
+                    [rp.table_cell("Channel", align="left"),
+                     rp.table_cell(author, align="left")],
+                    [rp.table_cell("Mode", align="left"),
+                     rp.table_cell("Video" if is_video else "Audio", align="left")],
+                ], bordered=True, striped=True, compact=False))
+                blocks.append(rp.buttons(
+                    rp.btn("⏹ Stop", callback_data=b"music:stop", style=_BS.DANGER),
+                    rp.btn("⏭ Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
+                    rp.btn("⏯ Pause", callback_data=b"music:pause", style=_BS.DEFAULT),
+                ))
+                rich_done = await self.send_rich_blocks(event, blocks, query_prefix="music")
             except Exception as e:
                 with contextlib.suppress(Exception):
-                    self.logger.warning(f"music card failed: {e!r}")
+                    self.logger.warning(f"music rich failed: {e!r}")
+
+            if not rich_done:
+                # Fallback: thumbnail + caption biasa
+                try:
+                    from pyrogram.types import InlineKeyboardButton as _IKB, InlineKeyboardMarkup as _IKM
+                    cap = (
+                        "<b>♪ Sekarang Diputar</b>\n"
+                        f"<blockquote><b>{title}</b>\n"
+                        f"⏱ {dur_txt}  •  {author}\n"
+                        f"🎧 {'Video' if is_video else 'Audio'}</blockquote>"
+                    )
+                    kb = _IKM([[
+                        _IKB("⏹ Stop", callback_data=b"music:stop"),
+                        _IKB("⏭ Skip", callback_data=b"music:skip"),
+                        _IKB("⏯ Pause", callback_data=b"music:pause"),
+                    ]])
+                    thumb_path = self._thumb_path(vid)
+                    if thumb_path:
+                        await self.client.app.send_photo(
+                            event.chat.id, thumb_path, caption=cap, reply_markup=kb,
+                        )
+                    else:
+                        await self.client.app.send_message(
+                            event.chat.id, cap, reply_markup=kb,
+                            disable_web_page_preview=True,
+                        )
+                    rich_done = True
+                except Exception as e:
+                    with contextlib.suppress(Exception):
+                        self.logger.warning(f"music card failed: {e!r}")
 
         if rich_done:
             with contextlib.suppress(Exception):
@@ -854,53 +886,74 @@ class Music(Module):
         if self.queue and self.queue[0].get("vid") == vid:
             self.queue[0] = info
 
-        # Kartu "Now Playing" — thumbnail + caption (gaya ShrutixMusic)
-        yt_link = info.get("url") or f"https://www.youtube.com/watch?v={vid}"
+        # Kartu "Now Playing" — RICH photo_block + table (auto-next via event=None)
         rich_done = False
         try:
+            import richpyro as rp
             from pyrogram.enums import ButtonStyle as _BS
-            from pyrogram.types import InlineKeyboardButton as _IKB, InlineKeyboardMarkup as _IKM
 
-            thumb_path = self._thumb_path(vid)
-
-            # 2. Caption blockquote
-            cap = (
-                "<b>♪ Sekarang Diputar</b>\n"
-                f"<blockquote><b>{info['title']}</b>\n"
-                f"⏱ {dur_txt}  •  {info.get('author', '-')}\n"
-                f"🎧 {'Video' if is_video else 'Audio'}"
-                + (f"  •  Antrian: {len(self.queue)}" if self.queue else "")
-                + "</blockquote>"
+            thumb_url = f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg" if vid else None
+            blocks = []
+            if thumb_url:
+                blocks.append(rp.photo_block(
+                    rp.photo_media(thumb_url),
+                    caption=rp.caption(rp.heading("♪ Now Playing")),
+                ))
+            blocks.append(rp.table([
+                [rp.table_cell("Title", align="left"),
+                 rp.table_cell(info["title"], align="left")],
+                [rp.table_cell("Duration", align="left"),
+                 rp.table_cell(dur_txt, align="left")],
+                [rp.table_cell("Channel", align="left"),
+                 rp.table_cell(info.get("author", "-"), align="left")],
+                [rp.table_cell("Mode", align="left"),
+                 rp.table_cell("Video" if is_video else "Audio", align="left")],
+                [rp.table_cell("Queue", align="left"),
+                 rp.table_cell(str(len(self.queue)), align="left")],
+            ], bordered=True, striped=True, compact=False))
+            blocks.append(rp.buttons(
+                rp.btn("⏹ Stop", callback_data=b"music:stop", style=_BS.DANGER),
+                rp.btn("⏭ Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
+                rp.btn("⏯ Pause", callback_data=b"music:pause", style=_BS.DEFAULT),
+            ))
+            rich_done = await self.send_rich_blocks(
+                event, blocks, query_prefix="music", chat_id=self.current_chat
             )
-            kb = _IKM([
-                [
-                    _IKB("⏹ Stop", callback_data=b"music:stop"),
-                    _IKB("⏭ Skip", callback_data=b"music:skip"),
-                    _IKB("⏯ Pause", callback_data=b"music:pause"),
-                ],
-            ])
-            target_chat = self.current_chat if event is None else event.chat.id
-            if thumb_path:
-                msg = await self.client.app.send_photo(
-                    target_chat, thumb_path, caption=cap, reply_markup=kb,
-                )
-            else:
-                msg = await self.client.app.send_message(
-                    target_chat, cap, reply_markup=kb,
-                    disable_web_page_preview=True,
-                )
-            rich_done = True
-            if event is not None:
+            if rich_done and event is not None:
                 with contextlib.suppress(Exception):
                     await event.delete()
         except Exception as e:
             with contextlib.suppress(Exception):
                 self.logger.warning(f"music rich failed: {e!r}")
         if not rich_done:
-            # Fallback teks polos
-            cap = f"♪ <b>{info['title']}</b> ({dur_txt})"
-            if event is not None:
-                await event.edit(cap)
-            else:
+            # Fallback: thumbnail + caption biasa
+            try:
+                from pyrogram.types import InlineKeyboardButton as _IKB, InlineKeyboardMarkup as _IKM
+                thumb_path = self._thumb_path(vid)
+                cap = (
+                    "<b>♪ Sekarang Diputar</b>\n"
+                    f"<blockquote><b>{info['title']}</b>\n"
+                    f"⏱ {dur_txt}  •  {info.get('author', '-')}\n"
+                    f"🎧 {'Video' if is_video else 'Audio'}</blockquote>"
+                )
+                kb = _IKM([[
+                    _IKB("⏹ Stop", callback_data=b"music:stop"),
+                    _IKB("⏭ Skip", callback_data=b"music:skip"),
+                    _IKB("⏯ Pause", callback_data=b"music:pause"),
+                ]])
+                target_chat = self.current_chat if event is None else event.chat.id
+                if thumb_path:
+                    await self.client.app.send_photo(
+                        target_chat, thumb_path, caption=cap, reply_markup=kb,
+                    )
+                else:
+                    await self.client.app.send_message(
+                        target_chat, cap, reply_markup=kb,
+                        disable_web_page_preview=True,
+                    )
+                if event is not None:
+                    with contextlib.suppress(Exception):
+                        await event.delete()
+            except Exception as e:
                 with contextlib.suppress(Exception):
-                    await self.client.app.send_message(self.current_chat, cap)
+                    self.logger.warning(f"music card failed: {e!r}")
