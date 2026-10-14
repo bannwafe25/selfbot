@@ -506,31 +506,9 @@ class Music(Module):
                 f"<blockquote><b>{title}</b>\n"
                 f"Posisi: #{pos}  •  {author}</blockquote>"
             )
-            # Kirim via INLINE RICH (bot) biar tombolnya render
-            try:
-                import richpyro as rp
-                from pyrogram.enums import ButtonStyle as _BS
-                blocks = [
-                    rp.para(rp.bold("➕ Masuk Antrian")),
-                    rp.para(rp.bold(title)),
-                    rp.para(f"Posisi: #{pos}  •  {author}"),
-                    rp.buttons(
-                        rp.btn("▶ Play Now", callback_data=f"music:playnow:{pos-1}".encode(), style=_BS.SUCCESS),
-                    ),
-                ]
-                ok = await self.send_rich_blocks(event, blocks, query_prefix="musicq")
-                self.logger.warning(f"antrian rich: ok={ok} pos={pos}")
-            except Exception:
-                ok = False
-            if not ok:
-                from pyrogram.types import InlineKeyboardButton as _IKB, InlineKeyboardMarkup as _IKM
-                kb = _IKM([[_IKB("▶ Play Now", callback_data=f"music:playnow:{pos-1}")]])
-                sender = self.client.bot or self.client.app
-                with contextlib.suppress(Exception):
-                    await sender.send_message(
-                        event.chat.id, cap, reply_markup=kb,
-                        disable_web_page_preview=True,
-                    )
+            await self.client.app.send_message(
+                event.chat.id, cap, disable_web_page_preview=True,
+            )
             with contextlib.suppress(Exception):
                 await event.delete()
             return
