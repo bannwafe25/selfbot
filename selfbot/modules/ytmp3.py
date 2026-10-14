@@ -54,7 +54,15 @@ def _yt_search(query: str) -> tuple[str, str, str] | None:
     vid = m.group(1)
     t = re.search(r'"videoId":"%s".*?"title":\{"runs":\[\{"text":"(.*?)"\}\]' % vid, html_text)
     ch = re.search(r'"videoId":"%s".*?"ownerText":\{"runs":\[\{"text":"(.*?)"\}\]' % vid, html_text)
-    return vid, (t.group(1) if t else ""), (ch.group(1) if ch else "")
+
+    def _clean(s: str) -> str:
+        s = s.encode().decode("unicode_escape", "ignore")
+        for junk in ('","navigationEndpoint', '{"', "\\u0026"):
+            if junk in s:
+                s = s.split(junk)[0]
+        return s.strip()
+
+    return vid, (_clean(t.group(1)) if t else ""), (_clean(ch.group(1)) if ch else "")
 
 
 async def _shruti_download_async(video_id: str, dest: str) -> None:
