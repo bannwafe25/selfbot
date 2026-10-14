@@ -16,11 +16,11 @@ async def _music_cb_filter(flt, event):
     if not isinstance(event, CallbackQuery):
         return False
     data = event.data if isinstance(event.data, str) else (event.data or b"").decode()
-    return bool(re.match(r"^music:(stop|pause|resume|skip|playnow:\d+)$", data))
+    return bool(re.match(r"^music:(stop|skip|playnow:\d+)$", data))
 
 
 MUSIC_PATTERN = re.compile(
-    r"^(?:play|vplay|stop|pause|resume|skip|playlist|volume|loop|shuffle)(?:\s+([\s\S]+))?$",
+    r"^(?:play|vplay|stop|skip)(?:\s+([\s\S]+))?$",
     re.IGNORECASE,
 )
 
@@ -156,19 +156,13 @@ def _download_media(video_id: str, dest: str, video: bool) -> None:
 
 class Music(Module):
     name = "Music Assistant"
-    cmds = "play|vplay <judul> | pause | resume | skip | playlist | volume <1-200> | stop"
+    cmds = "play|vplay <judul> | skip | stop"
     desc = {
         "play <judul>": "Assistant join VC & putar AUDIO dari YouTube.",
         "vplay <judul>": "Assistant join VC & putar VIDEO dari YouTube.",
-        "pause": "Pause lagu yang sedang diputar.",
-        "resume": "Lanjutkan lagu yang di-pause.",
         "skip": "Lewati lagu, putar berikutnya di queue.",
-        "playlist": "Lihat lagu sekarang + antrian.",
-        "volume <n>": "Set volume 1-200.",
-        "loop <1-10>": "Ulangi lagu sekarang (default 5x).",
-        "shuffle": "Acak urutan antrian.",
         "stop": "Stop lagu & assistant keluar VC.",
-        "e.g.": "play melukis senja | volume 150",
+        "e.g.": "play melukis senja",
     }
 
     def __init__(self, *args, **kwargs):
@@ -341,45 +335,9 @@ class Music(Module):
             return
 
         # kontrol VC simpel
-        if action == "pause":
-            await self._do_pause(event)
-            return
-        if action == "resume":
-            await self._do_resume(event)
-            return
-        if action == "volume":
-            await self._do_volume(event, query)
-            return
-        if action == "playlist":
-            await self._do_playlist(event)
-            return
         if action == "skip":
             await self._do_skip(event)
             return
-        if action == "loop":
-            if self.current_chat is None:
-                await self._status(event, "<code>Gak ada lagu yang diputar.</code>")
-                return
-            n = 5
-            if query and query.strip().isdigit():
-                n = max(1, min(int(query.strip()), 10))
-            self.loop_count = n
-            await self._status(event, f"<b>Loop:</b> <code>{n}x</code> lagu ini.")
-            return
-        if action == "shuffle":
-            if not self.queue:
-                await self._status(event, "<code>Queue kosong.</code>")
-                return
-            import random as _random
-            head = self.queue[0]
-            rest = self.queue[1:]
-            _random.shuffle(rest)
-            self.queue = [head] + rest
-            await self._status(
-                event, f"<b>Shuffle:</b> <code>{len(rest)} lagu diacak.</code>"
-            )
-            return
-
         # play / vplay
         is_video = action == "vplay"
         if not query:
@@ -641,14 +599,8 @@ class Music(Module):
         action = (event.data if isinstance(event.data, str) else event.data.decode()).split(":", 1)[1]
         if action == "stop":
             await self._do_stop(event)
-        elif action == "pause":
-            await self._do_pause(event)
-        elif action == "resume":
-            await self._do_resume(event)
         elif action == "skip":
             await self._do_skip(event)
-        elif action == "playlist":
-            await self._do_playlist(event)
         elif action.startswith("playnow:"):
             idx = int(action.split(":", 1)[1])
             if not (0 <= idx < len(self.queue)):
@@ -695,56 +647,6 @@ class Music(Module):
 
     def _now(self) -> dict | None:
         return self.queue[0] if self.queue else None
-
-    async def _do_pause(self, event) -> None:
-        if not self.current_chat:
-            return await self._status(event, "<code>Gak ada media yang diputar.</code>")
-        try:
-            await (await self._get_call()).pause(self.current_chat)
-            self.paused = True
-            now = self._now() or {}
-            await self._status(event, f"<code>Paused: {now.get('title', '-')}</code>")
-        except Exception as e:
-            await self._status(event, f"<code>{e}</code>")
-
-    async def _do_resume(self, event) -> None:
-        if not self.current_chat:
-            return await self._status(event, "<code>Gak ada media yang diputar.</code>")
-        try:
-            await (await self._get_call()).resume(self.current_chat)
-            self.paused = False
-            now = self._now() or {}
-            await self._status(event, f"<code>▶Resumed: {now.get('title', '-')}</code>")
-        except Exception as e:
-            await self._status(event, f"<code>{e}</code>")
-
-    async def _do_volume(self, event, query: str) -> None:
-        if not self.current_chat:
-            return await self._status(event, "<code>Gak ada media yang diputar.</code>")
-        try:
-            val = int((query or "").strip().rstrip("%"))
-        except ValueError:
-            return await self._status(event, "<code>Usage: volume 1-200</code>")
-        if not 1 <= val <= 200:
-            return await self._status(event, "<code>Volume harus 1-200.</code>")
-        try:
-            await (await self._get_call()).change_volume(self.current_chat, val)
-            await self._status(event, f"<code>Volume: {val}%</code>")
-        except Exception as e:
-            await self._status(event, f"<code>{e}</code>")
-
-    async def _do_playlist(self, event) -> None:
-        if not self.queue:
-            return await self._status(event, "<code>Queue kosong.</code>")
-        now = self.queue[0]
-        lines = ["<b>Now Playing</b>",
-                 f"{now.get('title', '-')}",
-                 f"{now.get('dur', '-')} | {now.get('author', '-')}", ""]
-        if len(self.queue) > 1:
-            lines.append("<b>Queue</b>")
-            for i, t in enumerate(self.queue[1:], 1):
-                lines.append(f"{i}. {t.get('title', '-')} ({t.get('dur', '-')})")
-        await self._status(event, "\n".join(lines))
 
     async def _do_skip(self, event) -> None:
         if not self.queue:
@@ -898,7 +800,6 @@ class Music(Module):
             blocks.append(rp.buttons(
                 rp.btn("Stop", callback_data=b"music:stop", style=_BS.DANGER),
                 rp.btn("Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
-                rp.btn("Pause", callback_data=b"music:pause", style=_BS.DEFAULT),
                 rp.btn("Tutup", callback_data=b"0", style=_BS.DANGER),
             ))
             rich_done = await self.send_rich_blocks(
