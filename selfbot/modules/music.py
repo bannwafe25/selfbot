@@ -10,6 +10,15 @@ from pyrogram.types import Message
 from selfbot.listener import handler
 from selfbot.module import Module
 
+def _music_cb_filter(_, __, event):
+    """Filter callback music: handle bytes data."""
+    from pyrogram.types import CallbackQuery
+    if not isinstance(event, CallbackQuery):
+        return False
+    data = event.data if isinstance(event.data, str) else (event.data or b"").decode()
+    return bool(re.match(r"^music:(stop|pause|resume|skip|playnow:\d+)$", data))
+
+
 MUSIC_PATTERN = re.compile(
     r"^(?:play|vplay|stop|pause|resume|skip|playlist|volume|loop|shuffle)(?:\s+([\s\S]+))?$",
     re.IGNORECASE,
@@ -702,14 +711,13 @@ class Music(Module):
             with contextlib.suppress(Exception):
                 await event.delete()
 
-    @handler(filters.regex(r"^music:(stop|pause|resume|skip|playnow:\\d+)$"), 1)
+    @handler(_music_cb_filter, 1)
     async def on_inline_callback(self, event) -> None:
         """Callback tombol rich dari kartu Now Playing."""
         from pyrogram.types import CallbackQuery
 
         if not isinstance(event, CallbackQuery):
             return
-        self.logger.warning(f"music callback: data={event.data!r}")
         action = (event.data if isinstance(event.data, str) else event.data.decode()).split(":", 1)[1]
         if action == "stop":
             await self._do_stop(event)
