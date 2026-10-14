@@ -11,7 +11,9 @@ from pyrogram.types import InputMediaPhoto, InputMediaVideo, Message
 from selfbot.listener import handler
 from selfbot.module import Module
 
-PIN_PATTERN = re.compile(r"^(?:[.,?!]?)?(?:pin|pinterest)(?:\s+([\s\S]+))?$", re.IGNORECASE)
+PIN_PATTERN = re.compile(
+    r"^(?:[.,?!]?)?(?:(?:r)?pin|pinterest|pinslide)(?:\s+([\s\S]+))?$", re.IGNORECASE
+)
 PIN_API = "https://api.siputzx.my.id/api/s/pinterest?query={}"
 MAX_MEDIA = 50  # batas media per request
 
@@ -50,7 +52,12 @@ class PinSearch(Module):
 
     @handler(filters.regex(PIN_PATTERN), 1)
     async def on_message_out(self, event: Message) -> None:
-        m = PIN_PATTERN.match(str(event.content).strip())
+        content = str(event.content).strip()
+        # Rich slideshow: .rpin <query>
+        rm = self.RPIN_PATTERN.match(content)
+        if rm:
+            return await self._rich_cmd(event, (rm.group(1) or "").strip())
+        m = PIN_PATTERN.match(content)
         if not m or not m.group(1):
             return await event.edit("<b>Format:</b> <code>.pin &lt;query&gt; [jumlah]</code>")
         parts = m.group(1).rsplit(maxsplit=1)
@@ -114,10 +121,7 @@ class PinSearch(Module):
     # Rich slideshow: .rpin <query> → kartu geser + tombol
     # ------------------------------------------------------
 
-    @handler(filters.regex(r"^(?:[.,?!]?)?(?:rpin|pinslide)(?:\s+([\s\S]+))?$", re.IGNORECASE), 1)
-    async def on_rich_cmd(self, event: Message) -> None:
-        m = self.RPIN_PATTERN.match(str(event.content).strip())
-        query = (m.group(1) or "").strip() if m else ""
+    async def _rich_cmd(self, event: Message, query: str) -> None:
         if not query:
             return await event.edit("<b>Format:</b> <code>.rpin &lt;query&gt;</code>")
         status = await event.edit(f"<code>Membuat slideshow: {query}…</code>")
@@ -136,8 +140,6 @@ class PinSearch(Module):
         if len(urls) < 2:
             return await status.edit("<b>Hasil foto terlalu sedikit buat slideshow.</b>")
         await status.delete()
-
-        # Kirim via inline bot: register payload ke Music rich route lalu trigger inline
         await self._send_rich_slideshow(event, query, urls)
 
     RPIN_PATTERN = re.compile(r"^(?:[.,?!]?)?(?:rpin|pinslide)(?:\s+([\s\S]+))?$", re.IGNORECASE)
