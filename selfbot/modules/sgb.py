@@ -76,10 +76,7 @@ class SGB(Module):
             )
 
             blocks = [
-                rp.table([
-                [rp.table_cell("History", is_header=True, colspan=2, align="center")],
-            ], bordered=False, compact=False),
-                rp.divider(),
+                rp.para(rp.bold("SangMata — History")),
                 rp.para(result.strip()[:3600]),
             ]
 
