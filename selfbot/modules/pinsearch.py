@@ -11,7 +11,7 @@ from pyrogram.types import InputMediaPhoto, InputMediaVideo, Message
 from selfbot.listener import handler
 from selfbot.module import Module
 
-PIN_PATTERN = re.compile(r"^(?:\.pin|,pin|\?pin)(?:\s+([\s\S]+))?$", re.IGNORECASE)
+PIN_PATTERN = re.compile(r"^(?:[.,?!]?)?(?:pin|pinterest)(?:\s+([\s\S]+))?$", re.IGNORECASE)
 PIN_API = "https://api.siputzx.my.id/api/s/pinterest?query={}"
 MAX_MEDIA = 20  # batas media per request (biar gak kena limit Telegram)
 
