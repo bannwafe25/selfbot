@@ -49,7 +49,7 @@ class PinSearch(Module):
     }
 
     @handler(filters.regex(PIN_PATTERN), 1)
-    async def on_cmd(self, event: Message) -> None:
+    async def on_message_out(self, event: Message) -> None:
         m = PIN_PATTERN.match(str(event.content).strip())
         if not m or not m.group(1):
             return await event.edit("<b>Format:</b> <code>.pin &lt;query&gt; [jumlah]</code>")
