@@ -73,22 +73,6 @@ def _yt_search(query: str) -> tuple[str, str, str] | None:
     return m.group(1), _clean(m.group(2)), _clean(m.group(3))
 
 
-def _arc_request(path: str, params: dict) -> dict:
-    """Request ke Arc API (api.arcmusic.fun) dengan api_key."""
-    import json
-    import urllib.parse
-    import urllib.request
-
-    api_key = os.getenv("ARC_API_KEY", "")
-    if not api_key:
-        raise RuntimeError("ARC_API_KEY belum di-set di .env")
-    params = {**params, "api_key": api_key}
-    url = "https://api.arcmusic.fun" + path + "?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read().decode("utf-8", "ignore"))
-
-
 def _shruti_download(video_id: str, dest: str, video: bool) -> None:
     """Download via ShrutiBots API (file langsung, no bot-check)."""
     import json
@@ -155,20 +139,8 @@ def _ytdlp_download(video_id: str, dest: str, video: bool) -> None:
         raise RuntimeError(f"yt-dlp gagal: {(r.stderr or r.stdout or 'kosong')[-150:]}")
 
 
-def _arc_cdn(video_id: str, video: bool) -> str | None:
-    """Ambil cdn dari Arc API (bisa URL langsung atau link t.me)."""
-    d = _arc_request(
-        "/youtube/v2/download",
-        {"query": video_id, "isVideo": "true" if video else "false"},
-    )
-    if d.get("job_id") is None and d.get("result", {}).get("success"):
-        return d["result"].get("cdn")
-    return None
-
-
 def _download_media(video_id: str, dest: str, video: bool) -> None:
-    """Download media: ShrutiBots utama, Arc cadangan, yt-dlp terakhir.
-    Link t.me dari Arc ditangani _download_via_userbot() di sisi async."""
+    """Download media: ShrutiBots utama, yt-dlp cadangan."""
     # 1) ShrutiBots (utama — no bot-check, file langsung)
     try:
         _shruti_download(video_id, dest, video)
@@ -178,32 +150,8 @@ def _download_media(video_id: str, dest: str, video: bool) -> None:
         with contextlib.suppress(Exception):
             os.remove(dest)
 
-    # 2) Arc (cadangan)
-    try:
-        cdn = _arc_cdn(video_id, video)
-        if cdn and not cdn.startswith("https://t.me/"):
-            _arc_fetch(cdn, dest)
-            if os.path.exists(dest) and os.path.getsize(dest) > 10000:
-                return
-    except Exception:
-        with contextlib.suppress(Exception):
-            os.remove(dest)
-
-    # 3) yt-dlp (terakhir, pakai cookies)
+    # 2) yt-dlp (cadangan, pakai cookies)
     _ytdlp_download(video_id, dest, video)
-
-
-def _arc_fetch(cdn: str, dest: str) -> None:
-    """Unduh file dari CDN langsung Arc (bukan link t.me)."""
-    import urllib.request
-
-    req = urllib.request.Request(cdn, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=180) as r, open(dest, "wb") as f:
-        while True:
-            chunk = r.read(262144)
-            if not chunk:
-                break
-            f.write(chunk)
 
 
 class Music(Module):
@@ -282,26 +230,6 @@ class Music(Module):
     # ------------------------------------------------------
     # PyTgCalls milik ASSISTANT
     # ------------------------------------------------------
-
-    async def _arc_tme_download(self, tme_link: str, dest: str) -> bool:
-        """Unduh file dari link t.me Arc API pakai userbot assistant."""
-        import re as _re
-
-        try:
-            assistant = getattr(self.client, "assistant", None) or self.client.app
-            m = _re.search(r"t\.me/([^/]+)/(\d+)", tme_link)
-            if not m:
-                return False
-            chat, msg_id = m.group(1), int(m.group(2))
-            msg = await assistant.get_messages(chat, msg_id)
-            if msg is None:
-                return False
-            path = await assistant.download_media(msg, file_name=dest)
-            return bool(path) and os.path.exists(dest) and os.path.getsize(dest) > 10000
-        except Exception as e:
-            with contextlib.suppress(Exception):
-                self.logger.warning(f"arc t.me download gagal: {e!r}")
-            return False
 
     def _thumb_path(self, vid: str) -> str | None:
         """Unduh thumbnail YouTube ke /tmp (cache), return path atau None."""
@@ -556,16 +484,8 @@ class Music(Module):
         ext = "mp4" if is_video else "m4a"
         dest = os.path.join(tmp_dir, f"{vid}.{ext}")
         try:
-            # Arc dulu — kalau cdn-nya link t.me, unduh via userbot assistant
-            arc_cdn = None
-            with contextlib.suppress(Exception):
-                arc_cdn = _arc_cdn(vid, is_video)
-            downloaded = False
-            if arc_cdn and arc_cdn.startswith("https://t.me/"):
-                downloaded = await self._arc_tme_download(arc_cdn, dest)
-            if not downloaded:
-                loop = asyncio.get_event_loop()
-                await loop.run_in_executor(None, _download_media, vid, dest, is_video)
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, _download_media, vid, dest, is_video)
         except Exception as e:
             await self._status(event, f"Download gagal: <code>{e}</code>")
             return
