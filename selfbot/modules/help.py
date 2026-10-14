@@ -105,6 +105,7 @@ class Help(Module):
         "sysinfo": ("", "Info & Sistem"),
         "speedtest": ("", "Info & Sistem"),
         "sgb": ("", "Riset & Pencarian"),
+        "pinsearch": ("", "Riset & Pencarian"),
         "genai": ("", "Chat"),
         # Sistem / dev
         "debug": ("", "Sistem"),
