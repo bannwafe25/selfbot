@@ -501,14 +501,42 @@ class Music(Module):
                                "is_video": is_video, "url": url,
                                "dur": "-", "req_by": req_by})
             pos = len(self.queue)
-            cap = (
-                "<b>➕ Masuk Antrian</b>\n"
-                f"<blockquote><b>{title}</b>\n"
-                f"Posisi: #{pos}  •  {author}</blockquote>"
-            )
-            await self.client.app.send_message(
-                event.chat.id, cap, disable_web_page_preview=True,
-            )
+            # Rich card antrian + tombol Play Now (via inline bot)
+            rich_ok = False
+            try:
+                import richpyro as rp
+                from pyrogram.enums import ButtonStyle as _BS
+                blocks = [
+                    rp.table([
+                        [rp.table_cell("Masuk Antrian", is_header=True,
+                                       colspan=2, align="center")],
+                    ], bordered=False, compact=False),
+                    rp.table([
+                        [rp.table_cell("Title", align="left"),
+                         rp.table_cell(title, align="left")],
+                        [rp.table_cell("Channel", align="left"),
+                         rp.table_cell(author, align="left")],
+                        [rp.table_cell("Posisi", align="left"),
+                         rp.table_cell(f"#{pos}", align="left")],
+                    ], bordered=True, striped=True),
+                    rp.buttons(
+                        rp.btn("Play Now", callback_data=f"music:playnow:{pos-1}".encode(), style=_BS.SUCCESS),
+                    ),
+                ]
+                rich_ok = await self.send_rich_blocks(event, blocks, query_prefix="musicqueue")
+                self.logger.warning(f"antrian rich: ok={rich_ok} pos={pos}")
+            except Exception as e:
+                with contextlib.suppress(Exception):
+                    self.logger.warning(f"antrian rich failed: {e!r}")
+            if not rich_ok:
+                cap = (
+                    "<b>➕ Masuk Antrian</b>\n"
+                    f"<blockquote><b>{title}</b>\n"
+                    f"Posisi: #{pos}  •  {author}</blockquote>"
+                )
+                await self.client.app.send_message(
+                    event.chat.id, cap, disable_web_page_preview=True,
+                )
             with contextlib.suppress(Exception):
                 await event.delete()
             return
