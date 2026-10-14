@@ -98,12 +98,16 @@ def _shruti_download(video_id: str, dest: str, video: bool) -> None:
         f"https://api.shrutibots.site/download?{q}",
         headers={"User-Agent": "Mozilla/5.0"},
     )
-    with urllib.request.urlopen(req, timeout=300) as r:
-        if r.status != 200:
-            raise RuntimeError(f"shruti HTTP {r.status}")
-        data = r.read()
+    try:
+        with urllib.request.urlopen(req, timeout=300) as r:
+            data = r.read()
+    except urllib.error.HTTPError as e:
+        body = ""
+        with contextlib.suppress(Exception):
+            body = e.read().decode("utf-8", "ignore")[:200]
+        raise RuntimeError(f"shruti HTTP {e.code}: {body or '(no body)'}") from None
     if len(data) < 10000:
-        raise RuntimeError(f"shruti file kecil: {len(data)} bytes")
+        raise RuntimeError(f"shruti file kecil: {len(data)} bytes: {data[:150]!r}")
     with open(dest, "wb") as f:
         f.write(data)
 
@@ -714,6 +718,32 @@ class Music(Module):
         await self._status(event, f"<code>Skipped: {skipped.get('title', '-')}</code>")
         await self._play_file(event, nxt)
 
+    async def _shruti_download_async(self, video_id: str, dest: str, is_video: bool) -> None:
+        """Download via ShrutiBots API, async aiohttp (gak blokir event loop saat skip)."""
+        import aiohttp
+
+        api_key = os.getenv("SHRUTI_API_KEY", "")
+        if not api_key:
+            raise RuntimeError("SHRUTI_API_KEY belum di-set")
+        params = {
+            "url": video_id,
+            "type": "video" if is_video else "audio",
+            "api_key": api_key,
+        }
+        timeout = aiohttp.ClientTimeout(total=300)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(
+                "https://api.shrutibots.site/download", params=params
+            ) as resp:
+                if resp.status != 200:
+                    body = (await resp.text())[:200]
+                    raise RuntimeError(f"shruti HTTP {resp.status}: {body}")
+                with open(dest, "wb") as f:
+                    async for chunk in resp.content.iter_chunked(131072):
+                        f.write(chunk)
+        if not os.path.exists(dest) or os.path.getsize(dest) < 10000:
+            raise RuntimeError("shruti file kecil/kosong")
+
     async def _play_file(self, event, info: dict) -> None:
         """Download + play sebuah item queue (dict dengan vid/title/author/is_video)."""
         status = await self._status(event, f"<code>Downloading: {info['title']}</code>")
@@ -723,21 +753,28 @@ class Music(Module):
         ext = "mp4" if is_video else "m4a"
         dest = os.path.join(tmp_dir, f"{vid}.{ext}")
         try:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, _download_media, vid, dest, is_video)
+            # ShrutiBots async dulu (cepat, gak blokir event loop)
+            await self._shruti_download_async(vid, dest, is_video)
         except Exception as e:
-            await self._status(event, f"Download gagal: <code>{e}</code>")
-            # Antrean jangan mati: lanjut ke lagu berikutnya
-            with contextlib.suppress(Exception):
-                if self.queue and self.current_chat:
-                    self.queue.pop(0)
-                if self.queue and self.current_chat:
-                    await self._play_file(None, self.queue[0])
-                elif self.current_chat:
-                    with contextlib.suppress(Exception):
-                        await self.call.leave_call(self.current_chat)
-                    self.current_chat = None
-            return
+            self.logger.warning(f"shruti async gagal ({info.get('title')}): {e!r}")
+            try:
+                # Fallback: ARC + yt-dlp via executor (sync)
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, _download_media, vid, dest, is_video)
+            except Exception as e2:
+                self.logger.warning(f"music download gagal ({info.get('title')}): {e2!r}")
+                await self._status(event, f"Download gagal: <code>{e2}</code>")
+                # Antrean jangan mati: lanjut ke lagu berikutnya
+                with contextlib.suppress(Exception):
+                    if self.queue and self.current_chat:
+                        self.queue.pop(0)
+                    if self.queue and self.current_chat:
+                        await self._play_file(None, self.queue[0])
+                    elif self.current_chat:
+                        with contextlib.suppress(Exception):
+                            await self.call.leave_call(self.current_chat)
+                        self.current_chat = None
+                return
         if not is_video:
             audio_dest = os.path.join(tmp_dir, f"{vid}.m4a")
             with contextlib.suppress(Exception):
@@ -760,6 +797,7 @@ class Music(Module):
             self.play_token += 1
             asyncio.ensure_future(self._wait_finish(self.current_chat, dest, self.play_token))
         except Exception as e:
+            self.logger.warning(f"music pytgcalls gagal ({info.get('title')}): {e!r}")
             await self._status(event, f"PyTgCalls: <code>{e}</code>")
             # Antrean jangan mati: lanjut ke lagu berikutnya
             with contextlib.suppress(Exception):
