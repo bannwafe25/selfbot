@@ -294,6 +294,27 @@ class Music(Module):
                 self.logger.warning(f"arc t.me download gagal: {e!r}")
             return False
 
+    def _thumb_path(self, vid: str) -> str | None:
+        """Unduh thumbnail YouTube ke /tmp (cache), return path atau None."""
+        if not vid:
+            return None
+        path = f"/tmp/mthumb_{vid}.jpg"
+        if os.path.isfile(path) and os.path.getsize(path) > 3000:
+            return path
+        try:
+            import urllib.request
+            for name in ("maxresdefault", "sddefault", "hqdefault"):
+                try:
+                    urllib.request.urlretrieve(
+                        f"https://i.ytimg.com/vi/{vid}/{name}.jpg", path)
+                    if os.path.getsize(path) > 3000:
+                        return path
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return None
+
     async def _get_call(self):
         if getattr(self.client, "assistant", None) is None:
             raise RuntimeError("Session assistant belum tersedia.")
@@ -471,36 +492,14 @@ class Music(Module):
                                "is_video": is_video, "url": url,
                                "dur": "-", "req_by": req_by})
             pos = len(self.queue)
-            rich_done = False
-            if isinstance(event, Message):
-                try:
-                    import richpyro as rp
-
-                    trows = [
-                        [rp.table_cell("Title", align="left"),
-                         rp.table_cell(title, align="left")],
-                        [rp.table_cell("Channel", align="left"),
-                         rp.table_cell(author, align="left")],
-                        [rp.table_cell("Posisi", align="left"),
-                         rp.table_cell(f"#{pos}", align="left")],
-                    ]
-                    blocks = [
-                        rp.table([
-                            [rp.table_cell("Masuk Antrian", is_header=True,
-                                           colspan=2, align="center")],
-                        ], bordered=False, compact=False),
-                        rp.divider(),
-                        rp.table(trows, bordered=True, striped=True),
-                    ]
-                    from pyrogram.enums import ButtonStyle as _BS
-                    blocks.append(rp.buttons(
-                        rp.btn("Playlist", callback_data=b"music:playlist", style=_BS.PRIMARY),
-                        rp.btn("Tutup", callback_data=b"0", style=_BS.DANGER),
-                    ))
-                    await self.send_rich_blocks(event, blocks, query_prefix="music")
-                except Exception as e:
-                    with contextlib.suppress(Exception):
-                        self.logger.warning(f"music rich failed: {e!r}")
+            cap = (
+                "<b>➕ Masuk Antrian</b>\n"
+                f"<blockquote><b>{title}</b>\n"
+                f"Posisi: #{pos}  •  {author}</blockquote>"
+            )
+            await self.client.app.send_message(
+                event.chat.id, cap, disable_web_page_preview=True,
+            )
             with contextlib.suppress(Exception):
                 await event.delete()
             return
@@ -593,43 +592,37 @@ class Music(Module):
                               "is_video": is_video, "url": yt_link, "dur": dur_txt,
                               "req_by": req_by})
 
-        # Rich card ala TgMusic via send_rich_blocks; kalau gagal → HTML di bawah
+        # Kartu "Now Playing" — thumbnail + caption (gaya ShrutixMusic)
         rich_done = False
         if isinstance(event, Message):
             try:
-                import richpyro as rp
+                from pyrogram.types import InlineKeyboardButton as _IKB, InlineKeyboardMarkup as _IKM
 
-                trows = [
-                    [rp.table_cell("Title", align="left"),
-                     rp.table_cell(title, align="left")],
-                    [rp.table_cell("Duration", align="left"),
-                     rp.table_cell(dur_txt, align="left")],
-                    [rp.table_cell("Channel", align="left"),
-                     rp.table_cell(author, align="left")],
-                    [rp.table_cell("Mode", align="left"),
-                     rp.table_cell("Video" if is_video else "Audio", align="left")],
-                    [rp.table_cell("Requested", align="left"),
-                     rp.table_cell(req_by, align="left")],
-                ]
-                blocks = [
-                    rp.table([
-                        [rp.table_cell("Now Playing", is_header=True,
-                                       colspan=2, align="center")],
-                    ], bordered=False, compact=False),
-                    rp.divider(),
-                    rp.table(trows, bordered=True, striped=True, compact=False),
-                ]
-                from pyrogram.enums import ButtonStyle as _BS
-                blocks.append(rp.buttons(
-                    rp.btn("Stop", callback_data=b"music:stop", style=_BS.DANGER),
-                    rp.btn("Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
-                    rp.btn("Pause", callback_data=b"music:pause", style=_BS.DEFAULT),
-                    rp.btn("Tutup", callback_data=b"0", style=_BS.DANGER),
-                ))
-                rich_done = await self.send_rich_blocks(event, blocks, query_prefix="music")
+                thumb_path = self._thumb_path(vid)
+                cap = (
+                    "<b>♪ Sekarang Diputar</b>\n"
+                    f"<blockquote><b>{title}</b>\n"
+                    f"⏱ {dur_txt}  •  {author}\n"
+                    f"🎧 {'Video' if is_video else 'Audio'}</blockquote>"
+                )
+                kb = _IKM([[
+                    _IKB("⏹ Stop", callback_data=b"music:stop"),
+                    _IKB("⏭ Skip", callback_data=b"music:skip"),
+                    _IKB("⏯ Pause", callback_data=b"music:pause"),
+                ]])
+                if thumb_path:
+                    await self.client.app.send_photo(
+                        event.chat.id, thumb_path, caption=cap, reply_markup=kb,
+                    )
+                else:
+                    await self.client.app.send_message(
+                        event.chat.id, cap, reply_markup=kb,
+                        disable_web_page_preview=True,
+                    )
+                rich_done = True
             except Exception as e:
                 with contextlib.suppress(Exception):
-                    self.logger.warning(f"music rich failed: {e!r}")
+                    self.logger.warning(f"music card failed: {e!r}")
 
         if rich_done:
             with contextlib.suppress(Exception):
@@ -868,36 +861,7 @@ class Music(Module):
             from pyrogram.enums import ButtonStyle as _BS
             from pyrogram.types import InlineKeyboardButton as _IKB, InlineKeyboardMarkup as _IKM
 
-            # 1. Unduh thumbnail YouTube (cache di /tmp)
-            thumb_path = None
-            if vid:
-                thumb_path = f"/tmp/mthumb_{vid}.jpg"
-                if not os.path.isfile(thumb_path):
-                    thumb_path = None
-                    aio = None
-                    try:
-                        import aiohttp as aio
-                    except Exception:
-                        aio = None
-                    if aio:
-                        async with aio.ClientSession(timeout=aio.ClientTimeout(total=10)) as ses:
-                            for name in ("maxresdefault", "sddefault", "hqdefault"):
-                                try:
-                                    async with ses.get(f"https://i.ytimg.com/vi/{vid}/{name}.jpg") as resp:
-                                        if resp.status != 200:
-                                            continue
-                                        raw = await resp.read()
-                                        if len(raw) < 3000:
-                                            continue
-                                        with open(thumb_path, "wb") as f:
-                                            f.write(raw)
-                                        break
-                                except Exception:
-                                    continue
-                        if not os.path.isfile(thumb_path):
-                            thumb_path = None
-                    else:
-                        thumb_path = None
+            thumb_path = self._thumb_path(vid)
 
             # 2. Caption blockquote
             cap = (
