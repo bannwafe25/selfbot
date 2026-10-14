@@ -3,8 +3,9 @@ import html
 import os
 import re
 import tempfile
+import urllib.parse
+import urllib.request
 
-import edge_tts
 from pyrogram import filters
 from pyrogram.types import Message, ReplyParameters
 
@@ -13,59 +14,86 @@ from selfbot.module import Module
 
 TTS_PATTERN = re.compile(r"^tts(?:\s+([\s\S]+))?$", re.IGNORECASE)
 
-# Suara populer: (alias, voice)
+# Alias suara → kode bahasa Google Translate TTS (gratis, tanpa API key)
 VOICES = {
-    "ardi": "id-ID-ArdiNeural",      # ID cowok
-    "gadis": "id-ID-GadisNeural",    # ID cewek
-    "guy": "en-US-GuyNeural",        # EN cowok
-    "aria": "en-US-AriaNeural",      # EN cewek
-    "ana": "en-US-AnaNeural",        # EN anak kecil
-    "jenny": "en-US-JennyNeural",    # EN cewek 2
-    "osman": "tr-TR-OsmanNeural",    # Turki cowok
-    "keita": "ja-JP-KeitaNeural",    # Jepang cowok
-    "nanami": "ja-JP-NanamiNeural",  # Jepang cewek
-    "injoon": "ko-KR-InJoonNeural",  # Korea cowok
-    "sunhi": "ko-KR-SunHiNeural",    # Korea cewek
-    "hamed": "ar-SA-HamedNeural",    # Arab cowok
-    "salim": "ar-EG-SalimNeural",    # Mesir cowok
-    "dmitry": "ru-RU-DmitryNeural",  # Rusia cowok
-    "elsa": "it-IT-ElsaNeural",      # Italia cewek
-    "carl": "de-DE-ConradNeural",    # Jerman cowok
-    "henri": "fr-FR-HenriNeural",    # Perancis cowok
-    "xiaoxiao": "zh-CN-XiaoxiaoNeural",  # Mandarin cewek
-    "yunxi": "zh-CN-YunxiNeural",    # Mandarin cowok
+    "ardi": "id",       # Indonesia
+    "gadis": "id",
+    "guy": "en",        # Inggris
+    "aria": "en",
+    "ana": "en",
+    "jenny": "en",
+    "osman": "tr",      # Turki
+    "keita": "ja",      # Jepang
+    "nanami": "ja",
+    "injoon": "ko",     # Korea
+    "sunhi": "ko",
+    "hamed": "ar",      # Arab
+    "salim": "ar",
+    "dmitry": "ru",     # Rusia
+    "elsa": "it",       # Italia
+    "carl": "de",       # Jerman
+    "henri": "fr",      # Perancis
+    "xiaoxiao": "zh-CN",  # Mandarin
+    "yunxi": "zh-CN",
 }
 
-DEFAULT_VOICE = "id-ID-GadisNeural"
+DEFAULT_VOICE = "id"
 HELP_LINES = ", ".join(f"`{k}`" for k in VOICES)
+
+GOOGLE_TTS_URL = "https://translate.google.com/translate_tts"
+UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/120 Safari/537.36")
 
 
 def _resolve(spec: str) -> str | None:
     spec = spec.strip().lower()
     if spec in VOICES:
         return VOICES[spec]
-    for alias, voice in VOICES.items():
-        if voice.lower().startswith(spec):
-            return voice
-    # full voice name e.g. id-ID-ArdiNeural
-    if re.match(r"^[a-z]{2}-[a-z]{2}-\w+neural$", spec):
+    # kode bahasa langsung: id, en, ja, zh-CN, dll
+    if re.match(r"^[a-z]{2}(-[A-Z]+)?$", spec):
         return spec
-    # bare language code e.g. "en" -> find any voice starting with it
-    if re.match(r"^[a-z]{2}$", spec):
-        for voice in VOICES.values():
-            if voice.lower().startswith(spec + "-"):
-                return voice
     return None
+
+
+def _google_tts_download(text: str, lang: str, dest: str, idx: int) -> None:
+    """Unduh satu chunk TTS dari Google Translate (max ~200 char)."""
+    q = urllib.parse.urlencode({
+        "ie": "UTF-8", "q": text, "tl": lang, "total": "1",
+        "idx": str(idx), "textlen": str(len(text)),
+        "client": "tw-ob", "ttsspeed": "1",
+    })
+    req = urllib.request.Request(
+        f"{GOOGLE_TTS_URL}?{q}",
+        headers={"User-Agent": UA, "Referer": "https://translate.google.com/"},
+    )
+    with urllib.request.urlopen(req, timeout=30) as r, open(dest, "wb") as f:
+        f.write(r.read())
+
+
+def _split_text(text: str, limit: int = 190) -> list[str]:
+    """Pecah teks per kalimat/kata agar <= limit char (batas Google TTS)."""
+    parts = []
+    cur = ""
+    for word in text.split():
+        if len(cur) + len(word) + 1 > limit:
+            if cur:
+                parts.append(cur)
+            cur = word
+        else:
+            cur = f"{cur} {word}".strip()
+    if cur:
+        parts.append(cur)
+    return parts or [""]
 
 
 class TTS(Module):
     name = "Text To Speech"
-    cmds = "tts [voice] <text>"
+    cmds = "tts [bahasa] <text>"
     desc = {
-        "tts <text>": "Voice note (default Indonesian female).",
-        "tts <voice> <text>": f"Pick a voice: {HELP_LINES}",
+        "tts <text>": "Voice note (default Indonesia).",
+        "tts <voice> <text>": f"Bahasa: {HELP_LINES}",
         "tts (reply)": "Convert the replied message text.",
-        "e.g.": "tts ardi halo bro",
+        "e.g.": "tts halo bro",
     }
 
     @handler(filters.regex(r"^tts(?:\s+.*)?$", re.IGNORECASE), 1)
@@ -76,14 +104,14 @@ class TTS(Module):
             return
 
         arg = (m.group(1) or "").strip()
-        voice = DEFAULT_VOICE
+        lang = DEFAULT_VOICE
         body = arg
 
         if arg:
             first_word = arg.split()[0].strip("`").lower()
             resolved = _resolve(first_word)
             if resolved:
-                voice = resolved
+                lang = resolved
                 body = arg[len(arg.split()[0]):].strip()
 
         if not body and event.reply_to_message:
@@ -97,17 +125,42 @@ class TTS(Module):
             )
             return
 
-        status = await self.respond(event, f"<code>Generating voice ({voice})...</code>")
+        status = await self.respond(event, f"<code>Generating voice ({lang})...</code>")
         tmp_path = None
 
         try:
-            tmp_fd, tmp_path = tempfile.mkstemp(suffix=".mp3")
-            os.close(tmp_fd)
-            communicate = edge_tts.Communicate(body, voice)
-            await asyncio.wait_for(communicate.save(tmp_path), timeout=60)
-
-            if os.path.getsize(tmp_path) < 1000:
+            loop = asyncio.get_event_loop()
+            parts = _split_text(body[:1000])
+            chunks = []
+            tmp_dir = tempfile.mkdtemp(prefix="tts_")
+            for i, part in enumerate(parts):
+                p = os.path.join(tmp_dir, f"c{i}.mp3")
+                await loop.run_in_executor(
+                    None, _google_tts_download, part, lang, p, i
+                )
+                if os.path.getsize(p) > 500:
+                    chunks.append(p)
+            if not chunks:
                 raise RuntimeError("empty audio response")
+
+            # Gabung chunk dengan ffmpeg concat
+            tmp_path = os.path.join(tmp_dir, "out.mp3")
+            if len(chunks) == 1:
+                os.replace(chunks[0], tmp_path)
+            else:
+                list_file = os.path.join(tmp_dir, "list.txt")
+                with open(list_file, "w") as f:
+                    for c in chunks:
+                        f.write(f"file '{c}'\n")
+                proc = await asyncio.create_subprocess_exec(
+                    "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+                    "-i", list_file, "-c", "copy", tmp_path,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                await asyncio.wait_for(proc.communicate(), timeout=60)
+                if not os.path.exists(tmp_path) or os.path.getsize(tmp_path) < 1000:
+                    raise RuntimeError("ffmpeg concat gagal")
 
             reply_parameters = ReplyParameters(message_id=event.reply_to_message_id or event.id)
             await event._client.send_voice(
