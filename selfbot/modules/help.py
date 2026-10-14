@@ -88,6 +88,7 @@ class Help(Module):
         # Media & unduhan
         "alldl": ("", "Media & Unduhan"),
         "toss": ("", "Media & Unduhan"),
+        "ytmp3": ("", "Media & Unduhan"),
         "qris": ("", "Qris"),
         "upload": ("", "Media & Unduhan"),
         "sticker": ("", "Kreatif"),
