@@ -519,6 +519,7 @@ class Music(Module):
                     ),
                 ]
                 ok = await self.send_rich_blocks(event, blocks, query_prefix="musicq")
+                self.logger.warning(f"antrian rich: ok={ok} pos={pos}")
             except Exception:
                 ok = False
             if not ok:
