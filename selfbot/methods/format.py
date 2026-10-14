@@ -140,12 +140,6 @@ class Format:
                 _chat_id, res.query_id, res.results[0].id,
             )
             try:
-                self.client.modules.get("Music").logger.warning(
-                    f"rich inline: prefix={query_prefix} chat={_chat_id} sent={bool(msg)}"
-                )
-            except Exception:
-                pass
-            try:
                 if msg:
                     self.client.modules.get("Music").np_msg = msg
             except Exception:
