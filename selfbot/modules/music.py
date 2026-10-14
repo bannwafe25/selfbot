@@ -705,6 +705,8 @@ class Music(Module):
         if not self.queue:
             return await self._status(event, "<code>Queue kosong.</code>")
         skipped = self.queue.pop(0)
+        # Batalin watcher lagu lama SEKARANG (token naik), biar gak nge-pop queue dobel
+        self.play_token += 1
         if not self.queue:
             await self._do_stop(event)
             return
