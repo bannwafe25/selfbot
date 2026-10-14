@@ -620,16 +620,16 @@ class Music(Module):
                 ]
                 blocks = [
                     rp.table([
-                        [rp.table_cell("♪ Now Playing", is_header=True,
+                        [rp.table_cell("Now Playing", is_header=True,
                                        colspan=2, align="center")],
                     ], bordered=False, compact=False),
                     rp.table(trows, bordered=True, striped=True, compact=False),
                 ]
                 blocks.append(rp.buttons(
-                    rp.btn("⏹ Stop", callback_data=b"music:stop", style=_BS.DANGER),
-                    rp.btn("⏭ Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
-                    rp.btn("⏯ Pause", callback_data=b"music:pause", style=_BS.DEFAULT),
-                    rp.btn("✕", callback_data=b"0", style=_BS.DANGER),
+                    rp.btn("Stop", callback_data=b"music:stop", style=_BS.DANGER),
+                    rp.btn("Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
+                    rp.btn("Pause", callback_data=b"music:pause", style=_BS.DEFAULT),
+                    rp.btn("Tutup", callback_data=b"0", style=_BS.DANGER),
                 ))
                 rich_done = await self.send_rich_blocks(event, blocks, query_prefix="music")
             except Exception as e:
@@ -932,16 +932,16 @@ class Music(Module):
             ]
             blocks = [
                 rp.table([
-                    [rp.table_cell("♪ Now Playing", is_header=True,
+                    [rp.table_cell("Now Playing", is_header=True,
                                    colspan=2, align="center")],
                 ], bordered=False, compact=False),
                 rp.table(trows, bordered=True, striped=True, compact=False),
             ]
             blocks.append(rp.buttons(
-                rp.btn("⏹ Stop", callback_data=b"music:stop", style=_BS.DANGER),
-                rp.btn("⏭ Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
-                rp.btn("⏯ Pause", callback_data=b"music:pause", style=_BS.DEFAULT),
-                rp.btn("✕", callback_data=b"0", style=_BS.DANGER),
+                rp.btn("Stop", callback_data=b"music:stop", style=_BS.DANGER),
+                rp.btn("Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
+                rp.btn("Pause", callback_data=b"music:pause", style=_BS.DEFAULT),
+                rp.btn("Tutup", callback_data=b"0", style=_BS.DANGER),
             ))
             rich_done = await self.send_rich_blocks(
                 event, blocks, query_prefix="music", chat_id=self.current_chat
