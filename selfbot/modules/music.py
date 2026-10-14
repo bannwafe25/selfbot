@@ -520,6 +520,7 @@ class Music(Module):
                     ], bordered=False, compact=False),
                     rp.table(trows, bordered=True, striped=True),
                     rp.buttons(
+                        rp.btn("Play Now", callback_data=f"music:playnow:{pos-1}".encode(), style=_BS.SUCCESS),
                         rp.btn("Tutup", callback_data=b"0", style=_BS.DANGER),
                     ),
                 ]
