@@ -10,7 +10,7 @@ from pyrogram.types import Message
 from selfbot.listener import handler
 from selfbot.module import Module
 
-def _music_cb_filter(_, __, event):
+def _music_cb_filter(flt, event):
     """Filter callback music: handle bytes data."""
     from pyrogram.types import CallbackQuery
     if not isinstance(event, CallbackQuery):
