@@ -687,6 +687,16 @@ class Music(Module):
             await loop.run_in_executor(None, _download_media, vid, dest, is_video)
         except Exception as e:
             await self._status(event, f"Download gagal: <code>{e}</code>")
+            # Antrean jangan mati: lanjut ke lagu berikutnya
+            with contextlib.suppress(Exception):
+                if self.queue and self.current_chat:
+                    self.queue.pop(0)
+                if self.queue and self.current_chat:
+                    await self._play_file(None, self.queue[0])
+                elif self.current_chat:
+                    with contextlib.suppress(Exception):
+                        await self.call.leave_call(self.current_chat)
+                    self.current_chat = None
             return
         if not is_video:
             audio_dest = os.path.join(tmp_dir, f"{vid}.m4a")
@@ -711,6 +721,16 @@ class Music(Module):
             asyncio.ensure_future(self._wait_finish(self.current_chat, dest, self.play_token))
         except Exception as e:
             await self._status(event, f"PyTgCalls: <code>{e}</code>")
+            # Antrean jangan mati: lanjut ke lagu berikutnya
+            with contextlib.suppress(Exception):
+                if self.queue:
+                    self.queue.pop(0)
+                if self.queue and self.current_chat:
+                    await self._play_file(None, self.queue[0])
+                elif self.current_chat:
+                    with contextlib.suppress(Exception):
+                        await self.call.leave_call(self.current_chat)
+                    self.current_chat = None
             return
 
         # Update durasi hasil ffprobe
