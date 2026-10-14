@@ -126,7 +126,7 @@ class Format:
                     chat_id, res.query_id, res.results[0].id,
                 )
                 try:
-                    if msg:
+                    if msg and query_prefix == "music":
                         self.client.modules.get("Music").np_msg = msg
                 except Exception:
                     pass
@@ -140,7 +140,7 @@ class Format:
                 _chat_id, res.query_id, res.results[0].id,
             )
             try:
-                if msg:
+                if msg and query_prefix == "music":
                     self.client.modules.get("Music").np_msg = msg
             except Exception:
                 pass
