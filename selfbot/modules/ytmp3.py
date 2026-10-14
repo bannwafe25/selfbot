@@ -12,7 +12,7 @@ from pyrogram.types import Message
 from selfbot.listener import handler
 from selfbot.module import Module
 
-pattern = re.compile(r"^(?:ytmp3|song)(?:\s+([\s\S]+))?$", re.IGNORECASE)
+pattern = re.compile(r"^song(?:\s+([\s\S]+))?$", re.IGNORECASE)
 
 
 def _yt_id_from_link(text: str) -> str | None:
@@ -90,7 +90,7 @@ async def _shruti_download_async(video_id: str, dest: str) -> None:
 
 class YtMp3(Module):
     name = "YT MP3"
-    cmds = "ytmp3|song {link|judul}"
+    cmds = "song {link|judul}"
     desc = {
         "{link|judul}": "Link YouTube atau judul lagu — kirim audio ke chat.",
         "e.g.": "ytmp3 melukis senja",
