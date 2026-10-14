@@ -303,11 +303,20 @@ class Music(Module):
             return path
         try:
             import urllib.request
-            for name in ("maxresdefault", "sddefault", "hqdefault"):
+            for name in ("mqdefault", "hqdefault"):
                 try:
                     urllib.request.urlretrieve(
                         f"https://i.ytimg.com/vi/{vid}/{name}.jpg", path)
                     if os.path.getsize(path) > 3000:
+                        # Resize ke 320px lebar biar thumbnail kecil
+                        try:
+                            from PIL import Image
+                            im = Image.open(path)
+                            w = 320
+                            h = int(im.height * w / im.width)
+                            im.resize((w, h)).convert("RGB").save(path, "JPEG", quality=85)
+                        except Exception:
+                            pass
                         return path
                 except Exception:
                     continue
@@ -599,7 +608,7 @@ class Music(Module):
                 import richpyro as rp
                 from pyrogram.enums import ButtonStyle as _BS
 
-                thumb_url = f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg" if vid else None
+                thumb_url = f"https://i.ytimg.com/vi/{vid}/mqdefault.jpg" if vid else None
                 blocks = []
                 if thumb_url:
                     blocks.append(rp.photo_block(
@@ -889,7 +898,7 @@ class Music(Module):
             import richpyro as rp
             from pyrogram.enums import ButtonStyle as _BS
 
-            thumb_url = f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg" if vid else None
+            thumb_url = f"https://i.ytimg.com/vi/{vid}/mqdefault.jpg" if vid else None
             blocks = []
             if thumb_url:
                 blocks.append(rp.photo_block(
