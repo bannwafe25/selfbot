@@ -606,16 +606,9 @@ class Music(Module):
                         rp.photo_media(thumb_url),
                         cap=rp.caption(rp.bold("♪ Now Playing")),
                     ))
-                blocks.append(rp.table([
-                    [rp.table_cell("Title", align="left"),
-                     rp.table_cell(title, align="left")],
-                    [rp.table_cell("Duration", align="left"),
-                     rp.table_cell(dur_txt, align="left")],
-                    [rp.table_cell("Channel", align="left"),
-                     rp.table_cell(author, align="left")],
-                    [rp.table_cell("Mode", align="left"),
-                     rp.table_cell("Video" if is_video else "Audio", align="left")],
-                ], bordered=True, striped=True, compact=False))
+                blocks.append(rp.para(rp.bold(title)))
+                blocks.append(rp.para(f"⏱ {dur_txt}  •  {author}"))
+                blocks.append(rp.para(f"🎧 {'Video' if is_video else 'Audio'}"))
                 blocks.append(rp.buttons(
                     rp.btn("⏹ Stop", callback_data=b"music:stop", style=_BS.DANGER),
                     rp.btn("⏭ Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
@@ -903,18 +896,9 @@ class Music(Module):
                     rp.photo_media(thumb_url),
                     cap=rp.caption(rp.bold("♪ Now Playing")),
                 ))
-            blocks.append(rp.table([
-                [rp.table_cell("Title", align="left"),
-                 rp.table_cell(info["title"], align="left")],
-                [rp.table_cell("Duration", align="left"),
-                 rp.table_cell(dur_txt, align="left")],
-                [rp.table_cell("Channel", align="left"),
-                 rp.table_cell(info.get("author", "-"), align="left")],
-                [rp.table_cell("Mode", align="left"),
-                 rp.table_cell("Video" if is_video else "Audio", align="left")],
-                [rp.table_cell("Queue", align="left"),
-                 rp.table_cell(str(len(self.queue)), align="left")],
-            ], bordered=True, striped=True, compact=False))
+            blocks.append(rp.para(rp.bold(info["title"])))
+            blocks.append(rp.para(f"⏱ {dur_txt}  •  {info.get('author', '-')}"))
+            blocks.append(rp.para(f"🎧 {'Video' if is_video else 'Audio'}  •  Queue: {len(self.queue)}"))
             blocks.append(rp.buttons(
                 rp.btn("⏹ Stop", callback_data=b"music:stop", style=_BS.DANGER),
                 rp.btn("⏭ Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
