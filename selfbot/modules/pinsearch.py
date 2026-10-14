@@ -13,7 +13,7 @@ from selfbot.module import Module
 
 PIN_PATTERN = re.compile(r"^(?:[.,?!]?)?(?:pin|pinterest)(?:\s+([\s\S]+))?$", re.IGNORECASE)
 PIN_API = "https://api.siputzx.my.id/api/s/pinterest?query={}"
-MAX_MEDIA = 20  # batas media per request (biar gak kena limit Telegram)
+MAX_MEDIA = 50  # batas media per request
 
 
 def _fetch_json(query: str) -> list:
@@ -54,7 +54,7 @@ class PinSearch(Module):
         if not m or not m.group(1):
             return await event.edit("<b>Format:</b> <code>.pin &lt;query&gt; [jumlah]</code>")
         parts = m.group(1).rsplit(maxsplit=1)
-        limit = 10
+        limit = 20
         query = m.group(1).strip()
         if len(parts) == 2 and parts[1].isdigit():
             query, limit = parts[0], min(int(parts[1]), MAX_MEDIA)
