@@ -709,6 +709,7 @@ class Music(Module):
 
         if not isinstance(event, CallbackQuery):
             return
+        self.logger.warning(f"music callback: data={event.data!r}")
         action = (event.data if isinstance(event.data, str) else event.data.decode()).split(":", 1)[1]
         if action == "stop":
             await self._do_stop(event)
