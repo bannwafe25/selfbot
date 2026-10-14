@@ -387,75 +387,6 @@ class Help(Module):
             blocks.append(rp.para(rp.spoiler(re.sub(r"<[^>]+>", "", quote))))
         return blocks
 
-    def _blocks_all_in_one(self, quote: str) -> list:
-        """Semua kategori dalam SATU halaman — tiap kategori jadi accordion,
-        isinya accordion modul (nested). Gak perlu bolak-balik klik."""
-        import richpyro as rp
-
-        groups = self._group_by_category()
-        ordered = sorted(groups.items(), key=lambda kv: kv[0].lower())
-        total_mods = sum(len(v[1]) for _, v in ordered)
-
-        blocks = [
-            rp.table([
-                [rp.table_cell("Menu Bantuan Selfbot", is_header=True, colspan=2, align="center")],
-            ], bordered=False, compact=False),
-            rp.para(
-                rp.italic(
-                    f"Semua kategori terbuka — {len(ordered)} kategori, "
-                    f"{total_mods} modul. Klik untuk expand/collapse."
-                )
-            ),
-            rp.divider(),
-        ]
-
-        MAX_LINES, MAX_DESC, MAX_SUM = 8, 6, 40
-        for cname, (icon, mods) in ordered:
-            mod_accs = []
-            for mod in sorted(mods, key=lambda x: str(x.name)):
-                cmds_raw = (getattr(mod, "cmds", "") or "-").strip()
-                cmds_lines = [
-                    l for l in cmds_raw.splitlines() if l.strip()
-                ][:MAX_LINES]
-                det = [
-                    rp.preformatted("\n".join(cmds_lines) or "-", language="text")
-                ]
-                desc = getattr(mod, "desc", None)
-                if isinstance(desc, dict) and desc:
-                    det.append(
-                        # bullet manual — blok list bawaan bermasalah di rich inline
-                        rp.para(
-                            *[
-                                item
-                                for k, v in list(desc.items())[:MAX_DESC]
-                                for item in ("{k}: ", f"{v}\n")
-                            ]
-                        )
-                    )
-                mname = mod.name or "?"
-                if len(mname) > MAX_SUM:
-                    mname = mname[: MAX_SUM - 1] + "…"
-                mod_accs.append(rp.details(mname, *det))
-
-            kname = f"{icon} {cname} ({len(mods)})"
-            blocks.append(rp.details(kname, *mod_accs))
-
-        blocks.append(rp.divider())
-        blocks.append(
-            rp.buttons(
-                rp.btn("Tutup", callback_data=b"0", style=rp.Style.DANGER),
-                RichMessageButton(
-                    text="Channel",
-                    style=ButtonStyle.SUCCESS,
-                    url="https://t.me/wass4pbruh",
-                ),
-                align="center",
-            )
-        )
-        if quote:
-            blocks.append(rp.para(rp.spoiler(re.sub(r"<[^>]+>", "", quote))))
-        return blocks
-
     async def _answer_rich(
         self, event: InlineQuery, quote: str, category: str = ""
     ) -> None:
@@ -652,30 +583,6 @@ class Help(Module):
                 reply_markup=markup_raw,
             )
         )
-
-    def _rich_from_ikm(self, ikm_markup):
-        """Konversi InlineKeyboardMarkup jadi InputRichBlockButtons (rich)."""
-        style_rev = {
-            str(ButtonStyle.DANGER): ButtonStyle.DANGER,
-            str(ButtonStyle.SUCCESS): ButtonStyle.SUCCESS,
-            str(ButtonStyle.PRIMARY): ButtonStyle.PRIMARY,
-        }
-        rows_out = []
-        for row in ikm_markup.inline_keyboard:
-            for btn in row:
-                kwargs = {"text": RichTextBold(btn.text)}
-                if btn.callback_data is not None:
-                    kwargs["callback_data"] = btn.callback_data
-                elif btn.url is not None:
-                    kwargs["url"] = btn.url
-                else:
-                    continue  # jenis tombol tak didukung rich, skip
-                st = style_rev.get(str(btn.style))
-                if st:
-                    kwargs["style"] = st
-                rows_out.append(RichMessageButton(**kwargs))
-        # InputRichBlockButtons: SATU list datar (maks 8 tombol per baris)
-        return InputRichBlockButtons(rows_out[:8])
 
     def _build_header(self, quote: str = "") -> str:
         header = (

@@ -469,40 +469,7 @@ class AnimePic(Module):
             with contextlib.suppress(Exception):
                 await event._client.send_message(event.chat.id, text)
 
-    async def _fetch_moe_tags(self, force_refresh: bool = False) -> list[str]:
-        now = datetime.datetime.now(datetime.UTC)
-        if (
-            not force_refresh
-            and self._moe_tags_cache
-            and self._moe_tags_cache_time
-            and now - self._moe_tags_cache_time < self._moe_tags_cache_ttl
-        ):
-            return self._moe_tags_cache
-
-        resp = await self.client.http.get("https://nekos.moe/api/v1/tags", timeout=15)
-        if resp.status_code != 200:
-            return self._moe_tags_cache
-
-        raw_tags = (resp.json() or {}).get("tags") or []
-        fetched = sorted({t.strip() for t in raw_tags if isinstance(t, str) and t.strip()})
-        if fetched:
-            self._moe_tags_cache = fetched
-            self._moe_tags_cache_time = now
-        return self._moe_tags_cache
-
     @staticmethod
-    def _format_tag_list(tags: list[str], max_chars: int = 2500) -> tuple[str, int]:
-        picked, used = [], 0
-        for tag in tags:
-            token = tag if not picked else f", {tag}"
-            if used + len(token) > max_chars:
-                break
-            picked.append(tag)
-            used += len(token)
-        return ", ".join(picked), len(picked)
-
-    # ── Query / payload parsing ───────────────────────────────────────────────
-
     @staticmethod
     def parse_query(query: str) -> tuple[str, str | None]:
         normalized = (query or "").strip()
@@ -584,17 +551,6 @@ class AnimePic(Module):
         return AnimePic._is_valid_url(url) and not AnimePic._is_gif_url(url)
 
     @staticmethod
-    def _pick_preferred_url(urls: list[str]) -> str | None:
-        for url in urls:
-            if AnimePic._is_valid_non_gif(url):
-                return url
-        for url in urls:
-            if AnimePic._is_valid_url(url):
-                return url
-        return None
-
-    # ── API fetchers ──────────────────────────────────────────────────────────
-
     async def _get_from_mwm_moe(self, tag: str) -> tuple | None:
         resp = await self.client.http.get(
             f"https://t.mwm.moe/{tag}", follow_redirects=True, timeout=10
@@ -628,43 +584,6 @@ class AnimePic(Module):
             "https://api.waifu.im/images",
             params={"IncludedTags": tag, "IsNsfw": "false", "PageSize": 1},
             timeout=10,
-        )
-        if resp.status_code != 200:
-            return None
-
-        data = resp.json() or {}
-        images = data.get("items") or data.get("images") or []
-        if not isinstance(images, list) or not images:
-            return None
-
-        image_data = images[0]
-        url = image_data.get("url")
-        if not self._is_valid_non_gif(url):
-            return None
-
-        artists = image_data.get("artists") or []
-        artist = (
-            artists[0]
-            if isinstance(artists, list) and artists and isinstance(artists[0], dict)
-            else image_data.get("artist") or {}
-        )
-        links = {
-            k: v for k, v in {
-                "Pixiv": artist.get("pixiv"),
-                "Twitter": artist.get("twitter"),
-                "Patreon": artist.get("patreon"),
-                "DeviantArt": artist.get("deviantArt"),
-            }.items() if v
-        }
-        return url, artist.get("name"), links, image_data.get("source") or image_data.get("source_url")
-
-    async def _get_from_waifu_im_nsfw(self, tag: str) -> tuple | None:
-        included = self.waifu_im_nsfw_map.get(tag, "hentai")
-        params = {"IsNsfw": "true", "PageSize": 1}
-        if included:
-            params["IncludedTags"] = included
-        resp = await self.client.http.get(
-            "https://api.waifu.im/images", params=params, timeout=10,
         )
         if resp.status_code != 200:
             return None
