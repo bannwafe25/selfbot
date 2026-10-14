@@ -171,8 +171,6 @@ class Music(Module):
         self.current_chat = None  # chat_id VC aktif
         self.play_token = 0       # naik setiap play baru (batal watcher lama)
         self.queue = []           # antrian: list f_info dict
-        self.paused = False
-        self.loop_count = 0       # loop lagu saat ini (1-10, 0 = off)
 
     async def _wait_finish(self, chat_id: int, dest: str, token: int) -> None:
         """Tunggu durasi media habis (ffprobe) lalu assistant keluar VC."""
@@ -199,12 +197,6 @@ class Music(Module):
         with contextlib.suppress(Exception):
             if self.queue and self.queue[0].get("vid") and self.queue:
                 self.queue.pop(0)
-        # LOOP aktif → replay lagu yang sama
-        if self.loop_count > 0 and self.queue and self.current_chat == chat_id:
-            self.loop_count -= 1
-            with contextlib.suppress(Exception):
-                await self._play_file(None, self.queue[0])
-            return
         # Masih ada antrian → auto-next, jangan keluar VC
         if self.queue and self.current_chat == chat_id:
             nxt = self.queue[0]
@@ -490,7 +482,6 @@ class Music(Module):
                 )
             await call.play(chat_id, stream)
             self.current_chat = chat_id
-            self.current_file = dest
             self.play_token += 1
             asyncio.ensure_future(self._wait_finish(chat_id, dest, self.play_token))
         except Exception as e:
@@ -634,8 +625,7 @@ class Music(Module):
                     await call.leave_call(self.current_chat)
                 self.current_chat = None
             self.queue.clear()
-            self.paused = False
-            # hapus kartu Now Playing yang nyangkut
+                # hapus kartu Now Playing yang nyangkut
             await self._delete_now_playing()
             await self._status(event, "<code>Stopped. Assistant keluar VC.</code>", revoke=5)
         except Exception as e:
@@ -736,7 +726,6 @@ class Music(Module):
                 video_flags=MediaStream.Flags.REQUIRED if is_video else MediaStream.Flags.IGNORE,
             )
             await call.play(self.current_chat, stream)
-            self.paused = False
             self.play_token += 1
             asyncio.ensure_future(self._wait_finish(self.current_chat, dest, self.play_token))
         except Exception as e:
