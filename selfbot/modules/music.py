@@ -80,6 +80,34 @@ def _arc_request(path: str, params: dict) -> dict:
         return json.loads(r.read().decode("utf-8", "ignore"))
 
 
+def _shruti_download(video_id: str, dest: str, video: bool) -> None:
+    """Download via ShrutiBots API (file langsung, no bot-check)."""
+    import json
+    import urllib.parse
+    import urllib.request
+
+    api_key = os.getenv("SHRUTI_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("SHRUTI_API_KEY belum di-set di .env")
+    q = urllib.parse.urlencode({
+        "video_id": video_id,
+        "type": "video" if video else "audio",
+        "api_key": api_key,
+    })
+    req = urllib.request.Request(
+        f"https://api.shrutibots.site/download?{q}",
+        headers={"User-Agent": "Mozilla/5.0"},
+    )
+    with urllib.request.urlopen(req, timeout=300) as r:
+        if r.status != 200:
+            raise RuntimeError(f"shruti HTTP {r.status}")
+        data = r.read()
+    if len(data) < 10000:
+        raise RuntimeError(f"shruti file kecil: {len(data)} bytes")
+    with open(dest, "wb") as f:
+        f.write(data)
+
+
 def _ytdlp_download(video_id: str, dest: str, video: bool) -> None:
     """Download via yt-dlp (butuh deno runtime buat challenge solver YouTube)."""
     import shutil
@@ -126,8 +154,18 @@ def _arc_cdn(video_id: str, video: bool) -> str | None:
 
 
 def _download_media(video_id: str, dest: str, video: bool) -> None:
-    """Download media: Arc (cdn langsung) dulu, yt-dlp (cookies) cadangan.
+    """Download media: ShrutiBots utama, Arc cadangan, yt-dlp terakhir.
     Link t.me dari Arc ditangani _download_via_userbot() di sisi async."""
+    # 1) ShrutiBots (utama — no bot-check, file langsung)
+    try:
+        _shruti_download(video_id, dest, video)
+        if os.path.exists(dest) and os.path.getsize(dest) > 10000:
+            return
+    except Exception:
+        with contextlib.suppress(Exception):
+            os.remove(dest)
+
+    # 2) Arc (cadangan)
     try:
         cdn = _arc_cdn(video_id, video)
         if cdn and not cdn.startswith("https://t.me/"):
@@ -138,7 +176,7 @@ def _download_media(video_id: str, dest: str, video: bool) -> None:
         with contextlib.suppress(Exception):
             os.remove(dest)
 
-    # yt-dlp (cadangan, pakai cookies)
+    # 3) yt-dlp (terakhir, pakai cookies)
     _ytdlp_download(video_id, dest, video)
 
 
