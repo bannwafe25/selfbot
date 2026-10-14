@@ -613,10 +613,15 @@ class Music(Module):
                 if thumb_url:
                     blocks.append(rp.photo_block(
                         rp.photo_media(thumb_url),
-                        cap=rp.caption(rp.bold("♪ Now Playing")),
+                        cap=rp.caption(
+                            rp.bold("♪ Now Playing"),
+                            credit=rp.italic(f"{dur_txt} • {author}"),
+                        ),
                     ))
-                blocks.append(rp.para(rp.bold(title)))
-                blocks.append(rp.para(f"⏱ {dur_txt}  •  {author}"))
+                else:
+                    blocks.append(rp.para(rp.bold("♪ Now Playing")))
+                    blocks.append(rp.para(rp.bold(title)))
+                    blocks.append(rp.para(f"⏱ {dur_txt}  •  {author}"))
                 blocks.append(rp.para(f"🎧 {'Video' if is_video else 'Audio'}"))
                 blocks.append(rp.buttons(
                     rp.btn("⏹ Stop", callback_data=b"music:stop", style=_BS.DANGER),
@@ -903,7 +908,10 @@ class Music(Module):
             if thumb_url:
                 blocks.append(rp.photo_block(
                     rp.photo_media(thumb_url),
-                    cap=rp.caption(rp.bold("♪ Now Playing")),
+                    cap=rp.caption(
+                        rp.bold("♪ Now Playing"),
+                        credit=rp.italic(f"{dur_txt} • {info.get('author', '-')}"),
+                    ),
                 ))
             blocks.append(rp.para(rp.bold(info["title"])))
             blocks.append(rp.para(f"⏱ {dur_txt}  •  {info.get('author', '-')}"))
