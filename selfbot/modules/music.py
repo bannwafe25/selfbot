@@ -506,8 +506,11 @@ class Music(Module):
                 f"<blockquote><b>{title}</b>\n"
                 f"Posisi: #{pos}  •  {author}</blockquote>"
             )
+            from pyrogram.types import InlineKeyboardButton as _IKB, InlineKeyboardMarkup as _IKM
+            kb = _IKM([[_IKB("▶ Play Now", callback_data=f"music:playnow:{pos-1}")]])
             await self.client.app.send_message(
-                event.chat.id, cap, disable_web_page_preview=True,
+                event.chat.id, cap, reply_markup=kb,
+                disable_web_page_preview=True,
             )
             with contextlib.suppress(Exception):
                 await event.delete()
@@ -671,7 +674,7 @@ class Music(Module):
             with contextlib.suppress(Exception):
                 await event.delete()
 
-    @handler(filters.regex(r"^music:(stop|pause|resume|skip)$"), 1)
+    @handler(filters.regex(r"^music:(stop|pause|resume|skip|playnow:\\d+)$"), 1)
     async def on_inline_callback(self, event) -> None:
         """Callback tombol rich dari kartu Now Playing."""
         from pyrogram.types import CallbackQuery
@@ -689,6 +692,19 @@ class Music(Module):
             await self._do_skip(event)
         elif action == "playlist":
             await self._do_playlist(event)
+        elif action.startswith("playnow:"):
+            idx = int(action.split(":", 1)[1])
+            if not (0 <= idx < len(self.queue)):
+                with contextlib.suppress(Exception):
+                    await event.answer("Lagu gak ada di antrian.", show_alert=True)
+                return
+            # Naikin ke posisi 0 & skip lagu sekarang
+            item = self.queue.pop(idx)
+            self.queue.insert(0, item)
+            with contextlib.suppress(Exception):
+                await event.answer("▶ Memutar sekarang...")
+            # event=None → kartu & status dikirim ke chat VC (callback query gak bisa dipakai lama)
+            await self._do_skip(None)
 
     async def _delete_now_playing(self) -> None:
         """Hapus kartu Now Playing yang nyangkut di chat VC."""
