@@ -620,6 +620,7 @@ class Music(Module):
                     rp.btn("⏹ Stop", callback_data=b"music:stop", style=_BS.DANGER),
                     rp.btn("⏭ Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
                     rp.btn("⏯ Pause", callback_data=b"music:pause", style=_BS.DEFAULT),
+                    rp.btn("✕", callback_data=b"0", style=_BS.DANGER),
                 ))
                 rich_done = await self.send_rich_blocks(event, blocks, query_prefix="music")
             except Exception as e:
@@ -636,11 +637,14 @@ class Music(Module):
                         f"⏱ {dur_txt}  •  {author}\n"
                         f"🎧 {'Video' if is_video else 'Audio'}</blockquote>"
                     )
-                    kb = _IKM([[
-                        _IKB("⏹ Stop", callback_data=b"music:stop"),
-                        _IKB("⏭ Skip", callback_data=b"music:skip"),
-                        _IKB("⏯ Pause", callback_data=b"music:pause"),
-                    ]])
+                    kb = _IKM([
+                        [
+                            _IKB("⏹ Stop", callback_data=b"music:stop"),
+                            _IKB("⏭ Skip", callback_data=b"music:skip"),
+                            _IKB("⏯ Pause", callback_data=b"music:pause"),
+                        ],
+                        [_IKB("✕ Tutup", callback_data=b"0")],
+                    ])
                     thumb_path = self._thumb_path(vid)
                     if thumb_path:
                         await self.client.app.send_photo(
@@ -915,6 +919,7 @@ class Music(Module):
                 rp.btn("⏹ Stop", callback_data=b"music:stop", style=_BS.DANGER),
                 rp.btn("⏭ Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
                 rp.btn("⏯ Pause", callback_data=b"music:pause", style=_BS.DEFAULT),
+                rp.btn("✕", callback_data=b"0", style=_BS.DANGER),
             ))
             rich_done = await self.send_rich_blocks(
                 event, blocks, query_prefix="music", chat_id=self.current_chat
@@ -936,11 +941,14 @@ class Music(Module):
                     f"⏱ {dur_txt}  •  {info.get('author', '-')}\n"
                     f"🎧 {'Video' if is_video else 'Audio'}</blockquote>"
                 )
-                kb = _IKM([[
-                    _IKB("⏹ Stop", callback_data=b"music:stop"),
-                    _IKB("⏭ Skip", callback_data=b"music:skip"),
-                    _IKB("⏯ Pause", callback_data=b"music:pause"),
-                ]])
+                kb = _IKM([
+                    [
+                        _IKB("⏹ Stop", callback_data=b"music:stop"),
+                        _IKB("⏭ Skip", callback_data=b"music:skip"),
+                        _IKB("⏯ Pause", callback_data=b"music:pause"),
+                    ],
+                    [_IKB("✕ Tutup", callback_data=b"0")],
+                ])
                 target_chat = self.current_chat if event is None else event.chat.id
                 if thumb_path:
                     await self.client.app.send_photo(
