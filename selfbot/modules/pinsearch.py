@@ -193,12 +193,7 @@ class PinSearch(Module):
                     ]
                 )
 
-            # Jawab inline query asli dari userbot
-            res = await self.client.app.get_inline_bot_results(
-                bot.me.id, f"rpin{_dt.datetime.now(_dt.UTC).timestamp()}"
-            )
-            # Register rich payload via bot SetInlineBotResults gak bisa tanpa query_id asli;
-            # gunakan mekanisme Music rich route (shared handler) bila tersedia, else fallback HTML.
+            # Register shared handler + route SEBELUM inline query (biar bot sempat jawab)
             ping_mod = None
             try:
                 ping_mod = self.client.modules.get("Ping")
@@ -214,6 +209,13 @@ class PinSearch(Module):
                 ping_mod._rich_route = {}
             self._pin_route = {"query": query, "urls": urls}
             ping_mod._rich_route["rpin"] = (rich_raw, None)
+
+            # Sekarang inline query — shared handler akan jawab dengan rich payload
+            res = await self.client.app.get_inline_bot_results(
+                bot.me.id, f"rpin{_dt.datetime.now(_dt.UTC).timestamp()}"
+            )
+            if not res or not res.results:
+                raise RuntimeError("bot inline gak balas hasil")
             msg = await self.client.app.send_inline_bot_result(
                 event.chat.id, res.query_id, res.results[0].id
             )
