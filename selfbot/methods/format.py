@@ -110,7 +110,8 @@ class Format:
             ping_mod._rich_route[query_prefix] = (rich_raw, None)
 
             now = _dt.datetime.now(_dt.UTC)
-            _c = event._client if event is not None else self.client.app
+            # Selalu pakai USERBOT untuk inline (bot kena BOT_METHOD_INVALID)
+            _c = self.client.app
             res = await _c.get_inline_bot_results(
                 bot.me.id, f"{query_prefix}{now.timestamp()}"
             )
@@ -131,7 +132,18 @@ class Format:
                     pass
                 return True
 
-            await event.reply_inline_bot_result(res.query_id, res.results[0].id)
+            # Reply via userbot ke chat event (bukan event.reply yang mungkin bot)
+            _chat_id = event.chat.id if getattr(event, "chat", None) else chat_id
+            if not _chat_id:
+                return False
+            msg = await self.client.app.send_inline_bot_result(
+                _chat_id, res.query_id, res.results[0].id,
+            )
+            try:
+                if msg:
+                    self.client.modules.get("Music").np_msg = msg
+            except Exception:
+                pass
             return True
         except Exception as e:
             with contextlib.suppress(Exception):
