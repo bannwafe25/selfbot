@@ -53,20 +53,18 @@ class PinSearch(Module):
     @handler(filters.regex(PIN_PATTERN), 1)
     async def on_message_out(self, event: Message) -> None:
         content = str(event.content).strip()
-        # Rich slideshow: .rpin <query>
-        rm = self.RPIN_PATTERN.match(content)
-        if rm:
-            return await self._rich_cmd(event, (rm.group(1) or "").strip())
         m = PIN_PATTERN.match(content)
         if not m or not m.group(1):
             return await event.edit("<b>Format:</b> <code>.pin &lt;query&gt; [jumlah]</code>")
         parts = m.group(1).rsplit(maxsplit=1)
-        limit = 20
         query = m.group(1).strip()
+        # .pin <query> <angka> → album media; tanpa angka → rich slideshow
         if len(parts) == 2 and parts[1].isdigit():
-            query, limit = parts[0], min(int(parts[1]), MAX_MEDIA)
+            return await self._album_cmd(event, parts[0], min(int(parts[1]), MAX_MEDIA))
+        return await self._rich_cmd(event, query)
 
-        status = await event.edit(f"<code>Mencari Pinterest: {query}…</code>")
+    async def _album_cmd(self, event: Message, query: str, limit: int) -> None:
+        status = await event.edit(f"<code>Mencari Pinterest: {query} ({limit})…</code>")
         await self.client.app.send_chat_action(event.chat.id, ChatAction.UPLOAD_PHOTO)
 
         try:
