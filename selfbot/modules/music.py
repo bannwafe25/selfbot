@@ -508,7 +508,9 @@ class Music(Module):
             )
             from pyrogram.types import InlineKeyboardButton as _IKB, InlineKeyboardMarkup as _IKM
             kb = _IKM([[_IKB("▶ Play Now", callback_data=f"music:playnow:{pos-1}")]])
-            await self.client.app.send_message(
+            # Tombol callback hanya bisa dari BOT (userbot gak bisa render inline button)
+            sender = self.client.bot or self.client.app
+            await sender.send_message(
                 event.chat.id, cap, reply_markup=kb,
                 disable_web_page_preview=True,
             )
