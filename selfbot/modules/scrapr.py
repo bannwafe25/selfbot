@@ -117,7 +117,9 @@ class Scrapr(Module):
                 media = rp.video_block(InputMediaVideo(dest))
             blocks = [
                 media,
+                rp.divider(),
                 rp.para(info),
+                rp.footer("@zpselfbot"),
             ]
             rich_raw = await rp.blocks_message(*blocks).write(client=bot)
             return await self._dispatch_rich(event, rich_raw, f"scrapr{int(asyncio.get_event_loop().time()*1000)}")
