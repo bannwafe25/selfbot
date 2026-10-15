@@ -20,24 +20,26 @@ BRIDGE = os.path.expanduser("~/apps/selfbot/scrapr/bridge.js")
 # Deteksi platform dari URL → action scrapr
 ROUTES = [
     (r"tiktok\.com|vt\.tiktok", "tiktok.snaptik"),
-    (r"instagram\.com", "instagram.instagram"),
+    (r"instagram\.com", "instagram.snapsave"),
     (r"mediafire\.com", "resolver.mediafire"),
     (r"sfile\.mobi|sfile\.com", "resolver.sfile"),
     (r"safelinku|sfl\.gl", "resolver.safelinku"),
     (r"rekonise\.com", "resolver.rekonise"),
     (r"sub2unlock", "resolver.sub2unlock"),
-    (r"terabox", "terabox.terabox"),
-    (r"facebook\.com|fb\.watch", "facebook.facebook"),
-    (r"twitter\.com|x\.com", "twitter.twitter"),
-    (r"soundcloud\.com", "soundcloud.soundcloud"),
-    (r"spotify\.com", "spotify.spotify"),
-    (r"pin\.it|pinterest\.com", "pinterest.pinterest"),
-    (r"reddit\.com", "reddit.reddit"),
-    (r"threads\.net", "threads.threads"),
-    (r"bilibili\.com", "bilibili.bilibili"),
-    (r"douyin\.com", "douyin.douyin"),
-    (r"pixiv\.net", "pixiv.pixiv"),
+    (r"terabox", "terabox.sechno"),
+    (r"facebook\.com|fb\.watch", "facebook.fdown"),
+    (r"twitter\.com|x\.com", "twitter.tvd"),
+    (r"soundcloud\.com", "soundcloud.klickaud"),
+    (r"spotify\.com", "spotify.spotidown"),
+    (r"pin\.it|pinterest\.com", "pinterest.pindown"),
+    (r"reddit\.com", "reddit.rapidsave"),
+    (r"threads\.net", "threads.threadster"),
+    (r"bilibili\.com", "bilibili.direct"),
+    (r"douyin\.com", "douyin.direct"),
+    (r"pixiv\.net", "pixiv.ajax"),
     (r"bandcamp\.com", "bandcamp.bandcampdownloader"),
+    (r"music\.apple\.com", "applemusic.aplmate"),
+    (r"xiaohongshu|rednote", "rednote.direct"),
 ]
 
 
@@ -56,7 +58,7 @@ async def _run_bridge(action: str, url: str) -> dict:
     out, _ = await asyncio.wait_for(proc.communicate(), timeout=90)
     data = json.loads(out.decode().strip() or "{}")
     if not data.get("status"):
-        raise RuntimeError(data.get("error") or "scrapr gagal")
+        raise RuntimeError(data.get("error") or data.get("message") or "scrapr gagal")
     return data["result"]
 
 
