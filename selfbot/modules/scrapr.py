@@ -139,7 +139,17 @@ class Scrapr(Module):
             if not durl:
                 continue
             dtype = d.get("type", "file")
-            ext = {"video": ".mp4", "audio": ".mp3", "image": ".jpg"}.get(dtype, ".bin")
+            # Deteksi ext dari URL kalau type gak jelas
+            ext = {"video": ".mp4", "audio": ".mp3", "image": ".jpg"}.get(dtype, "")
+            if not ext:
+                um = re.search(r"\.(mp4|mkv|webm|m4a|mp3|jpg|jpeg|png|gif)(\?|$)", durl, re.IGNORECASE)
+                ext = f".{um.group(1).lower()}" if um else ".bin"
+                if ext in (".mp4", ".mkv", ".webm"):
+                    dtype = "video"
+                elif ext in (".m4a", ".mp3"):
+                    dtype = "audio"
+                elif ext in (".jpg", ".jpeg", ".png", ".gif"):
+                    dtype = "image"
             dest = os.path.join(tmp_dir, f"media{ext}")
             try:
                 loop = asyncio.get_event_loop()
