@@ -16,7 +16,7 @@ async def _music_cb_filter(flt, event):
     if not isinstance(event, CallbackQuery):
         return False
     data = event.data if isinstance(event.data, str) else (event.data or b"").decode()
-    return bool(re.match(r"^music:(stop|skip|playnow:\d+)$", data))
+    return bool(re.match(r"^music:(stop|skip|loop|playnow:\d+)$", data))
 
 
 MUSIC_PATTERN = re.compile(
@@ -553,7 +553,7 @@ class Music(Module):
                 blocks.append(rp.buttons(
                     rp.btn("Stop", callback_data=b"music:stop", style=_BS.DANGER),
                     rp.btn("Skip", callback_data=b"music:skip", style=_BS.PRIMARY),
-                    rp.btn("Pause", callback_data=b"music:pause", style=_BS.DEFAULT),
+                    rp.btn("Loop", callback_data=b"music:loop", style=_BS.DEFAULT),
                     rp.btn("Tutup", callback_data=b"0", style=_BS.DANGER),
                 ))
                 rich_done = await self.send_rich_blocks(event, blocks, query_prefix="music")
@@ -575,7 +575,7 @@ class Music(Module):
                         [
                             _IKB("⏹ Stop", callback_data=b"music:stop"),
                             _IKB("⏭ Skip", callback_data=b"music:skip"),
-                            _IKB("⏯ Pause", callback_data=b"music:pause"),
+                            _IKB("🔁 Loop", callback_data=b"music:loop"),
                         ],
                         [_IKB("✕ Tutup", callback_data=b"0")],
                     ])
@@ -610,6 +610,21 @@ class Music(Module):
             await self._do_stop(event)
         elif action == "skip":
             await self._do_skip(event)
+        elif action == "loop":
+            if self.current_chat is None:
+                with contextlib.suppress(Exception):
+                    await event.answer("Gak ada lagu.", show_alert=True)
+                return
+            self.loop_count = self.loop_count + 5 if self.loop_count < 10 else 0
+            n = self.loop_count
+            with contextlib.suppress(Exception):
+                await event.answer(f"Loop {'OFF' if n == 0 else str(n) + 'x'}")
+            with contextlib.suppress(Exception):
+                await self._status(
+                    event,
+                    f"<b>Loop:</b> <code>{'OFF' if n == 0 else str(n) + 'x'}</code>",
+                    revoke=5,
+                )
         elif action.startswith("playnow:"):
             idx = int(action.split(":", 1)[1])
             if not (0 <= idx < len(self.queue)):
@@ -835,7 +850,7 @@ class Music(Module):
                     [
                         _IKB("⏹ Stop", callback_data=b"music:stop"),
                         _IKB("⏭ Skip", callback_data=b"music:skip"),
-                        _IKB("⏯ Pause", callback_data=b"music:pause"),
+                        _IKB("🔁 Loop", callback_data=b"music:loop"),
                     ],
                     [_IKB("✕ Tutup", callback_data=b"0")],
                 ])
