@@ -87,6 +87,7 @@ class Help(Module):
         "quotly": ("", "Chat"),
         # Media & unduhan
         "toss": ("", "Media & Unduhan"),
+        "scrapr": ("", "Media & Unduhan"),
         "ytmp3": ("", "Media & Unduhan"),
         "qris": ("", "Qris"),
         "upload": ("", "Media & Unduhan"),
