@@ -619,12 +619,6 @@ class Music(Module):
             n = self.loop_count
             with contextlib.suppress(Exception):
                 await event.answer(f"Loop {'OFF' if n == 0 else str(n) + 'x'}")
-            with contextlib.suppress(Exception):
-                await self._status(
-                    event,
-                    f"<b>Loop:</b> <code>{'OFF' if n == 0 else str(n) + 'x'}</code>",
-                    revoke=5,
-                )
         elif action.startswith("playnow:"):
             idx = int(action.split(":", 1)[1])
             if not (0 <= idx < len(self.queue)):
@@ -683,7 +677,7 @@ class Music(Module):
             await self._do_stop(event)
             return
         nxt = self.queue[0]
-        await self._status(event, f"<code>Skipped: {skipped.get('title', '-')}</code>")
+        await self._status(event, f"<code>Skipped: {skipped.get('title', '-')}</code>", revoke=5)
         await self._play_file(event, nxt)
 
     async def _shruti_download_async(self, video_id: str, dest: str, is_video: bool) -> None:
