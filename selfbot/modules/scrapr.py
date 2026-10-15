@@ -138,7 +138,11 @@ class Scrapr(Module):
             durl = d.get("url")
             if not durl:
                 continue
-            dtype = d.get("type", "file")
+            dtype = str(d.get("type", "file")).lower()
+            # normalisasi: "mp4"->video, "mp3/m4a"->audio, "jpg/png"->image
+            dtype = {"mp4": "video", "mkv": "video", "webm": "video",
+                     "mp3": "audio", "m4a": "audio",
+                     "jpg": "image", "jpeg": "image", "png": "image"}.get(dtype, dtype)
             # Deteksi ext dari URL kalau type gak jelas
             ext = {"video": ".mp4", "audio": ".mp3", "image": ".jpg"}.get(dtype, "")
             if not ext:
