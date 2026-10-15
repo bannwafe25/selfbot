@@ -99,6 +99,32 @@ class Scrapr(Module):
         "e.g.": "dl https://vt.tiktok.com/xxx",
     }
 
+    async def _rich_media(self, event, dest, mtype, title, plat, quality, size_mb) -> bool:
+        """Kartu rich: media block + info teks (tanpa table). Return True kalau sukses."""
+        try:
+            import richpyro as rp
+            from pyrogram.types import InputMediaVideo, InputMediaPhoto
+
+            bot = self.client.bot
+            info = (
+                rp.bold("Download Selesai") + "\n"
+                + title.strip()[:200] + "\n"
+                + f"{plat} • {quality} • {size_mb:.1f} MB"
+            )
+            if mtype == "photo":
+                media = rp.photo_block(InputMediaPhoto(dest))
+            else:
+                media = rp.video_block(InputMediaVideo(dest))
+            blocks = [
+                media,
+                rp.para(info),
+            ]
+            rich_raw = await rp.blocks_message(*blocks).write(client=bot)
+            return await self._dispatch_rich(event, rich_raw, f"scrapr{int(asyncio.get_event_loop().time()*1000)}")
+        except Exception as e:
+            self.logger.warning(f"scrapr rich media failed: {e!r}")
+            return False
+
     @handler(filters.regex(pattern), 1)
     async def on_message_out(self, event: Message) -> None:
         query = (pattern.match(str(event.content).strip()).group(1) or "").strip()
@@ -166,23 +192,11 @@ class Scrapr(Module):
                     cap += f"\n{d['quality']}"
                 size_mb = os.path.getsize(dest) / 1048576
                 mtype = "photo" if dtype == "image" else "video"
-                rows = [
-                    ("Sumber", plat),
-                    ("Judul", title[:60] or "-"),
-                    ("Ukuran", f"{size_mb:.1f} MB"),
-                    ("Kualitas", d.get("quality") or dtype),
-                ]
+                ok = False
                 if sent == 0:
-                    ok = await self.send_rich(
-                        event,
-                        "Download Selesai",
-                        rows,
-                        query_prefix=f"scrapr{int(asyncio.get_event_loop().time()*1000)}",
-                        media_file=dest,
-                        media_type=mtype,
+                    ok = await self._rich_media(
+                        event, dest, mtype, title, plat, d.get("quality") or dtype, size_mb
                     )
-                else:
-                    ok = False
                 if not ok:
                     if dtype == "video":
                         await self.client.app.send_video(event.chat.id, dest, caption=cap)
