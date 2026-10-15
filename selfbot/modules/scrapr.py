@@ -131,6 +131,50 @@ class Scrapr(Module):
                 await status.edit("<code>Gak ada media yang bisa diunduh.</code>")
             return
 
+        # === Kartu rich "Scrapr — Siap Diunduh" (via bot inline, pola sgb) ===
+        try:
+            import datetime as _dt
+            import richpyro as rp
+            from pyrogram.raw import functions as rawfn
+            from pyrogram.raw.types import (
+                InputBotInlineMessageRichMessage,
+                InputBotInlineResult,
+            )
+
+            now = _dt.datetime.now(_dt.UTC)
+            plat = action.split(".")[0].capitalize()
+            blocks = [
+                rp.para(rp.bold("Scrapr — Siap Diunduh")),
+                rp.para(title.strip()[:200]),
+                rp.para(
+                    f"Platform: {plat}\n"
+                    + "\n".join(f"{i}. {d.get('quality') or d.get('type','file')}" for i, d in enumerate(dls, 1))
+                ),
+            ]
+            bot = self.client.bot
+            rich_raw = await rp.blocks_message(*blocks).write(client=bot)
+            ping_mod = self.client.modules.get("Ping")
+            route = getattr(ping_mod, "_rich_route", None)
+            if route is None and ping_mod is not None:
+                self._ensure_rich_handler(
+                    ping_mod, rawfn, InputBotInlineMessageRichMessage, InputBotInlineResult
+                )
+                route = getattr(ping_mod, "_rich_route", None)
+            if route is not None:
+                route["scrapr"] = (rich_raw, None)
+                res = await event._client.get_inline_bot_results(
+                    bot.me.id, f"scrapr{now.timestamp()}"
+                )
+                if res.results:
+                    await event.reply_inline_bot_result(res.query_id, res.results[0].id)
+                    with contextlib.suppress(Exception):
+                        await event.delete()
+                    # lanjut download di background, status text gak dibutuhkan lagi
+                    with contextlib.suppress(Exception):
+                        await status.delete()
+        except Exception:
+            pass  # rich gagal → lanjut jalur biasa (status text)
+
         with contextlib.suppress(Exception):
             await status.edit(f"<code>Downloading: {html.escape(title[:100])}</code>")
 
