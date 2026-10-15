@@ -32,6 +32,10 @@ fi
 echo "==> [3/6] Install dependencies..."
 uv sync
 
+# deps Node buat Scrapr (.dl)
+cd "$APP_DIR/scrapr" 2>/dev/null && npm install --silent >/dev/null 2>&1
+cd "$APP_DIR"
+
 echo "==> [4/6] Cek file .env..."
 if [ ! -f .env ]; then
     cp .env.example .env
