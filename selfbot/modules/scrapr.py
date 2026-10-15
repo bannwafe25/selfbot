@@ -106,11 +106,11 @@ class Scrapr(Module):
             from pyrogram.types import InputMediaVideo, InputMediaPhoto
 
             bot = self.client.bot
-            info = (
-                rp.bold("Download Selesai") + "\n"
-                + title.strip()[:200] + "\n"
-                + f"{plat} • {quality} • {size_mb:.1f} MB"
-            )
+            info = [
+                rp.bold("Download Selesai"), "\n",
+                title.strip()[:200], "\n",
+                f"{plat} • {quality} • {size_mb:.1f} MB",
+            ]
             if mtype == "photo":
                 media = rp.photo_block(InputMediaPhoto(dest))
             else:
