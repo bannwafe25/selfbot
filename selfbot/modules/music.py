@@ -195,16 +195,16 @@ class Music(Module):
                 import shutil
                 shutil.rmtree(os.path.dirname(dest), ignore_errors=True)
             return
-        # Hapus lagu ini dari queue head
-        with contextlib.suppress(Exception):
-            if self.queue and self.queue[0].get("vid") and self.queue:
-                self.queue.pop(0)
-        # LOOP aktif → replay lagu yang sama
+        # LOOP aktif → replay queue head TANPA pop (pola ShrutixMusic)
         if self.loop_count > 0 and self.queue and self.current_chat == chat_id:
             self.loop_count -= 1
             with contextlib.suppress(Exception):
                 await self._play_file(None, self.queue[0])
             return
+        # Hapus lagu ini dari queue head
+        with contextlib.suppress(Exception):
+            if self.queue and self.queue[0].get("vid") and self.queue:
+                self.queue.pop(0)
         # Masih ada antrian → auto-next, jangan keluar VC
         if self.queue and self.current_chat == chat_id:
             nxt = self.queue[0]
