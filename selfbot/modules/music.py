@@ -269,7 +269,7 @@ class Music(Module):
     # Helpers
     # ------------------------------------------------------
 
-    async def _status(self, event: Message, text: str, revoke: int = 0):
+    async def _status(self, event: Message, text: str, revoke: int = 6):
         if event is None:
             # auto-next tanpa event → kirim ke chat VC
             if self.current_chat:
@@ -340,13 +340,13 @@ class Music(Module):
             return
         if action == "loop":
             if self.current_chat is None:
-                await self._status(event, "<code>Gak ada lagu yang diputar.</code>")
+                await self._status(event, "<code>Gak ada lagu yang diputar.</code>", revoke=6)
                 return
             n = 5
             if query and query.strip().isdigit():
                 n = max(1, min(int(query.strip()), 10))
             self.loop_count = n
-            await self._status(event, f"<b>Loop:</b> <code>{n}x</code> lagu ini.")
+            await self._status(event, f"<b>Loop:</b> <code>{n}x</code> lagu ini.", revoke=6)
             return
         # play / vplay
         is_video = action == "vplay"
@@ -364,20 +364,20 @@ class Music(Module):
                 chat_override = parts[0]
                 query = parts[1] if len(parts) > 1 else ""
             if not query:
-                await self._status(event, f"<code>{action} @grup &lt;judul&gt;</code>")
+                await self._status(event, f"<code>{action} @grup &lt;judul&gt;</code>", revoke=6)
                 return
 
-        status = await self._status(event, "<code>Mencari lagu...</code>")
+        status = await self._status(event, "<code>Mencari lagu...</code>", revoke=6)
 
         # 1. Search
         try:
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(None, _yt_search, query)
         except Exception as e:
-            await self._status(event, f"Search gagal: <code>{e}</code>")
+            await self._status(event, f"Search gagal: <code>{e}</code>", revoke=6)
             return
         if not result:
-            await self._status(event, "<code>Lagu tidak ditemukan.</code>")
+            await self._status(event, "<code>Lagu tidak ditemukan.</code>", revoke=6)
             return
         vid, title, author = result
 
@@ -389,10 +389,10 @@ class Music(Module):
             else:
                 chat_id = self._resolve_chat(event)
         except RuntimeError as e:
-            await self._status(event, f"<code>{e}</code>")
+            await self._status(event, f"<code>{e}</code>", revoke=6)
             return
         except Exception as e:
-            await self._status(event, f"{e.__class__.__name__}: <code>{e}</code>")
+            await self._status(event, f"{e.__class__.__name__}: <code>{e}</code>", revoke=6)
             return
 
         # 3. Download
@@ -447,7 +447,7 @@ class Music(Module):
                 await event.delete()
             return
 
-        await self._status(event, f"<code>Downloading {kind}:</code> {title}")
+        await self._status(event, f"<code>Downloading {kind}:</code> {title}", revoke=6)
         tmp_dir = tempfile.mkdtemp(prefix="music_")
         ext = "mp4" if is_video else "m4a"
         dest = os.path.join(tmp_dir, f"{vid}.{ext}")
@@ -455,11 +455,11 @@ class Music(Module):
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, _download_media, vid, dest, is_video)
         except Exception as e:
-            await self._status(event, f"Download gagal: <code>{e}</code>")
+            await self._status(event, f"Download gagal: <code>{e}</code>", revoke=6)
             return
 
         if not os.path.exists(dest) or os.path.getsize(dest) < 10000:
-            await self._status(event, "<code>Media kosong / terlalu kecil.</code>")
+            await self._status(event, "<code>Media kosong / terlalu kecil.</code>", revoke=6)
             return
 
         # 3b. Mode audio: extract track audio dari MP4 → file murni audio
@@ -479,7 +479,7 @@ class Music(Module):
 
         # 4. Assistant join & play
         emoji = "" if is_video else ""
-        await self._status(event, f"<code>{emoji} Joining VC & playing...</code>")
+        await self._status(event, f"<code>{emoji} Joining VC & playing...</code>", revoke=6)
         try:
             call = await self._get_call()
             from pytgcalls.types import MediaStream
@@ -658,7 +658,7 @@ class Music(Module):
                 await self._delete_now_playing()
             await self._status(event, "<code>Stopped. Assistant keluar VC.</code>", revoke=5)
         except Exception as e:
-            await self._status(event, f"<code>{e}</code>")
+            await self._status(event, f"<code>{e}</code>", revoke=6)
 
     # ------------------------------------------------------
     # Queue & kontrol
@@ -669,7 +669,7 @@ class Music(Module):
 
     async def _do_skip(self, event) -> None:
         if not self.queue:
-            return await self._status(event, "<code>Queue kosong.</code>")
+            return await self._status(event, "<code>Queue kosong.</code>", revoke=6)
         skipped = self.queue.pop(0)
         # Batalin watcher lagu lama SEKARANG (token naik), biar gak nge-pop queue dobel
         self.play_token += 1
@@ -708,7 +708,7 @@ class Music(Module):
 
     async def _play_file(self, event, info: dict) -> None:
         """Download + play sebuah item queue (dict dengan vid/title/author/is_video)."""
-        status = await self._status(event, f"<code>Downloading: {info['title']}</code>")
+        status = await self._status(event, f"<code>Downloading: {info['title']}</code>", revoke=6)
         vid = info["vid"]
         is_video = info.get("is_video", False)
         tmp_dir = tempfile.mkdtemp(prefix="music_")
@@ -725,7 +725,7 @@ class Music(Module):
                 await loop.run_in_executor(None, _download_media, vid, dest, is_video)
             except Exception as e2:
                 self.logger.warning(f"music download gagal ({info.get('title')}): {e2!r}")
-                await self._status(event, f"Download gagal: <code>{e2}</code>")
+                await self._status(event, f"Download gagal: <code>{e2}</code>", revoke=6)
                 # Antrean jangan mati: lanjut ke lagu berikutnya
                 with contextlib.suppress(Exception):
                     if self.queue and self.current_chat:
@@ -759,7 +759,7 @@ class Music(Module):
             asyncio.ensure_future(self._wait_finish(self.current_chat, dest, self.play_token))
         except Exception as e:
             self.logger.warning(f"music pytgcalls gagal ({info.get('title')}): {e!r}")
-            await self._status(event, f"PyTgCalls: <code>{e}</code>")
+            await self._status(event, f"PyTgCalls: <code>{e}</code>", revoke=6)
             # Antrean jangan mati: lanjut ke lagu berikutnya
             with contextlib.suppress(Exception):
                 if self.queue:
