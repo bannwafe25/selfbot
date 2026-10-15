@@ -131,53 +131,10 @@ class Scrapr(Module):
                 await status.edit("<code>Gak ada media yang bisa diunduh.</code>")
             return
 
-        # === Kartu rich "Scrapr — Siap Diunduh" (via bot inline, pola sgb) ===
-        try:
-            import datetime as _dt
-            import richpyro as rp
-            from pyrogram.raw import functions as rawfn
-            from pyrogram.raw.types import (
-                InputBotInlineMessageRichMessage,
-                InputBotInlineResult,
-            )
-
-            now = _dt.datetime.now(_dt.UTC)
-            plat = action.split(".")[0].capitalize()
-            blocks = [
-                rp.para(rp.bold("Scrapr — Siap Diunduh")),
-                rp.para(title.strip()[:200]),
-                rp.para(
-                    f"Platform: {plat}\n"
-                    + "\n".join(f"{i}. {d.get('quality') or d.get('type','file')}" for i, d in enumerate(dls, 1))
-                ),
-            ]
-            bot = self.client.bot
-            rich_raw = await rp.blocks_message(*blocks).write(client=bot)
-            ping_mod = self.client.modules.get("Ping")
-            route = getattr(ping_mod, "_rich_route", None)
-            if route is None and ping_mod is not None:
-                self._ensure_rich_handler(
-                    ping_mod, rawfn, InputBotInlineMessageRichMessage, InputBotInlineResult
-                )
-                route = getattr(ping_mod, "_rich_route", None)
-            if route is not None:
-                route["scrapr"] = (rich_raw, None)
-                res = await event._client.get_inline_bot_results(
-                    bot.me.id, f"scrapr{now.timestamp()}"
-                )
-                if res.results:
-                    await event.reply_inline_bot_result(res.query_id, res.results[0].id)
-                    with contextlib.suppress(Exception):
-                        await event.delete()
-                    # lanjut download di background, status text gak dibutuhkan lagi
-                    with contextlib.suppress(Exception):
-                        await status.delete()
-        except Exception:
-            pass  # rich gagal → lanjut jalur biasa (status text)
-
         with contextlib.suppress(Exception):
             await status.edit(f"<code>Downloading: {html.escape(title[:100])}</code>")
 
+        plat = action.split(".")[0].capitalize()
         tmp_dir = tempfile.mkdtemp(prefix="scrapr_")
         sent = 0
         for d in dls:
@@ -207,13 +164,32 @@ class Scrapr(Module):
                 cap = f"<b>{html.escape(title[:200])}</b>"
                 if d.get("quality"):
                     cap += f"\n{d['quality']}"
-                if dtype in ("video", "image"):
+                size_mb = os.path.getsize(dest) / 1048576
+                mtype = "photo" if dtype == "image" else "video"
+                rows = [
+                    ("Sumber", plat),
+                    ("Judul", title[:60] or "-"),
+                    ("Ukuran", f"{size_mb:.1f} MB"),
+                    ("Kualitas", d.get("quality") or dtype),
+                ]
+                if sent == 0:
+                    ok = await self.send_rich(
+                        event,
+                        "Download Selesai",
+                        rows,
+                        query_prefix=f"scrapr{int(asyncio.get_event_loop().time()*1000)}",
+                        media_file=dest,
+                        media_type=mtype,
+                    )
+                else:
+                    ok = False
+                if not ok:
                     if dtype == "video":
                         await self.client.app.send_video(event.chat.id, dest, caption=cap)
-                    else:
+                    elif dtype == "image":
                         await self.client.app.send_photo(event.chat.id, dest, caption=cap)
-                else:
-                    await self.client.app.send_document(event.chat.id, dest, caption=cap)
+                    else:
+                        await self.client.app.send_document(event.chat.id, dest, caption=cap)
                 sent += 1
             except Exception:
                 continue
