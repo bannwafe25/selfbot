@@ -20,7 +20,7 @@ async def _music_cb_filter(flt, event):
 
 
 MUSIC_PATTERN = re.compile(
-    r"^(?:play|vplay|stop|skip)(?:\s+([\s\S]+))?$",
+    r"^(?:play|vplay|stop|skip|loop)(?:\s+([\s\S]+))?$",
     re.IGNORECASE,
 )
 
@@ -161,6 +161,7 @@ class Music(Module):
         "play <judul>": "Assistant join VC & putar AUDIO dari YouTube.",
         "vplay <judul>": "Assistant join VC & putar VIDEO dari YouTube.",
         "skip": "Lewati lagu, putar berikutnya di queue.",
+        "loop <1-10>": "Ulangi lagu sekarang (default 5x).",
         "stop": "Stop lagu & assistant keluar VC.",
         "e.g.": "play melukis senja",
     }
@@ -171,6 +172,7 @@ class Music(Module):
         self.current_chat = None  # chat_id VC aktif
         self.play_token = 0       # naik setiap play baru (batal watcher lama)
         self.queue = []           # antrian: list f_info dict
+        self.loop_count = 0       # loop lagu saat ini (1-10, 0 = off)
 
     async def _wait_finish(self, chat_id: int, dest: str, token: int) -> None:
         """Tunggu durasi media habis (ffprobe) lalu assistant keluar VC."""
@@ -197,6 +199,12 @@ class Music(Module):
         with contextlib.suppress(Exception):
             if self.queue and self.queue[0].get("vid") and self.queue:
                 self.queue.pop(0)
+        # LOOP aktif → replay lagu yang sama
+        if self.loop_count > 0 and self.queue and self.current_chat == chat_id:
+            self.loop_count -= 1
+            with contextlib.suppress(Exception):
+                await self._play_file(None, self.queue[0])
+            return
         # Masih ada antrian → auto-next, jangan keluar VC
         if self.queue and self.current_chat == chat_id:
             nxt = self.queue[0]
@@ -329,6 +337,16 @@ class Music(Module):
         # kontrol VC simpel
         if action == "skip":
             await self._do_skip(event)
+            return
+        if action == "loop":
+            if self.current_chat is None:
+                await self._status(event, "<code>Gak ada lagu yang diputar.</code>")
+                return
+            n = 5
+            if query and query.strip().isdigit():
+                n = max(1, min(int(query.strip()), 10))
+            self.loop_count = n
+            await self._status(event, f"<b>Loop:</b> <code>{n}x</code> lagu ini.")
             return
         # play / vplay
         is_video = action == "vplay"
@@ -624,9 +642,11 @@ class Music(Module):
                 with contextlib.suppress(Exception):
                     await call.leave_call(self.current_chat)
                 self.current_chat = None
+            self.loop_count = 0
             self.queue.clear()
-                # hapus kartu Now Playing yang nyangkut
-            await self._delete_now_playing()
+            # hapus kartu Now Playing yang nyangkut
+            with contextlib.suppress(Exception):
+                await self._delete_now_playing()
             await self._status(event, "<code>Stopped. Assistant keluar VC.</code>", revoke=5)
         except Exception as e:
             await self._status(event, f"<code>{e}</code>")
