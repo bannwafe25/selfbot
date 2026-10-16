@@ -346,7 +346,6 @@ class Music(Module):
             if query and query.strip().isdigit():
                 n = max(1, min(int(query.strip()), 10))
             self.loop_count = n
-            await self._status(event, f"<b>Loop:</b> <code>{n}x</code> lagu ini.", revoke=2)
             return
         # play / vplay
         is_video = action == "vplay"
@@ -447,7 +446,6 @@ class Music(Module):
                 await event.delete()
             return
 
-        await self._status(event, f"<code>Downloading {kind}:</code> {title}", revoke=2)
         tmp_dir = tempfile.mkdtemp(prefix="music_")
         ext = "mp4" if is_video else "m4a"
         dest = os.path.join(tmp_dir, f"{vid}.{ext}")
@@ -479,7 +477,6 @@ class Music(Module):
 
         # 4. Assistant join & play
         emoji = "" if is_video else ""
-        await self._status(event, f"<code>{emoji} Joining VC & playing...</code>", revoke=2)
         try:
             call = await self._get_call()
             from pytgcalls.types import MediaStream
@@ -656,7 +653,6 @@ class Music(Module):
             # hapus kartu Now Playing yang nyangkut
             with contextlib.suppress(Exception):
                 await self._delete_now_playing()
-            await self._status(event, "<code>Stopped. Assistant keluar VC.</code>", revoke=5)
         except Exception as e:
             await self._status(event, f"<code>{e}</code>", revoke=2)
 
@@ -677,7 +673,6 @@ class Music(Module):
             await self._do_stop(event)
             return
         nxt = self.queue[0]
-        await self._status(event, f"<code>Skipped: {skipped.get('title', '-')}</code>", revoke=5)
         await self._play_file(event, nxt)
 
     async def _shruti_download_async(self, video_id: str, dest: str, is_video: bool) -> None:
@@ -708,7 +703,6 @@ class Music(Module):
 
     async def _play_file(self, event, info: dict) -> None:
         """Download + play sebuah item queue (dict dengan vid/title/author/is_video)."""
-        status = await self._status(event, f"<code>Downloading: {info['title']}</code>", revoke=2)
         vid = info["vid"]
         is_video = info.get("is_video", False)
         tmp_dir = tempfile.mkdtemp(prefix="music_")
