@@ -366,7 +366,7 @@ class Music(Module):
                 await self._status(event, f"<code>{action} @grup &lt;judul&gt;</code>", revoke=2)
                 return
 
-        status = await self._status(event, "<code>Mencari lagu...</code>", revoke=2)
+        status = await self._status(event, "<b>sabar ya kntl</b>", revoke=2)
 
         # 1. Search
         try:
@@ -708,6 +708,8 @@ class Music(Module):
         tmp_dir = tempfile.mkdtemp(prefix="music_")
         ext = "mp4" if is_video else "m4a"
         dest = os.path.join(tmp_dir, f"{vid}.{ext}")
+        with contextlib.suppress(Exception):
+            await self._status(event, "<b>sabar ya kntl</b>", revoke=2)
         try:
             # ShrutiBots async dulu (cepat, gak blokir event loop)
             await self._shruti_download_async(vid, dest, is_video)
