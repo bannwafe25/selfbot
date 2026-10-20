@@ -88,7 +88,7 @@ def _shruti_download(video_id: str, dest: str, video: bool) -> None:
         "api_key": api_key,
     })
     req = urllib.request.Request(
-        f"https://api.shrutibots.site/download?{q}",
+        f"https://api.shrutibots.in/download?{q}",
         headers={"User-Agent": "Mozilla/5.0"},
     )
     try:
@@ -690,7 +690,7 @@ class Music(Module):
         timeout = aiohttp.ClientTimeout(total=300)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(
-                "https://api.shrutibots.site/download", params=params
+                "https://api.shrutibots.in/download", params=params
             ) as resp:
                 if resp.status != 200:
                     body = (await resp.text())[:200]

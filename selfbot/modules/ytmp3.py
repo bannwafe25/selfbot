@@ -76,7 +76,7 @@ async def _shruti_download_async(video_id: str, dest: str) -> None:
     timeout = aiohttp.ClientTimeout(total=300)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(
-            "https://api.shrutibots.site/download", params=params
+            "https://api.shrutibots.in/download", params=params
         ) as resp:
             if resp.status != 200:
                 body = (await resp.text())[:200]
