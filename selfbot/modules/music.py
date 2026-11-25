@@ -130,7 +130,6 @@ def _ytdlp_download(video_id: str, dest: str, video: bool) -> None:
     cookie_args = ["--cookies", cookie_file] if os.path.exists(cookie_file) else ["--no-cookies"]
     cmd = [
         ytdlp, *cookie_args, "-f", fmt, "--no-playlist", "--geo-bypass",
-        "--extractor-args", "youtube:player_client=android,web_safari",
         "--no-warnings", "--quiet", "-o", dest,
         f"https://www.youtube.com/watch?v={video_id}",
     ]
