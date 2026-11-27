@@ -68,6 +68,24 @@ else
     echo "✅ Cookies ditemukan: $COOKIE_PATH"
 fi
 
+echo "==> [4d/6] Cek deno + config yt-dlp (challenge solver YouTube)..."
+if ! command -v deno &>/dev/null; then
+    echo "==> deno belum ada, installing..."
+    curl -fsSL https://deno.land/install.sh | DENO_INSTALL="$HOME/.deno" sh >/dev/null 2>&1
+    sudo ln -sf "$HOME/.deno/bin/deno" /usr/local/bin/deno
+fi
+export PATH="$HOME/.deno/bin:$PATH"
+if command -v deno &>/dev/null; then
+    echo "✅ deno: $(deno --version 2>/dev/null | head -1)"
+else
+    echo "⚠️  deno gagal terpasang — yt-dlp bisa kena 403 challenge YouTube"
+fi
+mkdir -p "$HOME/.config/yt-dlp"
+if [ ! -f "$HOME/.config/yt-dlp/config" ]; then
+    printf -- '--remote-components\nejs:github\n' > "$HOME/.config/yt-dlp/config"
+    echo "✅ config yt-dlp dibuat (ejs:github)"
+fi
+
 echo "==> [5/6] Pasang systemd service..."
 sudo tee /etc/systemd/system/$SERVICE_NAME.service >/dev/null <<EOF
 [Unit]
