@@ -92,11 +92,6 @@ class Ping(Module):
                                            .strftime("%H:%M:%S WIB"), align="center")],
                 ]
                 blocks = [
-                    rp.table([
-                        [rp.table_cell("Ping Selesai", is_header=True,
-                                       colspan=2, align="center")],
-                    ], bordered=False, compact=False),
-                    rp.divider(),
                     rp.table(trows, bordered=True, striped=True, compact=False),
                     rp.buttons(
                         rp.btn("Tutup", callback_data=b"0", style=ButtonStyle.DANGER)

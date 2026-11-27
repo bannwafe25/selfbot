@@ -2,6 +2,8 @@ import asyncio
 import contextlib
 import os
 import re
+import json
+import shutil
 import tempfile
 
 from pyrogram import filters
@@ -73,38 +75,6 @@ def _yt_search(query: str) -> tuple[str, str, str] | None:
     return m.group(1), _clean(m.group(2)), _clean(m.group(3))
 
 
-def _shruti_download(video_id: str, dest: str, video: bool) -> None:
-    """Download via ShrutiBots API (file langsung, no bot-check)."""
-    import json
-    import urllib.parse
-    import urllib.request
-
-    api_key = os.getenv("SHRUTI_API_KEY", "")
-    if not api_key:
-        raise RuntimeError("SHRUTI_API_KEY belum di-set di .env")
-    q = urllib.parse.urlencode({
-        "url": video_id,
-        "type": "video" if video else "audio",
-        "api_key": api_key,
-    })
-    req = urllib.request.Request(
-        f"https://api.shrutibots.in/download?{q}",
-        headers={"User-Agent": "Mozilla/5.0"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=300) as r:
-            data = r.read()
-    except urllib.error.HTTPError as e:
-        body = ""
-        with contextlib.suppress(Exception):
-            body = e.read().decode("utf-8", "ignore")[:200]
-        raise RuntimeError(f"shruti HTTP {e.code}: {body or '(no body)'}") from None
-    if len(data) < 10000:
-        raise RuntimeError(f"shruti file kecil: {len(data)} bytes: {data[:150]!r}")
-    with open(dest, "wb") as f:
-        f.write(data)
-
-
 def _ytdlp_download(video_id: str, dest: str, video: bool) -> None:
     """Download via yt-dlp (butuh deno runtime buat challenge solver YouTube)."""
     import shutil
@@ -118,6 +88,7 @@ def _ytdlp_download(video_id: str, dest: str, video: bool) -> None:
 
     deno = os.path.expanduser("~/.deno/bin")
     env = dict(os.environ)
+    env.setdefault("HOME", os.path.expanduser("~"))  # systemd gak set HOME → config yt-dlp gak kebaca → 403
     if os.path.isdir(deno):
         env["PATH"] = deno + os.pathsep + env.get("PATH", "")
 
@@ -139,17 +110,7 @@ def _ytdlp_download(video_id: str, dest: str, video: bool) -> None:
 
 
 def _download_media(video_id: str, dest: str, video: bool) -> None:
-    """Download media: ShrutiBots utama, yt-dlp cadangan."""
-    # 1) ShrutiBots (utama — no bot-check, file langsung)
-    try:
-        _shruti_download(video_id, dest, video)
-        if os.path.exists(dest) and os.path.getsize(dest) > 10000:
-            return
-    except Exception:
-        with contextlib.suppress(Exception):
-            os.remove(dest)
-
-    # 2) yt-dlp (cadangan, pakai cookies)
+    """Download media (sinkron): yt-dlp pakai cookies."""
     _ytdlp_download(video_id, dest, video)
 
 
@@ -674,32 +635,6 @@ class Music(Module):
         nxt = self.queue[0]
         await self._play_file(event, nxt)
 
-    async def _shruti_download_async(self, video_id: str, dest: str, is_video: bool) -> None:
-        """Download via ShrutiBots API, async aiohttp (gak blokir event loop saat skip)."""
-        import aiohttp
-
-        api_key = os.getenv("SHRUTI_API_KEY", "")
-        if not api_key:
-            raise RuntimeError("SHRUTI_API_KEY belum di-set")
-        params = {
-            "url": video_id,
-            "type": "video" if is_video else "audio",
-            "api_key": api_key,
-        }
-        timeout = aiohttp.ClientTimeout(total=300)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(
-                "https://api.shrutibots.in/download", params=params
-            ) as resp:
-                if resp.status != 200:
-                    body = (await resp.text())[:200]
-                    raise RuntimeError(f"shruti HTTP {resp.status}: {body}")
-                with open(dest, "wb") as f:
-                    async for chunk in resp.content.iter_chunked(131072):
-                        f.write(chunk)
-        if not os.path.exists(dest) or os.path.getsize(dest) < 10000:
-            raise RuntimeError("shruti file kecil/kosong")
-
     async def _play_file(self, event, info: dict) -> None:
         """Download + play sebuah item queue (dict dengan vid/title/author/is_video)."""
         vid = info["vid"]
@@ -710,28 +645,23 @@ class Music(Module):
         with contextlib.suppress(Exception):
             await self._status(event, "<b>sabar ya kntl</b>", revoke=2)
         try:
-            # ShrutiBots async dulu (cepat, gak blokir event loop)
-            await self._shruti_download_async(vid, dest, is_video)
-        except Exception as e:
-            self.logger.warning(f"shruti async gagal ({info.get('title')}): {e!r}")
-            try:
-                # Fallback: ARC + yt-dlp via executor (sync)
-                loop = asyncio.get_event_loop()
-                await loop.run_in_executor(None, _download_media, vid, dest, is_video)
-            except Exception as e2:
-                self.logger.warning(f"music download gagal ({info.get('title')}): {e2!r}")
-                await self._status(event, f"Download gagal: <code>{e2}</code>", revoke=2)
-                # Antrean jangan mati: lanjut ke lagu berikutnya
-                with contextlib.suppress(Exception):
-                    if self.queue and self.current_chat:
-                        self.queue.pop(0)
-                    if self.queue and self.current_chat:
-                        await self._play_file(None, self.queue[0])
-                    elif self.current_chat:
-                        with contextlib.suppress(Exception):
-                            await self.call.leave_call(self.current_chat)
-                        self.current_chat = None
-                return
+            # yt-dlp via executor (sync)
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, _download_media, vid, dest, is_video)
+        except Exception as e2:
+            self.logger.warning(f"music download gagal ({info.get('title')}): {e2!r}")
+            await self._status(event, f"Download gagal: <code>{e2}</code>", revoke=2)
+            # Antrean jangan mati: lanjut ke lagu berikutnya
+            with contextlib.suppress(Exception):
+                if self.queue and self.current_chat:
+                    self.queue.pop(0)
+                if self.queue and self.current_chat:
+                    await self._play_file(None, self.queue[0])
+                elif self.current_chat:
+                    with contextlib.suppress(Exception):
+                        await self.call.leave_call(self.current_chat)
+                    self.current_chat = None
+            return
         if not is_video:
             audio_dest = os.path.join(tmp_dir, f"{vid}.m4a")
             with contextlib.suppress(Exception):

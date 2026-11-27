@@ -112,7 +112,7 @@ class Call(Module):
     # Final rich table via inline bot (pola ping.py)
     # --------------------------------------------------------
 
-    async def _rich_final(self, event: Message, title: str, extra: list, dur: float, chat_label: str = "-"):
+    async def _rich_final(self, event: Message, title: str, extra: list, dur: float, chat_label: str = "-", chat_id=None):
         """Kirim hasil call sebagai blok collapsible (details) + tombol Tutup."""
         import richpyro as rp
         from pyrogram.enums import ButtonStyle
@@ -137,13 +137,14 @@ class Call(Module):
                     rp.table_cell(v.strip(), align="center"),
                 ])
         trows.append([
-            rp.table_cell("Total Waktu", align="left"),
+            rp.table_cell("Waktu Proses", align="left"),
             rp.table_cell(f"{dur:.2f}s", align="center"),
         ])
-        trows.append([
-            rp.table_cell("Status Akhir", align="left"),
-            rp.table_cell("Keluar VC" if is_leave else "Masuk VC", align="center"),
-        ])
+        if not is_leave:
+            trows.append([
+                rp.table_cell("ID Chat", align="left"),
+                rp.table_cell(str(chat_id), align="center"),
+            ])
 
         blocks = [
             rp.table([
@@ -493,7 +494,7 @@ class Call(Module):
         if mute and action == "join":
 
             extra.append(
-                "Mute: <code>True</code>"
+                "Mute: <code>Ya</code>"
             )
 
         # ----------------------------------------------------
@@ -512,11 +513,20 @@ class Call(Module):
         lines = list(extra) or [""]
 
         try:
-            chat_label = getattr(chat, "title", None) or getattr(chat, "username", None) or str(chat_id)
+            chat_label = str(chat_id)
+            try:
+                _chat = await event._client.get_chat(chat_id)
+                chat_label = (
+                    getattr(_chat, "title", None)
+                    or getattr(_chat, "username", None)
+                    or chat_label
+                )
+            except Exception:
+                pass
         except Exception:
             chat_label = str(chat_id)
 
-        await self._rich_final(event, title, extra, dur, chat_label=chat_label)
+        await self._rich_final(event, title, extra, dur, chat_label=chat_label, chat_id=chat_id)
 
         # Auto-delete disabled at user request (Sep 23)
         # if action in ("join", "leave"):

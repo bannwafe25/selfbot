@@ -66,24 +66,13 @@ def _yt_search(query: str) -> tuple[str, str, str] | None:
 
 
 async def _shruti_download_async(video_id: str, dest: str) -> None:
-    """Download audio via ShrutiBots API (async, streaming)."""
-    import aiohttp
+    """Download audio via yt-dlp (jalankan di executor biar gak blokir event loop)."""
+    import asyncio
 
-    api_key = os.getenv("SHRUTI_API_KEY", "")
-    if not api_key:
-        raise RuntimeError("SHRUTI_API_KEY belum di-set")
-    params = {"url": video_id, "type": "audio", "api_key": api_key}
-    timeout = aiohttp.ClientTimeout(total=300)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(
-            "https://api.shrutibots.in/download", params=params
-        ) as resp:
-            if resp.status != 200:
-                body = (await resp.text())[:200]
-                raise RuntimeError(f"shruti HTTP {resp.status}: {body}")
-            with open(dest, "wb") as f:
-                async for chunk in resp.content.iter_chunked(131072):
-                    f.write(chunk)
+    from selfbot.modules.music import _download_media
+
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _download_media, video_id, dest, False)
     if not os.path.exists(dest) or os.path.getsize(dest) < 10000:
         raise RuntimeError("file kecil/kosong")
 

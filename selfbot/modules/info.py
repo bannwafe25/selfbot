@@ -129,10 +129,10 @@ class Info(Module):
             blocks.append(rp.divider())
 
             emoji_map = {
-                "ID": "🆔", "First Name": "", "Last Name": "", "Username": "",
-                "DC ID": "", "Language": "", "Status": "", "Common Groups": "",
-                "You Blocked": "", "Flags": "", "Registration Date": "",
-                "Last Seen": "", "Bio": "", "Profile Photos": "",
+                "ID": "🆔", "First Name": "👤", "Last Name": "👤", "Username": "🔗",
+                "DC ID": "📡", "Language": "🌐", "Status": "⚫", "Common Groups": "👥",
+                "You Blocked": "🚫", "Flags": "🏷", "Registration Date": "📅",
+                "Last Seen": "🕒", "Bio": "📝", "Profile Photos": "🖼",
             }
             trows = [[rp.table_cell(" Metrik", is_header=True, align="left"),
                       rp.table_cell(" Detail Hasil", is_header=True, align="center")]]
@@ -171,10 +171,10 @@ class Info(Module):
                 rp.divider(),
             ]
             emoji_map = {
-                "ID": "🆔", "First Name": "", "Last Name": "", "Username": "",
-                "DC ID": "", "Language": "", "Status": "", "Common Groups": "",
-                "You Blocked": "", "Flags": "", "Registration Date": "",
-                "Last Seen": "", "Bio": "", "Profile Photos": "",
+                "ID": "🆔", "First Name": "👤", "Last Name": "👤", "Username": "🔗",
+                "DC ID": "📡", "Language": "🌐", "Status": "⚫", "Common Groups": "👥",
+                "You Blocked": "🚫", "Flags": "🏷", "Registration Date": "📅",
+                "Last Seen": "🕒", "Bio": "📝", "Profile Photos": "🖼",
             }
             trows = [[rp.table_cell(" Metrik", is_header=True, align="left"),
                       rp.table_cell(" Detail Hasil", is_header=True, align="center")]]

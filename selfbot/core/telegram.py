@@ -202,8 +202,8 @@ class Telegram(abc.ABC):
             if kv and kv.get("value"):
                 self.assistant = Client(
                     name="assistant",
-                    api_id=36794114,
-                    api_hash="a5128238f493834b1a65613b8d311c49",
+                    api_id=31019298,
+                    api_hash="f80a208b8cd4709c30c26ceacae9e1be",
                     app_version="2.2 K",
                     device_model="Chrome 143",
                     workdir="./selfbot/",
@@ -301,8 +301,8 @@ class Telegram(abc.ABC):
     def build(self, name: str, updates: tuple = (), *args, **kwargs) -> Client:
         client = Client(
             name=name,
-            api_id=36794114,
-            api_hash="a5128238f493834b1a65613b8d311c49",
+            api_id=31019298,
+            api_hash="f80a208b8cd4709c30c26ceacae9e1be",
             app_version="2.2 K",
             device_model="Chrome 143",
             workdir="./selfbot/",

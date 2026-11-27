@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Bridge scrapr -> JSON (dipanggil dari Python selfbot)
 // Usage: node scrapr_bridge.js <platform.method> <url>
-const scrapr = require("/home/agentuser/apps/selfbot/scrapr/node_modules/@coflyn/scrapr");
+const scrapr = require(require("path").join(__dirname, "node_modules/@coflyn/scrapr"));
 
 const [, , action, url] = process.argv;
 const [platform, method] = action.split(".");
